@@ -43,6 +43,7 @@ impl GeneralSettingsRepository {
                        ui_font_family, ui_font_size, editor_font_family, editor_font_size,
                        grid_font_family, grid_font_size, toast_auto_dismiss_secs,
                        syntax_colors_json, accent_color_dark, accent_color_light,
+                       table_alias_completion, table_alias_use_as,
                        updated_at
                 FROM cfg_general_settings WHERE id = 1
                 "#,
@@ -87,7 +88,9 @@ impl GeneralSettingsRepository {
                 syntax_colors_json: row.get(30)?,
                 accent_color_dark: row.get(31)?,
                 accent_color_light: row.get(32)?,
-                updated_at: row.get(33)?,
+                table_alias_completion: row.get(33)?,
+                table_alias_use_as: row.get(34)?,
+                updated_at: row.get(35)?,
             })
         });
 
@@ -119,8 +122,9 @@ impl GeneralSettingsRepository {
                     ui_font_family, ui_font_size, editor_font_family, editor_font_size,
                     grid_font_family, grid_font_size, toast_auto_dismiss_secs,
                     syntax_colors_json, accent_color_dark, accent_color_light,
+                    table_alias_completion, table_alias_use_as,
                     updated_at
-                ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, datetime('now'))
+                ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, datetime('now'))
                 ON CONFLICT(id) DO UPDATE SET
                     theme = excluded.theme,
                     restore_session_on_startup = excluded.restore_session_on_startup,
@@ -154,6 +158,8 @@ impl GeneralSettingsRepository {
                     syntax_colors_json = excluded.syntax_colors_json,
                     accent_color_dark = excluded.accent_color_dark,
                     accent_color_light = excluded.accent_color_light,
+                    table_alias_completion = excluded.table_alias_completion,
+                    table_alias_use_as = excluded.table_alias_use_as,
                     updated_at = datetime('now')
                 "#,
                 params![
@@ -189,6 +195,8 @@ impl GeneralSettingsRepository {
                     settings.syntax_colors_json,
                     settings.accent_color_dark,
                     settings.accent_color_light,
+                    settings.table_alias_completion,
+                    settings.table_alias_use_as,
                 ],
             )
             .map_err(|source| StorageError::Sqlite {
@@ -265,6 +273,11 @@ pub struct GeneralSettingsDto {
     /// Accent color of the light palette as `#RRGGBB`; `None` keeps the
     /// palette's accent.
     pub accent_color_light: Option<String>,
+    /// Whether accepting a table completion after `FROM` / `JOIN` appends a
+    /// generated alias: 1 on, 0 off.
+    pub table_alias_completion: i32,
+    /// Whether that alias is written with `AS`: 1 on, 0 off.
+    pub table_alias_use_as: i32,
     pub updated_at: String,
 }
 
@@ -332,6 +345,8 @@ mod tests {
             syntax_colors_json: String::new(),
             accent_color_dark: None,
             accent_color_light: None,
+            table_alias_completion: 1,
+            table_alias_use_as: 0,
             updated_at: String::new(),
         };
 
@@ -394,6 +409,8 @@ mod tests {
                 syntax_colors_json: String::new(),
                 accent_color_dark: None,
                 accent_color_light: None,
+                table_alias_completion: 1,
+                table_alias_use_as: 0,
                 updated_at: String::new(),
             };
 
@@ -476,6 +493,8 @@ mod tests {
             syntax_colors_json: String::new(),
             accent_color_dark: None,
             accent_color_light: None,
+            table_alias_completion: 1,
+            table_alias_use_as: 0,
             updated_at: String::new(),
         };
 
@@ -572,6 +591,8 @@ mod tests {
             syntax_colors_json: String::new(),
             accent_color_dark: None,
             accent_color_light: None,
+            table_alias_completion: 1,
+            table_alias_use_as: 0,
             updated_at: String::new(),
         };
 
@@ -628,6 +649,8 @@ mod tests {
             syntax_colors_json: String::new(),
             accent_color_dark: None,
             accent_color_light: None,
+            table_alias_completion: 1,
+            table_alias_use_as: 0,
             updated_at: String::new(),
         };
 
@@ -716,6 +739,8 @@ mod tests {
             syntax_colors_json: String::new(),
             accent_color_dark: None,
             accent_color_light: None,
+            table_alias_completion: 1,
+            table_alias_use_as: 0,
             updated_at: String::new(),
         };
 

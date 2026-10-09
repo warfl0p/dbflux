@@ -188,6 +188,7 @@ impl MigrationRegistry {
         registry.register(mod_043_connection_profile_show_all_databases::MigrationImpl);
         registry.register(mod_044_general_settings_syntax_colors::MigrationImpl);
         registry.register(mod_045_general_settings_accent_colors::MigrationImpl);
+        registry.register(mod_046_general_settings_table_alias::MigrationImpl);
         registry
     }
 
@@ -423,6 +424,7 @@ mod mod_042_connection_profile_navigator_view;
 mod mod_043_connection_profile_show_all_databases;
 mod mod_044_general_settings_syntax_colors;
 mod mod_045_general_settings_accent_colors;
+mod mod_046_general_settings_table_alias;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1246,6 +1248,7 @@ mod tests {
             "043_connection_profile_show_all_databases",
             "044_general_settings_syntax_colors",
             "045_general_settings_accent_colors",
+            "046_general_settings_table_alias",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();
