@@ -1476,5 +1476,6 @@ fn form_section_app_icon(icon: dbflux_core::FormSectionIcon) -> AppIcon {
         FormSectionIcon::Version => AppIcon::Tag,
         FormSectionIcon::Topology => AppIcon::Boxes,
         FormSectionIcon::Schema => AppIcon::Braces,
+        FormSectionIcon::Startup => AppIcon::SquareTerminal,
     }
 }
