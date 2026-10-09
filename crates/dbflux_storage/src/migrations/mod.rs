@@ -186,6 +186,7 @@ impl MigrationRegistry {
         registry.register(mod_041_general_settings_toast_timeout::MigrationImpl);
         registry.register(mod_042_connection_profile_navigator_view::MigrationImpl);
         registry.register(mod_043_connection_profile_show_all_databases::MigrationImpl);
+        registry.register(mod_044_general_settings_syntax_colors::MigrationImpl);
         registry
     }
 
@@ -419,6 +420,7 @@ mod mod_040_general_settings_fonts;
 mod mod_041_general_settings_toast_timeout;
 mod mod_042_connection_profile_navigator_view;
 mod mod_043_connection_profile_show_all_databases;
+mod mod_044_general_settings_syntax_colors;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1076,6 +1078,59 @@ mod tests {
     }
 
     #[test]
+    fn test_044_general_settings_syntax_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("044_general_settings_syntax_colors");
+        if let Err(error) = std::fs::remove_dir_all(&temp_dir)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            panic!("clear stale temp dir: {error}");
+        }
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let db_path = temp_dir.join("test.db");
+
+        let conn = Connection::open(&db_path).unwrap();
+        let registry = MigrationRegistry::new();
+        registry.run_all(&conn).expect("create pre-044 schema");
+        conn.execute_batch(
+            "ALTER TABLE cfg_general_settings DROP COLUMN syntax_colors_json;
+             UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
+             DELETE FROM sys_migrations WHERE name = '044_general_settings_syntax_colors';",
+        )
+        .expect("restore pre-044 general settings schema");
+
+        registry
+            .run_all(&conn)
+            .expect("upgrade general settings schema");
+        let (language, syntax_colors): (String, String) = conn
+            .query_row(
+                "SELECT language, syntax_colors_json FROM cfg_general_settings WHERE id = 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("read upgraded general settings row");
+        assert_eq!(language, "es", "migration 044 must keep existing row data");
+        assert_eq!(
+            syntax_colors, "",
+            "migration 044 must default to no overrides"
+        );
+
+        registry
+            .run_all(&conn)
+            .expect("rerun general settings schema upgrade");
+        let applied: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '044_general_settings_syntax_colors'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("count migration applications");
+        assert_eq!(applied, 1);
+
+        drop(conn);
+        std::fs::remove_dir_all(temp_dir).expect("remove temp dir");
+    }
+
+    #[test]
     fn test_migration_name_order_invariant() {
         let temp_dir = temp_dir("name_order");
         let _ = std::fs::remove_dir_all(&temp_dir);
@@ -1132,6 +1187,7 @@ mod tests {
             "041_general_settings_toast_timeout",
             "042_connection_profile_navigator_view",
             "043_connection_profile_show_all_databases",
+            "044_general_settings_syntax_colors",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();
