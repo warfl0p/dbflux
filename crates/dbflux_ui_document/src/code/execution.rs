@@ -631,7 +631,21 @@ impl CodeDocument {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(conn_id) = self.connection_id else {
+        // A Load all rows run goes back to where its result came from, which
+        // may no longer be the document's connection or database.
+        let load_all = self
+            .execution
+            .load_all_rows
+            .take()
+            .filter(|load_all| load_all.query == query);
+        let result_grid = load_all.as_ref().map(|load_all| load_all.grid);
+        let rerun_origin = load_all.map(|load_all| load_all.origin);
+
+        let Some(conn_id) = rerun_origin
+            .as_ref()
+            .map(|origin| origin.connection_id)
+            .or(self.connection_id)
+        else {
             let msg = dbflux_i18n::t!("document.code.execution.toast.no_active_connection");
             Toast::error(msg.clone())
                 .meta_right(now_hms())
@@ -651,39 +665,66 @@ impl CodeDocument {
                 return;
             };
 
-            let active_database = self
-                .source
-                .exec_ctx
-                .database
-                .clone()
-                .or_else(|| connected.active_database.clone());
+            if let Some(origin) = &rerun_origin {
+                let database = origin.context.database.clone();
+                (
+                    origin.context.root.clone(),
+                    database.clone(),
+                    task_target_for_execution(conn_id, connected, database.as_deref()),
+                )
+            } else {
+                let active_database = self
+                    .source
+                    .exec_ctx
+                    .database
+                    .clone()
+                    .or_else(|| connected.active_database.clone());
 
-            match connected.resolve_connection_for_execution(active_database.as_deref()) {
-                Ok(connection) => (
-                    connection,
-                    active_database.clone(),
-                    task_target_for_execution(conn_id, connected, active_database.as_deref()),
-                ),
-                Err(dbflux_core::ConnectionResolutionError::PendingDatabaseConnection {
-                    database,
-                }) => {
-                    let msg = dbflux_i18n::t!(
-                        "document.code.execution.toast.connecting",
-                        database = database
-                    );
-                    Toast::error(msg.clone())
-                        .meta_right(now_hms())
-                        .action(copy_action(msg))
-                        .push(cx);
-                    return;
+                match connected.resolve_connection_for_execution(active_database.as_deref()) {
+                    Ok(connection) => (
+                        connection,
+                        active_database.clone(),
+                        task_target_for_execution(conn_id, connected, active_database.as_deref()),
+                    ),
+                    Err(dbflux_core::ConnectionResolutionError::PendingDatabaseConnection {
+                        database,
+                    }) => {
+                        let msg = dbflux_i18n::t!(
+                            "document.code.execution.toast.connecting",
+                            database = database
+                        );
+                        Toast::error(msg.clone())
+                            .meta_right(now_hms())
+                            .action(copy_action(msg))
+                            .push(cx);
+                        return;
+                    }
                 }
             }
         };
 
-        self.execution_session_context = Some(ExecutionSessionContext {
+        let session_context = ExecutionSessionContext {
             root: connection.clone(),
             database: active_database.clone(),
-        });
+        };
+        // A rerun on a context the document has left runs on that context's
+        // own connection, so the editor session stays bound where it is.
+        let on_session = rerun_origin.is_none()
+            || self
+                .current_execution_context(cx)
+                .is_some_and(|current| current.same_as(&session_context));
+        let exec_ctx = rerun_origin
+            .map(|origin| origin.exec_ctx)
+            .unwrap_or_else(|| self.source.exec_ctx.clone());
+        let origin = ResultOrigin {
+            connection_id: conn_id,
+            context: session_context.clone(),
+            exec_ctx: exec_ctx.clone(),
+        };
+
+        if on_session {
+            self.execution_session_context = Some(session_context);
+        }
         self.clear_live_output();
         self.result_tabs.run_in_new_tab = in_new_tab;
 
@@ -713,19 +754,13 @@ impl CodeDocument {
         self.execution.active_query_task = Some(ActiveQueryTask {
             task_id,
             target: task_target.clone(),
-            uses_isolated_session: connection.execution_session_factory().is_some(),
+            uses_isolated_session: on_session && connection.execution_session_factory().is_some(),
         });
 
         self.state = DocumentState::Executing;
         cx.emit(DocumentEvent::ExecutionStarted);
         cx.notify();
 
-        let result_grid = self
-            .execution
-            .load_all_rows
-            .take()
-            .filter(|load_all| load_all.query == query)
-            .map(|load_all| load_all.grid);
         let row_limit = if result_grid.is_some() {
             usize::MAX
         } else {
@@ -736,7 +771,7 @@ impl CodeDocument {
         let mut request = query_request_for_execution(
             query.clone(),
             active_database,
-            &self.source.exec_ctx,
+            &exec_ctx,
             self.effective_language().clone(),
             row_limit,
         );
@@ -752,18 +787,17 @@ impl CodeDocument {
         // ceiling `None`, which the driver defaults to the restrictive
         // `Read`. This never branches on a concrete driver id — the
         // downstream driver decides whether the ceiling even applies to it.
-        let confirmed_ceiling = self.connection_id.and_then(|conn_id| {
-            self.app_state
-                .read(cx)
-                .connections()
-                .get(&conn_id)
-                .and_then(|connected| {
-                    connected
-                        .connection
-                        .language_service()
-                        .detect_dangerous(&query)
-                })
-        });
+        let confirmed_ceiling = self
+            .app_state
+            .read(cx)
+            .connections()
+            .get(&conn_id)
+            .and_then(|connected| {
+                connected
+                    .connection
+                    .language_service()
+                    .detect_dangerous(&query)
+            });
         if confirmed_ceiling.is_some() {
             request =
                 request.with_confirmed_ceiling(dbflux_core::ExecutionClassification::Destructive);
@@ -779,10 +813,12 @@ impl CodeDocument {
 
         // Capture honest connection metadata (connection_id string + driver_id) before spawn
         // so we can emit proper fallback events without needing cx in the async block.
-        let fallback_conn_id = self.connection_id.map(|id| id.to_string());
+        let fallback_conn_id = Some(conn_id.to_string());
         let fallback_driver_id = self
-            .connection_id
-            .and_then(|id| self.app_state.read(cx).connections().get(&id))
+            .app_state
+            .read(cx)
+            .connections()
+            .get(&conn_id)
             .map(|c| c.profile.driver_id())
             .unwrap_or_default();
 
@@ -791,7 +827,16 @@ impl CodeDocument {
         let task = cx.background_executor().spawn({
             let connection = connection.clone();
             let session_binding = session_binding.clone();
-            async move { session_binding.execute(connection, session_database, &request) }
+            async move {
+                if on_session {
+                    session_binding.execute(connection, session_database, &request)
+                } else {
+                    super::execution_session::SessionExecution {
+                        result: connection.execute(&request),
+                        isolated: false,
+                    }
+                }
+            }
         });
 
         cx.spawn(async move |this, cx| {
@@ -870,6 +915,7 @@ impl CodeDocument {
             }
 
             if !cancel_token.is_cancelled()
+                && on_session
                 && !session_binding.is_current_generation(session_generation)
             {
                 let _ = this.update(cx, |doc, cx| {
@@ -931,6 +977,7 @@ impl CodeDocument {
                     is_script: false,
                     read_only,
                     result_grid,
+                    origin: Some(origin),
                 });
                 cx.notify();
             });
@@ -1360,6 +1407,7 @@ impl CodeDocument {
                     arc_result,
                     pending.query.clone(),
                     pending.result_grid,
+                    pending.origin,
                     window,
                     cx,
                 );
@@ -1581,6 +1629,7 @@ impl CodeDocument {
         result: Arc<QueryResult>,
         query: String,
         result_grid: Option<gpui::EntityId>,
+        origin: Option<ResultOrigin>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -1602,7 +1651,7 @@ impl CodeDocument {
         // each its own tab so every statement's output is visible, rather than
         // surfacing only the primary set.
         if result.has_additional_results() {
-            self.create_result_tabs_for_batch(result, query, captions, window, cx);
+            self.create_result_tabs_for_batch(result, query, captions, origin, window, cx);
             return;
         }
 
@@ -1628,20 +1677,22 @@ impl CodeDocument {
 
         self.result_tabs.run_in_new_tab = false;
 
-        let limited_row_actions = self.limited_row_actions(&query, cx);
-        let context = self.execution_session_context.clone();
+        let profile_id = origin
+            .as_ref()
+            .map(|origin| origin.connection_id)
+            .or(self.connection_id);
+        let limited_row_actions = self.limited_row_actions(&query, profile_id, cx);
 
         if let Some(tab) =
             target_index.and_then(|index| self.result_tabs.result_tabs.get_mut(index))
         {
-            let profile_id = self.connection_id;
-            tab.context = context;
+            tab.origin = origin;
             tab.grid.update(cx, |g, cx| {
                 g.set_query_result(result, query.clone(), profile_id, cx);
                 g.set_result_caption(caption, cx);
             });
         } else {
-            self.create_result_tab(result, query, caption, window, cx);
+            self.create_result_tab(result, query, caption, origin, window, cx);
         }
 
         if let Some(grid) = self.active_result_grid() {
@@ -1661,6 +1712,7 @@ impl CodeDocument {
         result: Arc<QueryResult>,
         query: String,
         captions: Vec<Option<String>>,
+        origin: Option<ResultOrigin>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -1673,7 +1725,14 @@ impl CodeDocument {
             single.additional_results.clear();
 
             let caption = captions.get(index).cloned().flatten().map(Into::into);
-            self.create_result_tab(Arc::new(single), query.clone(), caption, window, cx);
+            self.create_result_tab(
+                Arc::new(single),
+                query.clone(),
+                caption,
+                origin.clone(),
+                window,
+                cx,
+            );
         }
 
         if first_new_index < self.result_tabs.result_tabs.len() {
@@ -1686,6 +1745,7 @@ impl CodeDocument {
         result: Arc<QueryResult>,
         query: String,
         caption: Option<SharedString>,
+        origin: Option<ResultOrigin>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -1697,15 +1757,12 @@ impl CodeDocument {
         );
 
         let app_state = self.app_state.clone();
+        let profile_id = origin
+            .as_ref()
+            .map(|origin| origin.connection_id)
+            .or(self.connection_id);
         let grid = cx.new(|cx| {
-            DataGridPanel::new_for_result(
-                result,
-                query.clone(),
-                self.connection_id,
-                app_state,
-                window,
-                cx,
-            )
+            DataGridPanel::new_for_result(result, query.clone(), profile_id, app_state, window, cx)
         });
 
         grid.update(cx, |grid, cx| {
@@ -1802,7 +1859,7 @@ impl CodeDocument {
             title,
             grid,
             result_panel,
-            context: self.execution_session_context.clone(),
+            origin,
             _subscription: subscription,
         };
 
@@ -1815,7 +1872,12 @@ impl CodeDocument {
     /// Both actions run the query again, so they are offered only for one
     /// statement that reads. Counting wraps the statement in `COUNT(*)`, which
     /// only SQL can express.
-    fn limited_row_actions(&self, query: &str, cx: &App) -> LimitedRowActions {
+    fn limited_row_actions(
+        &self,
+        query: &str,
+        connection_id: Option<Uuid>,
+        cx: &App,
+    ) -> LimitedRowActions {
         if self.read_only {
             return LimitedRowActions::default();
         }
@@ -1825,9 +1887,8 @@ impl CodeDocument {
             return LimitedRowActions::default();
         }
 
-        let Some(connected) = self
-            .connection_id
-            .and_then(|id| self.app_state.read(cx).connections().get(&id))
+        let Some(connected) =
+            connection_id.and_then(|id| self.app_state.read(cx).connections().get(&id))
         else {
             return LimitedRowActions::default();
         };
@@ -1846,19 +1907,19 @@ impl CodeDocument {
         }
     }
 
-    /// The query behind a result tab and the context it ran in.
+    /// The query behind a result tab and where it ran.
     fn result_tab_query(
         &self,
         grid: &Entity<DataGridPanel>,
         cx: &App,
-    ) -> Option<(String, ExecutionSessionContext)> {
+    ) -> Option<(String, ResultOrigin)> {
         let tab = self
             .result_tabs
             .result_tabs
             .iter()
             .find(|tab| tab.grid.entity_id() == grid.entity_id())?;
         let query = tab.grid.read(cx).result_query()?.to_string();
-        Some((query, tab.context.clone()?))
+        Some((query, tab.origin.clone()?))
     }
 
     /// Runs `request` where a result tab's query ran: on the editor session
@@ -1890,7 +1951,7 @@ impl CodeDocument {
     /// Counts the rows of the query behind a result tab, without fetching
     /// them, where the query ran.
     fn count_result_rows(&mut self, grid: Entity<DataGridPanel>, cx: &mut Context<Self>) {
-        let Some((query, context)) = self.result_tab_query(&grid, cx) else {
+        let Some((query, origin)) = self.result_tab_query(&grid, cx) else {
             grid.update(cx, |grid, cx| {
                 grid.set_limited_row_total(LimitedRowTotal::Unknown, cx);
             });
@@ -1899,9 +1960,9 @@ impl CodeDocument {
 
         let generation = grid.read(cx).result_generation();
         let request = QueryRequest::new(dbflux_core::count_query_from_sql(&query))
-            .with_database(context.database.clone())
+            .with_database(origin.context.database.clone())
             .with_limit(1);
-        let task = self.execute_in_result_context(context, request, cx);
+        let task = self.execute_in_result_context(origin.context, request, cx);
 
         cx.spawn(async move |_this, cx| {
             let total = match task.await {
@@ -1947,7 +2008,7 @@ impl CodeDocument {
     /// Drivers have no shared offset; move to cursor or `OFFSET` paging if
     /// deep scrolling gets slow.
     fn fetch_next_rows(&mut self, grid: Entity<DataGridPanel>, cx: &mut Context<Self>) {
-        let Some((query, context)) = self.result_tab_query(&grid, cx) else {
+        let Some((query, origin)) = self.result_tab_query(&grid, cx) else {
             grid.update(cx, |grid, cx| grid.next_rows_failed(cx));
             return;
         };
@@ -1957,12 +2018,12 @@ impl CodeDocument {
         let limit = grid.read(cx).loaded_row_count().saturating_add(page);
         let request = query_request_for_execution(
             query,
-            context.database.clone(),
-            &self.source.exec_ctx,
+            origin.context.database.clone(),
+            &origin.exec_ctx,
             self.effective_language().clone(),
             limit,
         );
-        let task = self.execute_in_result_context(context, request, cx);
+        let task = self.execute_in_result_context(origin.context, request, cx);
 
         cx.spawn(async move |_this, cx| {
             let result = task.await;
@@ -1993,11 +2054,12 @@ impl CodeDocument {
     }
 
     /// Runs the query behind a result tab again without the editor row limit,
-    /// replacing that tab's rows.
+    /// on the connection and database it came from, replacing that tab's rows.
     ///
-    /// ponytail: refused once the document moved to another connection or
-    /// database, because the run goes through the document's own context;
-    /// carry the tab's context into the execution if that gets in the way.
+    /// The statement was validated and classified as a read when it first ran,
+    /// so the rerun skips the dangerous-query and drift checks of a run the
+    /// user starts, and goes straight to execution, which records the task,
+    /// history and audit as usual.
     pub(super) fn process_pending_load_all_rows(
         &mut self,
         window: &mut Window,
@@ -2016,30 +2078,17 @@ impl CodeDocument {
         else {
             return;
         };
-        let Some((query, context)) = self.result_tab_query(&grid, cx) else {
+        let Some((query, origin)) = self.result_tab_query(&grid, cx) else {
             return;
         };
-
-        if !self
-            .current_execution_context(cx)
-            .is_some_and(|current| current.same_as(&context))
-        {
-            dbflux_ui_base::user_error::report_error(
-                dbflux_ui_base::user_error::UserFacingError::new(
-                    dbflux_ui_base::user_error::ErrorKind::User,
-                    dbflux_i18n::t!("document.code.execution.load_all_rows_context_changed"),
-                ),
-                cx,
-            );
-            return;
-        }
 
         self.execution.query_origin = None;
         self.execution.load_all_rows = Some(LoadAllRows {
             query: query.clone(),
             grid: grid_id,
+            origin,
         });
-        self.run_query_text(query, false, window, cx);
+        self.execute_query_internal(query, false, ReadOnlyEnforcement::None, window, cx);
     }
 
     pub fn cancel_query(&mut self, cx: &mut Context<Self>) {
@@ -2551,6 +2600,7 @@ impl CodeDocument {
                     is_script: true,
                     read_only: ReadOnlyEnforcement::None,
                     result_grid: None,
+                    origin: None,
                 });
                 cx.notify();
             });
@@ -3325,6 +3375,7 @@ mod rail_tests {
                     two_row_result(),
                     "SELECT 1".to_string(),
                     None,
+                    None,
                     window,
                     cx,
                 );
@@ -3801,6 +3852,7 @@ mod result_tab_keyboard_tests {
                         one_row_result(),
                         "SELECT 1".to_string(),
                         None,
+                        None,
                         window,
                         cx,
                     );
@@ -4051,6 +4103,7 @@ mod result_tab_keyboard_tests {
                         document.setup_data_grid(
                             one_row_result(),
                             "SELECT 1".to_string(),
+                            None,
                             None,
                             window,
                             cx,

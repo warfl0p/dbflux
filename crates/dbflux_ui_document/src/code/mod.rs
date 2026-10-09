@@ -94,9 +94,9 @@ pub(super) struct ResultTab {
     title: String,
     grid: Entity<DataGridPanel>,
     result_panel: Entity<ResultPanel>,
-    /// The connection and database the tab's result came from, so its
-    /// footer actions run the query there even after the document moved on.
-    context: Option<ExecutionSessionContext>,
+    /// Where the tab's result came from, so its footer actions run the
+    /// query there even after the document moved on.
+    origin: Option<ResultOrigin>,
     _subscription: Subscription,
 }
 
@@ -393,6 +393,15 @@ pub(super) struct Execution {
 pub(super) struct LoadAllRows {
     pub(super) query: String,
     pub(super) grid: gpui::EntityId,
+    pub(super) origin: ResultOrigin,
+}
+
+/// The connection, database and execution context a query result came from.
+#[derive(Clone)]
+pub(super) struct ResultOrigin {
+    connection_id: Uuid,
+    context: ExecutionSessionContext,
+    exec_ctx: ExecutionContext,
 }
 
 /// The result-tab collection and its selection cursor.
@@ -525,6 +534,8 @@ struct PendingQueryResult {
     read_only: ReadOnlyEnforcement,
     /// The result tab a Load all rows run replaces, whichever tab is active.
     result_grid: Option<gpui::EntityId>,
+    /// Where the query ran; `None` for a script.
+    origin: Option<ResultOrigin>,
 }
 
 pub(super) struct ActiveQueryTask {

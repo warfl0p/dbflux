@@ -1126,6 +1126,100 @@ mod tests {
         );
     }
 
+    /// Load all rows reruns a result's query on the database it came from and
+    /// replaces that result's tab, even after the document moved to another
+    /// database and another tab became active.
+    #[gpui::test]
+    fn load_all_rows_reruns_on_the_results_own_database(cx: &mut gpui::TestAppContext) {
+        let app_state = initialized_app_state(cx);
+        let root = FakeConnection::isolated();
+        let profile_id = add_test_profile(cx, &app_state, root.clone());
+        let document = Rc::new(RefCell::new(None));
+        let document_ref = document.clone();
+
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let document = cx.new(|cx| {
+                let mut document = CodeDocument::new_with_language(
+                    app_state.clone(),
+                    Some(profile_id),
+                    dbflux_core::QueryLanguage::Sql,
+                    window,
+                    cx,
+                );
+                document.set_content("SELECT 1", window, cx);
+                document
+            });
+            document_ref.replace(Some(document.clone()));
+            Root::new(document, window, cx)
+        });
+        let document = document.borrow().clone().expect("document created");
+        window.run_until_parked();
+
+        window.update(|window, cx| {
+            document.update(cx, |document, cx| {
+                document
+                    .on_database_changed(&DropdownItem::with_value("databaseA", "databaseA"), cx);
+                document.run_query(window, cx);
+            });
+        });
+        window.run_until_parked();
+        window.run_until_parked();
+
+        window.update(|window, cx| {
+            document.update(cx, |document, cx| {
+                document
+                    .on_database_changed(&DropdownItem::with_value("databaseB", "databaseB"), cx);
+                document.run_query_in_new_tab(window, cx);
+            });
+        });
+        window.run_until_parked();
+        window.run_until_parked();
+
+        let first_grid = window.update(|_, cx| {
+            let document = document.read(cx);
+            assert_eq!(document.result_tabs.result_tabs.len(), 2);
+            assert_eq!(document.result_tabs.active_result_index, Some(1));
+            document.result_tabs.result_tabs[0].grid.clone()
+        });
+        let first_generation = window.update(|_, cx| first_grid.read(cx).result_generation());
+
+        window.update(|_, cx| {
+            document.update(cx, |document, cx| {
+                document.pending.load_all_rows = Some(first_grid.entity_id());
+                cx.notify();
+            });
+        });
+        window.run_until_parked();
+        window.run_until_parked();
+
+        assert_eq!(
+            root.databases
+                .lock()
+                .expect("test database collection")
+                .as_slice(),
+            &[
+                Some("databaseA".to_string()),
+                Some("databaseB".to_string()),
+                Some("databaseA".to_string())
+            ]
+        );
+        assert_eq!(
+            root.request_limits
+                .lock()
+                .expect("test request limit collection")
+                .last()
+                .map(|(limit, _)| *limit),
+            Some(Some(u32::MAX)),
+            "load all rows drops the editor row limit"
+        );
+        window.update(|_, cx| {
+            let document = document.read(cx);
+            assert_eq!(document.result_tabs.result_tabs.len(), 2);
+            assert_eq!(document.result_tabs.active_result_index, Some(0));
+            assert_ne!(first_grid.read(cx).result_generation(), first_generation);
+        });
+    }
+
     #[gpui::test]
     fn script_run_sends_no_database_request(cx: &mut gpui::TestAppContext) {
         let app_state = initialized_app_state(cx);
