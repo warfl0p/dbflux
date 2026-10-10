@@ -1186,6 +1186,13 @@ document:
         connection_not_found: "연결을 찾을 수 없거나 활성 상태가 아닙니다"
         catalog_unsupported: "이 연결은 메트릭 카탈로그를 지원하지 않습니다"
   code:
+    completion_kind:
+      table: "테이블"
+      view: "뷰"
+      schema: "스키마"
+      column: "열"
+      alias: "별칭"
+      keyword: "키워드"
     gutter:
       run_statement: 이 문 실행
     history:

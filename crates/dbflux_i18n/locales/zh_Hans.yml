@@ -1186,6 +1186,13 @@ document:
         connection_not_found: 连接不存在或未激活
         catalog_unsupported: 连接不支持指标目录
   code:
+    completion_kind:
+      table: "表"
+      view: "视图"
+      schema: "模式"
+      column: "列"
+      alias: "别名"
+      keyword: "关键字"
     gutter:
       run_statement: 运行此语句
     history:

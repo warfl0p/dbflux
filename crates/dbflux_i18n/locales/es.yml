@@ -1186,6 +1186,13 @@ document:
         connection_not_found: Conexión no encontrada o inactiva
         catalog_unsupported: La conexión no admite el catálogo de métricas
   code:
+    completion_kind:
+      table: "tabla"
+      view: "vista"
+      schema: "esquema"
+      column: "columna"
+      alias: "alias"
+      keyword: "palabra clave"
     gutter:
       run_statement: Ejecutar esta sentencia
     history:

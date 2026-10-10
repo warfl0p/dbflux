@@ -737,11 +737,14 @@ impl CodeDocument {
         };
 
         let input_state = cx.new(|cx| {
-            GpuiEditorState::new(window, cx)
+            let mut state = GpuiEditorState::new(window, cx)
                 .language(editor_mode)
                 .line_number(true)
                 .soft_wrap(false)
-                .placeholder(placeholder)
+                .placeholder(placeholder);
+            state.lsp_mut().completion_menu.max_width =
+                crate::completion_support::completion_menu_max_width(cx);
+            state
         });
 
         let completion_query_generation = Rc::new(std::cell::Cell::new(0u64));

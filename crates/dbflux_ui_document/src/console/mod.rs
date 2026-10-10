@@ -171,6 +171,8 @@ impl NativeConsole {
         let input = cx.new(|cx| {
             let mut state = new_single_line_completion_state(window, cx, placeholder);
             state.lsp_mut().completion_provider = completion_provider;
+            state.lsp_mut().completion_menu.max_width =
+                crate::completion_support::completion_menu_max_width(cx);
             state
         });
 

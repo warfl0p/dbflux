@@ -1062,6 +1062,44 @@ fn sql_completion_items_with_context(
     cursor: usize,
     analysis: Option<&SqlCursorAnalysis>,
 ) -> Vec<CompletionItem> {
+    let mut items = unlabeled_sql_completion_items(metadata, source, cursor, analysis);
+    for item in &mut items {
+        if let Some(kind) = sql_kind_label(item, metadata) {
+            item.label_details = Some(lsp_types::CompletionItemLabelDetails {
+                detail: None,
+                description: Some(kind),
+            });
+        }
+    }
+    items
+}
+
+/// What a SQL suggestion is, shown beside it in the menu. Tables and views
+/// share `STRUCT`, so a name known only as a view is told apart here.
+fn sql_kind_label(item: &CompletionItem, metadata: &SqlCompletionMetadata) -> Option<String> {
+    let key = match item.kind? {
+        CompletionItemKind::STRUCT
+            if metadata.view_names.contains(&item.label)
+                && !metadata.table_names.contains(&item.label) =>
+        {
+            "document.code.completion_kind.view"
+        }
+        CompletionItemKind::STRUCT => "document.code.completion_kind.table",
+        CompletionItemKind::MODULE => "document.code.completion_kind.schema",
+        CompletionItemKind::FIELD => "document.code.completion_kind.column",
+        CompletionItemKind::VARIABLE => "document.code.completion_kind.alias",
+        CompletionItemKind::KEYWORD => "document.code.completion_kind.keyword",
+        _ => return None,
+    };
+    Some(dbflux_i18n::t!(key))
+}
+
+fn unlabeled_sql_completion_items(
+    metadata: &SqlCompletionMetadata,
+    source: &str,
+    cursor: usize,
+    analysis: Option<&SqlCursorAnalysis>,
+) -> Vec<CompletionItem> {
     let (prefix_start, prefix) = extract_identifier_prefix(source, cursor);
     let before_cursor = &source[..cursor];
 
@@ -2484,6 +2522,35 @@ mod tests {
         assert!(labels.contains(&"events".to_string()));
         assert!(labels.contains(&"event_counts".to_string()));
         assert!(!labels.contains(&"users".to_string()));
+    }
+
+    fn kind_label_of<'a>(items: &'a [CompletionItem], label: &str) -> Option<&'a str> {
+        items
+            .iter()
+            .find(|item| item.label == label)?
+            .label_details
+            .as_ref()?
+            .description
+            .as_deref()
+    }
+
+    #[test]
+    fn suggestions_say_whether_they_are_a_table_a_view_or_a_schema() {
+        let mut metadata = schema_first_metadata(Some("public"));
+        metadata.add_view(&dbflux_core::ViewInfo {
+            name: "rate_history".to_string(),
+            schema: Some("public".to_string()),
+        });
+
+        let source = "SELECT * FROM r";
+        let items = sql_completion_items(&metadata, source, source.len());
+        assert_eq!(kind_label_of(&items, "rates"), Some("table"));
+        assert_eq!(kind_label_of(&items, "rate_history"), Some("view"));
+        assert_eq!(kind_label_of(&items, "raw"), Some("schema"));
+
+        let source = "SEL";
+        let items = sql_completion_items(&metadata, source, source.len());
+        assert_eq!(kind_label_of(&items, "SELECT"), Some("keyword"));
     }
 
     fn schema_first_metadata(selected_schema: Option<&str>) -> SqlCompletionMetadata {
