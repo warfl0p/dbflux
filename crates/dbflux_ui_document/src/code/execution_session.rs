@@ -988,6 +988,101 @@ mod tests {
         assert_eq!(running[0].query_text.as_deref(), Some(full_query));
     }
 
+    /// Runs `query` to completion against a connection whose cache holds
+    /// `databaseA.public.users`, and reports whether that entry survived.
+    fn table_details_survive_run(query: &str, cx: &mut gpui::TestAppContext) -> bool {
+        let app_state = initialized_app_state(cx);
+        let profile_id = add_test_profile(cx, &app_state, FakeConnection::isolated());
+        cx.update(|cx| {
+            app_state.update(cx, |app, _| {
+                app.set_table_details(
+                    profile_id,
+                    "databaseA".to_string(),
+                    Some("public".to_string()),
+                    "users".to_string(),
+                    dbflux_core::TableInfo {
+                        name: "users".to_string(),
+                        schema: Some("public".to_string()),
+                        columns: Some(Vec::new()),
+                        indexes: None,
+                        foreign_keys: None,
+                        constraints: None,
+                        sample_fields: None,
+                        presentation: Default::default(),
+                        child_items: None,
+                        storage_hints: None,
+                        pseudo_columns: Box::default(),
+                    },
+                );
+            });
+        });
+
+        let document = Rc::new(RefCell::new(None));
+        let document_ref = document.clone();
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let document = cx.new(|cx| {
+                let mut document = CodeDocument::new_with_language(
+                    app_state.clone(),
+                    Some(profile_id),
+                    dbflux_core::QueryLanguage::Sql,
+                    window,
+                    cx,
+                );
+                document.set_content(query, window, cx);
+                document
+            });
+            document_ref.replace(Some(document.clone()));
+            Root::new(document, window, cx)
+        });
+        let document = document.borrow().clone().expect("document created");
+        window.run_until_parked();
+
+        window.update(|window, cx| {
+            document.update(cx, |document, cx| document.run_query(window, cx));
+        });
+        window.run_until_parked();
+
+        window.update(|_, cx| {
+            let document = document.read(cx);
+            assert!(
+                document.execution.active_query_task.is_none(),
+                "the query must have finished"
+            );
+            assert!(
+                document
+                    .execution
+                    .execution_history
+                    .last()
+                    .is_some_and(|record| record.result.is_some()),
+                "the query must have produced a result"
+            );
+            app_state
+                .read(cx)
+                .connections()
+                .get(&profile_id)
+                .expect("profile connected")
+                .table_details
+                .contains_key(&(
+                    "databaseA".to_string(),
+                    Some("public".to_string()),
+                    "users".to_string(),
+                ))
+        })
+    }
+
+    #[gpui::test]
+    fn ddl_run_invalidates_cached_table_details(cx: &mut gpui::TestAppContext) {
+        assert!(!table_details_survive_run(
+            "CREATE INDEX users_name ON users (name)",
+            cx
+        ));
+    }
+
+    #[gpui::test]
+    fn read_run_keeps_cached_table_details(cx: &mut gpui::TestAppContext) {
+        assert!(table_details_survive_run("SELECT * FROM users", cx));
+    }
+
     #[gpui::test]
     fn real_run_query_rotates_session_after_database_context_change(cx: &mut gpui::TestAppContext) {
         let app_state = initialized_app_state(cx);

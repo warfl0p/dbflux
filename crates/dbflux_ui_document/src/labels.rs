@@ -4259,7 +4259,6 @@ mod tests {
         let keys = [
             "document.code.toolbar.refresh",
             "document.code.toolbar.cancel",
-            "document.code.toolbar.checking",
             "document.code.toolbar.run",
             "document.code.toolbar.last_run",
             "document.code.toolbar.new_tab",
