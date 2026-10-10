@@ -106,7 +106,7 @@ pub trait SettingsSection: 'static {
 }
 
 #[derive(Clone, Debug)]
-pub enum SectionFocusEvent {
+pub(crate) enum SectionFocusEvent {
     RequestFocusReturn,
 }
 
@@ -114,7 +114,7 @@ pub enum SectionFocusEvent {
 /// asks the settings coordinator to perform. The coordinator owns the export
 /// modal and import wizard overlays; the section only signals intent.
 #[derive(Clone, Debug)]
-pub enum SectionPortabilityEvent {
+pub(crate) enum SectionPortabilityEvent {
     /// Export the section's currently selected profile as a portable bundle.
     OpenExport(crate::connection_manager::ExportTarget),
     /// Open the import wizard to bring in a profile from a bundle file.
