@@ -1203,7 +1203,6 @@ document:
         many: "%{count} instruções"
       refresh: Atualizar
       cancel: Cancelar
-      checking: "Verificando…"
       run: Executar
       last_run: "última execução %{seconds} s"
       new_tab: Nova aba

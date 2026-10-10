@@ -1203,7 +1203,6 @@ document:
         many: "%{count} statements"
       refresh: Refresh
       cancel: Cancel
-      checking: "Checking…"
       run: Run
       last_run: "last run %{seconds} s"
       new_tab: New tab

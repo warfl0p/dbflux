@@ -1203,7 +1203,6 @@ document:
         many: "%{count} sentencias"
       refresh: Actualizar
       cancel: Cancelar
-      checking: "Verificando…"
       run: Ejecutar
       last_run: "última ejecución %{seconds} s"
       new_tab: Nueva pestaña
