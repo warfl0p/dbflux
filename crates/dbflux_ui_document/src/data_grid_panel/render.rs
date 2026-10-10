@@ -3650,6 +3650,7 @@ impl DataGridPanel {
                     Button::new("footer-count-rows", crate::labels::count_rows_label())
                         .ghost()
                         .icon(AppIcon::Hash)
+                        .icon_only()
                         .tab_stop(false)
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.request_count_rows(cx);
@@ -3660,7 +3661,8 @@ impl DataGridPanel {
                 d.child(
                     Button::new("footer-load-all-rows", crate::labels::load_all_rows_label())
                         .ghost()
-                        .icon(AppIcon::Download)
+                        .icon(AppIcon::FileScan)
+                        .icon_only()
                         .tab_stop(false)
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.request_load_all_rows(cx);
