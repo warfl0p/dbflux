@@ -1444,6 +1444,10 @@ impl MysqlDriver {
     ) -> Result<Box<dyn Connection>, DbError> {
         let total_start = Instant::now();
 
+        // Resolve before logging, so a tunnel that references a host from the user's SSH
+        // config reports the target it actually dials.
+        let tunnel_config = dbflux_ssh::resolve_for_dial(tunnel_config)?;
+
         log::info!(
             "[SSH] Starting dual tunnels to {}:{} via {}@{}:{}",
             db_host,
@@ -1455,7 +1459,7 @@ impl MysqlDriver {
 
         // === Tunnel 1: Catalog connection ===
         log::info!("[SSH] Creating catalog tunnel (session 1/2)");
-        let session1 = dbflux_ssh::establish_session(tunnel_config, ssh_secret)?;
+        let session1 = dbflux_ssh::establish_session(&tunnel_config, ssh_secret)?;
         let tunnel1 = SshTunnel::start(session1, db_host.to_string(), db_port)?;
         let local_port1 = tunnel1.local_port();
         log::info!("[SSH] Catalog tunnel on local port {}", local_port1);
@@ -1512,7 +1516,7 @@ impl MysqlDriver {
 
         // === Tunnel 2: Query connection ===
         log::info!("[SSH] Creating query tunnel (session 2/2)");
-        let session2 = dbflux_ssh::establish_session(tunnel_config, ssh_secret)?;
+        let session2 = dbflux_ssh::establish_session(&tunnel_config, ssh_secret)?;
         let tunnel2 = SshTunnel::start(session2, db_host.to_string(), db_port)?;
         let local_port2 = tunnel2.local_port();
         log::info!("[SSH] Query tunnel on local port {}", local_port2);
@@ -1866,7 +1870,8 @@ fn plan_mysql_table_browse(
 ) -> Result<SemanticPlan, DbError> {
     let sql = if let Some(filter) = request.semantic_filter.as_ref() {
         let mut sql = format!(
-            "SELECT * FROM {}",
+            "SELECT {} FROM {}",
+            request.select_list_with(&MYSQL_DIALECT),
             request.table.quoted_with(&MYSQL_DIALECT)
         );
         let where_clause = render_semantic_filter_sql(filter, &MYSQL_DIALECT)?;

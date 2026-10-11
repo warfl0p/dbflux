@@ -1,8 +1,9 @@
-//! Migration 045: Add `accent_color_dark` and `accent_color_light` to
+//! Migration 047: Add `table_alias_completion` and `table_alias_use_as` to
 //! `cfg_general_settings`.
 //!
-//! Persists the accent color the user picked in place of the palette's, as
-//! `#RRGGBB` text per palette variant. `NULL` keeps the palette's accent.
+//! Persists whether accepting a table completion after `FROM` / `JOIN` appends
+//! a generated alias (on by default), and whether that alias is written with
+//! `AS` (off by default).
 
 use rusqlite::Transaction;
 
@@ -12,7 +13,7 @@ pub(crate) struct MigrationImpl;
 
 impl Migration for MigrationImpl {
     fn name(&self) -> &str {
-        "045_general_settings_accent_colors"
+        "047_general_settings_table_alias"
     }
 
     fn run(&self, tx: &Transaction) -> Result<(), MigrationError> {
@@ -28,7 +29,7 @@ impl Migration for MigrationImpl {
             return Ok(());
         }
 
-        for column in ["accent_color_dark", "accent_color_light"] {
+        for (column, default) in [("table_alias_completion", 1), ("table_alias_use_as", 0)] {
             let column_exists: bool = tx
                 .query_row(
                     "SELECT COUNT(*) FROM pragma_table_info('cfg_general_settings') WHERE name = ?1",
@@ -39,7 +40,7 @@ impl Migration for MigrationImpl {
 
             if !column_exists {
                 tx.execute_batch(&format!(
-                    "ALTER TABLE cfg_general_settings ADD COLUMN {column} TEXT;"
+                    "ALTER TABLE cfg_general_settings ADD COLUMN {column} INTEGER NOT NULL DEFAULT {default};"
                 ))?;
             }
         }

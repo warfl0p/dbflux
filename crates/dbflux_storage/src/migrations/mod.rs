@@ -186,9 +186,10 @@ impl MigrationRegistry {
         registry.register(mod_041_general_settings_toast_timeout::MigrationImpl);
         registry.register(mod_042_connection_profile_navigator_view::MigrationImpl);
         registry.register(mod_043_connection_profile_show_all_databases::MigrationImpl);
-        registry.register(mod_044_general_settings_syntax_colors::MigrationImpl);
-        registry.register(mod_045_general_settings_accent_colors::MigrationImpl);
-        registry.register(mod_046_general_settings_table_alias::MigrationImpl);
+        registry.register(mod_044_ssh_tunnel_config_host::MigrationImpl);
+        registry.register(mod_045_general_settings_syntax_colors::MigrationImpl);
+        registry.register(mod_046_general_settings_accent_colors::MigrationImpl);
+        registry.register(mod_047_general_settings_table_alias::MigrationImpl);
         registry
     }
 
@@ -422,9 +423,10 @@ mod mod_040_general_settings_fonts;
 mod mod_041_general_settings_toast_timeout;
 mod mod_042_connection_profile_navigator_view;
 mod mod_043_connection_profile_show_all_databases;
-mod mod_044_general_settings_syntax_colors;
-mod mod_045_general_settings_accent_colors;
-mod mod_046_general_settings_table_alias;
+mod mod_044_ssh_tunnel_config_host;
+mod mod_045_general_settings_syntax_colors;
+mod mod_046_general_settings_accent_colors;
+mod mod_047_general_settings_table_alias;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1082,8 +1084,8 @@ mod tests {
     }
 
     #[test]
-    fn test_044_general_settings_syntax_colors_upgrades_and_is_idempotent() {
-        let temp_dir = temp_dir("044_general_settings_syntax_colors");
+    fn test_045_general_settings_syntax_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("045_general_settings_syntax_colors");
         if let Err(error) = std::fs::remove_dir_all(&temp_dir)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -1098,7 +1100,7 @@ mod tests {
         conn.execute_batch(
             "ALTER TABLE cfg_general_settings DROP COLUMN syntax_colors_json;
              UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
-             DELETE FROM sys_migrations WHERE name = '044_general_settings_syntax_colors';",
+             DELETE FROM sys_migrations WHERE name = '045_general_settings_syntax_colors';",
         )
         .expect("restore pre-044 general settings schema");
 
@@ -1123,7 +1125,7 @@ mod tests {
             .expect("rerun general settings schema upgrade");
         let applied: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sys_migrations WHERE name = '044_general_settings_syntax_colors'",
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '045_general_settings_syntax_colors'",
                 [],
                 |row| row.get(0),
             )
@@ -1135,8 +1137,8 @@ mod tests {
     }
 
     #[test]
-    fn test_045_general_settings_accent_colors_upgrades_and_is_idempotent() {
-        let temp_dir = temp_dir("045_general_settings_accent_colors");
+    fn test_046_general_settings_accent_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("046_general_settings_accent_colors");
         if let Err(error) = std::fs::remove_dir_all(&temp_dir)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -1152,7 +1154,7 @@ mod tests {
             "ALTER TABLE cfg_general_settings DROP COLUMN accent_color_dark;
              ALTER TABLE cfg_general_settings DROP COLUMN accent_color_light;
              UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
-             DELETE FROM sys_migrations WHERE name = '045_general_settings_accent_colors';",
+             DELETE FROM sys_migrations WHERE name = '046_general_settings_accent_colors';",
         )
         .expect("restore pre-045 general settings schema");
 
@@ -1178,7 +1180,7 @@ mod tests {
             .expect("rerun general settings schema upgrade");
         let applied: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sys_migrations WHERE name = '045_general_settings_accent_colors'",
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '046_general_settings_accent_colors'",
                 [],
                 |row| row.get(0),
             )
@@ -1246,9 +1248,10 @@ mod tests {
             "041_general_settings_toast_timeout",
             "042_connection_profile_navigator_view",
             "043_connection_profile_show_all_databases",
-            "044_general_settings_syntax_colors",
-            "045_general_settings_accent_colors",
-            "046_general_settings_table_alias",
+            "044_ssh_tunnel_config_host",
+            "045_general_settings_syntax_colors",
+            "046_general_settings_accent_colors",
+            "047_general_settings_table_alias",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();

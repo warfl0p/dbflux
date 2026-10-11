@@ -1269,6 +1269,10 @@ impl PostgresDriver {
     ) -> Result<Box<dyn Connection>, DbError> {
         let total_start = Instant::now();
 
+        // Resolve before logging, so a tunnel that references a host from the user's SSH
+        // config reports the target it actually dials.
+        let tunnel_config = dbflux_ssh::resolve_for_dial(tunnel_config)?;
+
         log::info!(
             "[CONNECT] Starting SSH tunnel connection: {}@{}:{} -> {}:{}",
             tunnel_config.user,
@@ -1279,7 +1283,7 @@ impl PostgresDriver {
         );
 
         let phase_start = Instant::now();
-        let ssh_session = dbflux_ssh::establish_session(tunnel_config, ssh_secret)?;
+        let ssh_session = dbflux_ssh::establish_session(&tunnel_config, ssh_secret)?;
         log::info!(
             "[CONNECT] SSH session phase completed in {:.2}ms",
             phase_start.elapsed().as_secs_f64() * 1000.0
@@ -1446,7 +1450,8 @@ fn plan_postgres_table_browse(
 ) -> Result<SemanticPlan, DbError> {
     let sql = if let Some(filter) = request.semantic_filter.as_ref() {
         let mut sql = format!(
-            "SELECT * FROM {}",
+            "SELECT {} FROM {}",
+            request.select_list_with(&POSTGRES_DIALECT),
             request.table.quoted_with(&POSTGRES_DIALECT)
         );
         let where_clause = render_semantic_filter_sql(filter, &POSTGRES_DIALECT)?;
@@ -1672,6 +1677,23 @@ impl Connection for PostgresConnection {
             .ok()
             .map(|mut c| crate::instance_catalog::probe_postgres_write_privilege(&mut c))
             .unwrap_or(dbflux_core::WritePrivilege::Unknown)
+    }
+
+    fn table_view_features(&self) -> dbflux_core::TableViewFeatures {
+        dbflux_core::TableViewFeatures::COLUMN_PROFILE
+            | dbflux_core::TableViewFeatures::COLUMN_PROJECTION
+    }
+
+    fn table_profile(
+        &self,
+        table: &dbflux_core::TableRef,
+    ) -> Result<dbflux_core::TableProfile, DbError> {
+        let mut client = self
+            .client
+            .lock()
+            .map_err(|e| DbError::QueryFailed(format!("Lock error: {}", e).into()))?;
+
+        crate::table_views::table_profile(&mut client, table)
     }
 
     fn instance_catalog(&self) -> Option<Box<dyn InstanceCatalog>> {
@@ -4952,7 +4974,7 @@ fn format_pg_error(e: &postgres::Error, host: &str, port: u16) -> DbError {
     formatted.into_connection_error()
 }
 
-fn format_pg_query_error(e: &postgres::Error) -> DbError {
+pub(crate) fn format_pg_query_error(e: &postgres::Error) -> DbError {
     let formatted = PostgresErrorFormatter::format_postgres_error(e);
     let message = formatted.to_display_string();
     log::error!("PostgreSQL query failed: {}", message);

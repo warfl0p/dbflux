@@ -192,14 +192,32 @@ status bar.
 | Normal | `d` / `y` + `h` / `l` / `j` / `k` | Delete / yank a characterwise horizontal or linewise vertical motion (`y` copies to the system clipboard) |
 | Normal | `d` / `y` + `w` / `W` / `e` / `E` / `b` / `B` | Delete / yank a characterwise word-motion range (`y` copies to the system clipboard) |
 | Normal | `d` / `y` + `gg` / `G` | Delete / yank whole logical lines through an absolute target (`y` copies to the system clipboard) |
+| Normal / Visual | `$` / `^` / `0` | Move to the last character / first non-blank character / start of the line; `N$` moves to the end of the line N-1 lines below |
+| Normal / Visual | `f{char}` / `t{char}` / `F{char}` / `T{char}` | Move onto / just before the next `{char}` on the line, or onto / just after the previous one; a count finds the Nth |
+| Normal / Visual | `;` / `,` | Repeat the last `f` / `t` / `F` / `T` in the same / opposite direction |
+| Normal / Visual | `%` | Jump to the bracket matching the `()`, `[]` or `{}` bracket under the cursor or after it on the line |
+| Normal / Visual | `}` / `{` | Move to the next / previous empty line |
+| Normal | `d` / `c` / `y` + `$` / `^` / `0` / `f` / `t` / `F` / `T` / `;` / `,` / `%` / `}` / `{` | Act on the range of the motion; `f`, `t`, `$` and `%` include the destination character |
+| Normal | `d` / `c` / `y` + `i` / `a` + object | Act on a text object (see **Text objects** below), for example `ciw`, `di"`, `ca(` |
+| Normal | `D` / `C` | Delete / change to the end of the line, as `d$` / `c$` |
+| Normal | `s` / `S` | Change the character under the cursor (or the next N) / the whole line |
+| Normal | `J` | Join the line with the next one (or the next N-1) with one space |
+| Normal | `~` | Switch the case of the character under the cursor (or the next N) and move right |
+| Normal | `*` / `#` | Search the whole word under the cursor forward / backward |
+| Normal | `?` | Open the find panel searching backward |
 | Normal | `p` / `P` / `Np` | Put the system clipboard after / before the cursor; a count puts it that many times |
 | Normal | `Ctrl+Shift+V` | Put the system clipboard before the cursor, as `P` |
 | Normal | `u` | Undo |
+| Normal | `Ctrl+r` | Redo; a count redoes that many steps |
+| Normal | `.` | Repeat the last change, including the text typed after it; a count replaces the change's count |
+| Normal / Visual | `Ctrl+d` / `Ctrl+u` | Move half the visible lines down / up; a count moves that many lines |
 | Normal | `v` / `V` / `Ctrl+v` | Select characters / whole lines / a display-row rectangle in Visual mode |
 | Visual / Visual Line | `h` / `j` / `k` / `l`, `e` / `E` / `w` / `W` / `b` / `B`, `0`, `Enter` | Extend the selection with the same motions and counts as Normal mode |
 | Visual / Visual Line | `v` / `V` | Exit the active Visual mode / switch between characterwise and linewise selection |
 | Visual / Visual Line / Visual Block | `c` | Change the inclusive selected characters, logical lines, or block columns, then enter Insert mode |
 | Visual / Visual Line / Visual Block | `d` / `x` / `y` | Delete the selection (`d` / `x`) or yank it to the system clipboard (`y`) |
+| Visual / Visual Line | `i` / `a` + object | Select a text object |
+| Visual / Visual Line | `p` / `P` | Replace the selection with the clipboard; `p` then puts the replaced text on the clipboard, `P` keeps the clipboard |
 | Visual / Visual Line / Visual Block | `Escape` | Clear the selection and return to Normal mode |
 | Insert | `Escape` | Close an open completion menu, otherwise return to Normal mode |
 | Insert / Replace | `Ctrl+Shift+V` | Insert the system clipboard at the cursor, replacing the selection |
@@ -262,7 +280,7 @@ Everything else in Normal mode:
 | Input method (IME) composition and commit | Dropped |
 | `Backspace` / `Delete` | Nothing |
 | `Escape` | Its usual meaning: cancel a running query, or leave the editor |
-| Shortcuts with `Ctrl`, `Alt`, or `Cmd`; arrow keys; the mouse | Work as usual, including undo and redo |
+| Shortcuts with `Ctrl`, `Alt`, or `Cmd`; arrow keys; the mouse | Work as usual, including undo and redo, except the Vim keys `Ctrl+r`, `Ctrl+d`, `Ctrl+u` and `Ctrl+v` |
 
 In Normal mode the cursor sits on a character, never past the end of a line.
 Leaving Insert mode moves it back one character, as Vim does. On an empty line
@@ -290,6 +308,10 @@ Visual character and line `c` change the inclusive selection through native edit
 Each `x`, `dd`, or motion-based `d` invocation is one undo step, including counted commands. Everything typed in one ordinary Insert session is one undo step, and each new Insert session starts another. An undo group is capped at 1000 changes, so a long session may require multiple undo steps. `u` undoes the same steps as `Ctrl+z` / `Cmd+z`.
 
 **IME limitation.** A late stale unmark from a prior composition after the next composition starts can prematurely commit the active native composition and split the Vim undo group. On a read-only or Normal-mode transition, pending displayed preedit is finalized as-is rather than accepting a later candidate. In Replace mode, text that arrives without a key press, such as an IME commit, is inserted rather than overwriting, and `Backspace` does not restore characters around it. This is not a claim of full IME safety; live UI behavior has not been validated.
+
+**Text objects.** After `d`, `c` or `y`, or in Visual and Visual Line mode, `i` selects the inside of an object and `a` a little more. `iw` / `aw` take the word under the cursor, `aw` with the spaces after it, or before it when there are none after; `iW` / `aW` use whitespace-delimited words. `i"` / `a"`, `i'` / `a'` and `` i` `` / `` a` `` take quoted text on the cursor's line: on a quote the quotes pair up from the line start, elsewhere the nearest quotes around the cursor are used, or the first quoted text after it; a quote after a backslash does not count, and `a"` adds the spaces after the closing quote. `i(` / `a(` (also `ib`, `i)`), `i[`, `i{` (also `iB`) and `i<` take the brackets around the cursor, across lines; `a(` includes the brackets. A count picks words or outer brackets (`d2i(`). When the inside of a bracket starts with a line break and the closing bracket has only spaces before it on its line, `i{` covers the whole lines in between, so `ci{` leaves the braces on their own lines.
+
+**Finds, searches and repeat.** `f`, `t`, `F` and `T` stay on the cursor's line and wait for the next key as the character, so `f` followed by `Space` finds a space; `Escape` cancels. After `t` or `T`, `;` skips a target right next to the cursor. `%` takes no count. `{` and `}` stop on empty lines only; a line of spaces belongs to its paragraph. `*` and `#` search literal text with the find panel's case setting and skip matches inside longer words; after them, `n` and `N` keep the direction and the whole-word rule; after `?`, they keep the backward direction. After `?`, `Enter` in the find panel goes to the previous match and `Shift+Enter` to the next. `.` repeats the last Normal-mode command that changed the text, with the text typed in the Insert session it opened when the cursor stayed at the end of that text; if the cursor left that text or focus left the editor during the session, `.` does nothing until the next change; it does not repeat Visual-mode commands or Replace mode, and a repeat is one undo step. `Ctrl+d` and `Ctrl+u` count the lines visible in the editor and move the cursor; the view follows the cursor.
 
 **Leader key.** In Normal mode and the Visual modes, the leader key starts a
 two-key sequence that runs a command without leaving the home row. The leader
@@ -335,8 +357,8 @@ A read-only delete does not change the clipboard.
   `w` / `W` / `e` / `E` / `b` / `B`: `w` / `W` and `b` / `B` exclude the
   destination character, while `e` / `E` include it. Horizontal operator
   motions `h` / `l` are characterwise; vertical `j` / `k` are linewise.
-  Other marks, text objects, registers, macros, `.` repeat,
-  `:` commands, and a redo key are unsupported. This is not full Vim.
+  Other marks, registers, macros, and `:` commands are unsupported. This is
+  not full Vim.
 - There are no registers: `p` / `P` put the system clipboard. Text that DBFlux
   itself last yanked or deleted keeps its kind (whole lines from `yy`, `dd`,
   `j` / `k` and `gg` / `G` motions, and Visual Line; characters otherwise,
@@ -359,7 +381,7 @@ A read-only delete does not change the clipboard.
 | `g` / `Shift+g` (or `Home` / `End`) | First / last row |
 | `Ctrl+d` / `Ctrl+u` (or `PageDown` / `PageUp`) | Page down / up |
 | `]` / `[` | Next / previous results page |
-| `Alt+l` / `Alt+h` | Next / previous result tab of a query, or next / previous view (Documents, Schema, Aggregate) of a document collection, wrapping at either end |
+| `Alt+l` / `Alt+h` | Next / previous result tab of a query, next / previous view (Documents, Schema, Aggregate) of a document collection, or next / previous view (Data, Columns, Partitions) of a table, wrapping at either end |
 | `Alt+w` | Close the result tab shown; the editor gets focus when it was the last |
 | `F5` | Refresh the focused document (table rows, bucket list, object listing, keys) |
 | `Ctrl+e` / `Cmd+e` | Open the export menu: the context menu keys move through its save and copy formats, `Enter` runs one, `Escape` closes it |
@@ -397,6 +419,15 @@ A dump analysis tab takes the table keys in each of its two tables: `Alt+l` and
 that is still reading the file, and `m` lists the other table, a sort per column
 of the table the keyboard is in (as a header click sorts it) and Cancel while
 the file is read.
+
+A table's Columns view takes `j` / `k` to move between columns, `Space` to add
+the column under the cursor to the Data view or drop it, `Shift+t` to cycle the
+order (table order, size, name), `/` to filter the columns, and `F5` to read
+the statistics again. In the Partitions view, `F5` reads the partitions again.
+The Toolbar submenu of `m` lists Show Data, Show Columns, Show Partitions,
+Choose columns, Refresh column statistics, Profile the first rows and Refresh
+partitions when the table offers them. See [Columns and
+Partitions](TABLE_VIEWS.md).
 
 ## Schema diff
 
@@ -717,13 +748,14 @@ these. See [CSV and TSV Files](CSV_FILES.md).
 
 | Keys | Action |
 |------|--------|
-| `t` | Switch between the table and the text |
-| `Shift+t` | Switch the text between Raw and Aligned |
+| `t` | Show the next view: table, text, Columns |
+| `Shift+t` | Switch the text between Raw and Aligned, or cycle the order of the columns in the Columns view |
+| `/` | In the Columns view, filter the columns by name or type |
 | `Escape` / `Enter` | Take the keyboard out of the text / put it back |
 | `]` | Load the next 500 records |
 | `F5` | Read the file again from its source |
 | `Ctrl+s` / `Cmd+s` | Save, from the table or from the text |
-| `m` (or `Shift+F10`) | Pane actions: the dialect controls, Insert row above, Add column, Rename column, Discard changes, Reload from file, and Cancel loading while the rest of the file loads |
+| `m` (or `Shift+F10`) | Pane actions: the dialect controls, Insert row above, Add column, Rename column, Discard changes, Reload from file, Profile whole file, and Cancel loading while the rest of the file loads |
 
 ## Audit viewer
 

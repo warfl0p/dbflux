@@ -1212,6 +1212,10 @@ impl MssqlDriver {
     ) -> Result<Box<dyn Connection>, DbError> {
         let total_start = Instant::now();
 
+        // Resolve before logging, so a tunnel that references a host from the user's SSH
+        // config reports the target it actually dials.
+        let tunnel_config = dbflux_ssh::resolve_for_dial(tunnel_config)?;
+
         log::info!(
             "[CONNECT] Starting SSH tunnel connection: {}@{}:{} -> {}:{}",
             tunnel_config.user,
@@ -1221,7 +1225,7 @@ impl MssqlDriver {
             config.port
         );
 
-        let ssh_session = dbflux_ssh::establish_session(tunnel_config, ssh_secret)?;
+        let ssh_session = dbflux_ssh::establish_session(&tunnel_config, ssh_secret)?;
         let tunnel = SshTunnel::start(ssh_session, config.host.clone(), config.port)?;
         let local_port = tunnel.local_port();
 
@@ -2827,7 +2831,11 @@ impl Connection for MssqlConnection {
     /// schema in the `FROM` clause and leave the active database alone.
     fn browse_table(&self, request: &TableBrowseRequest) -> Result<QueryResult, DbError> {
         let table = request.table.quoted_with(&MSSQL_DIALECT);
-        let mut sql = format!("SELECT * FROM {}", table);
+        let mut sql = format!(
+            "SELECT {} FROM {}",
+            request.select_list_with(&MSSQL_DIALECT),
+            table
+        );
 
         if let Some(filter) = request.semantic_filter.as_ref() {
             let where_clause = render_semantic_filter_sql(filter, &MSSQL_DIALECT)?;
