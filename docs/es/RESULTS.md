@@ -37,6 +37,12 @@ Cuando el panel de resultados tiene el foco:
 - `f` enfoca la toolbar; `/` enfoca la búsqueda/filtro.
 - `z` alterna el colapso del panel.
 - `m` (o `Shift+F10`) abre el menú contextual de fila/celda.
+- `Shift+Space` / `Ctrl+Shift+Space` — selecciona la fila / columna entera de la
+  celda con el foco. Un clic en el número de fila o en el nombre de la columna
+  hace lo mismo, y `Shift`+clic extiende la selección hasta ella.
+
+Los números de fila se quedan en el borde izquierdo mientras la grilla se
+desplaza hacia los lados.
 
 ## Vista de registro
 
@@ -58,7 +64,8 @@ modos; `Up`/`Down` recorren los campos y `Left`/`Right` cambian de fila. Pulsa
 Haz clic derecho en la cabecera de una columna para abrir un menú limitado a
 esa columna: ordenar ascendente o descendente, quitar el orden y todos los
 operadores de filtro, en una sola lista plana. El clic izquierdo en la
-cabecera sigue alternando el orden.
+cabecera selecciona la columna; la flecha a la derecha de la cabecera alterna
+el orden.
 
 ## Panel de valor
 

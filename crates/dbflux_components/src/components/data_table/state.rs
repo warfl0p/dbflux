@@ -153,6 +153,10 @@ pub struct DataTableState {
     /// True for Table and Collection sources, false for query results.
     is_insertable: bool,
 
+    /// Whether the header offers a sort control. Off for a host that keeps
+    /// its rows in source order.
+    is_sortable: bool,
+
     /// Enum/set options per column index.
     enum_options: std::collections::HashMap<usize, Vec<String>>,
 
@@ -207,6 +211,7 @@ impl DataTableState {
             is_editable: false,
             positional_rows: false,
             is_insertable: false,
+            is_sortable: true,
             enum_options: std::collections::HashMap::new(),
             document: None,
             header_annotations: Vec::new(),
@@ -675,6 +680,50 @@ impl DataTableState {
         }
     }
 
+    /// Selection change for a primary click on a row number: the whole row,
+    /// or with Shift every row from the anchor's row to this one.
+    pub fn click_row_number(
+        &mut self,
+        row: usize,
+        modifiers: gpui::Modifiers,
+        cx: &mut Context<Self>,
+    ) {
+        self.commit_edit_in_progress(cx);
+        self.selection
+            .select_rows(row, modifiers.shift, self.col_count());
+        cx.emit(DataTableEvent::SelectionChanged(self.selection.clone()));
+        cx.notify();
+    }
+
+    /// Selection change for a primary click on a column header: the whole
+    /// column, or with Shift every column from the anchor's column to this one.
+    pub fn click_column_header(
+        &mut self,
+        col: usize,
+        modifiers: gpui::Modifiers,
+        cx: &mut Context<Self>,
+    ) {
+        self.commit_edit_in_progress(cx);
+        self.selection
+            .select_columns(col, modifiers.shift, self.row_count());
+        cx.emit(DataTableEvent::SelectionChanged(self.selection.clone()));
+        cx.notify();
+    }
+
+    /// Select the whole row of the focused cell.
+    pub fn select_active_row(&mut self, cx: &mut Context<Self>) {
+        if let Some(active) = self.selection.active {
+            self.click_row_number(active.row, gpui::Modifiers::default(), cx);
+        }
+    }
+
+    /// Select the whole column of the focused cell.
+    pub fn select_active_column(&mut self, cx: &mut Context<Self>) {
+        if let Some(active) = self.selection.active {
+            self.click_column_header(active.col, gpui::Modifiers::default(), cx);
+        }
+    }
+
     /// Commit an open inline editor, the way Enter does.
     ///
     /// Selecting a cell is a deliberate act, so a value typed into the previous
@@ -1066,6 +1115,15 @@ impl DataTableState {
     /// Set whether the table supports INSERT operations.
     pub fn set_insertable(&mut self, insertable: bool) {
         self.is_insertable = insertable;
+    }
+
+    pub fn is_sortable(&self) -> bool {
+        self.is_sortable
+    }
+
+    /// Set whether the header offers a sort control.
+    pub fn set_sortable(&mut self, sortable: bool) {
+        self.is_sortable = sortable;
     }
 
     pub fn set_enum_options(&mut self, col: usize, options: Vec<String>) {

@@ -646,6 +646,8 @@ fn data_table_action(command: Command) -> Option<Box<dyn Action>> {
         Command::ExtendSelectFirst => Box::new(actions::SelectToTop),
         Command::ExtendSelectLast => Box::new(actions::SelectToBottom),
         Command::SelectAll => Box::new(actions::SelectAll),
+        Command::SelectRow => Box::new(actions::SelectRow),
+        Command::SelectColumn => Box::new(actions::SelectColumn),
         Command::Cancel => Box::new(actions::ClearSelection),
         Command::ResultsCopyCell => Box::new(actions::Copy),
         Command::ResultsCopyRow => Box::new(actions::CopyRow),

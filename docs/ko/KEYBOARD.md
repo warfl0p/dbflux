@@ -347,6 +347,7 @@ IME 확정을 포함한 네이티브 텍스트 편집 시 마크는 텍스트를
 | `Ctrl+Home` / `Ctrl+End` | 첫 / 마지막 행 |
 | `Shift+Home` / `Shift+End`, `Ctrl+Shift+Home` / `Ctrl+Shift+End` | 행 또는 테이블의 끝까지 선택 확장 |
 | `Ctrl+a` / `Cmd+a` | 모두 선택 |
+| `Shift+Space` / `Ctrl+Shift+Space` | 포커스된 셀의 행 / 열 전체 선택 |
 | `Escape` | 선택 해제 |
 | `Ctrl+c` / `Cmd+c`, `y y` | 선택 영역 복사 |
 | `Shift+y Shift+y` | 행 복사 |

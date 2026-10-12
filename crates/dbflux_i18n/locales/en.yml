@@ -4180,6 +4180,8 @@ settings:
       extend_select_row_end: Extend selection to row end
       extend_select_first: Extend selection to first row
       extend_select_last: Extend selection to last row
+      select_row: Select row
+      select_column: Select column
       select_all: Select all
       save_row: Save row changes
       undo: Undo

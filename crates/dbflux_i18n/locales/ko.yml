@@ -4180,6 +4180,8 @@ settings:
       extend_select_row_end: 행 끝까지 선택 확장
       extend_select_first: 첫 행까지 선택 확장
       extend_select_last: 마지막 행까지 선택 확장
+      select_row: 행 선택
+      select_column: 열 선택
       select_all: 모두 선택
       save_row: 행 변경 사항 저장
       undo: 실행 취소

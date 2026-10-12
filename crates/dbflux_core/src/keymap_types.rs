@@ -248,6 +248,8 @@ pub enum Command {
     ExtendSelectRowEnd,
     ExtendSelectFirst,
     ExtendSelectLast,
+    SelectRow,
+    SelectColumn,
     SelectAll,
     SaveRow,
     Undo,
@@ -506,6 +508,8 @@ impl Command {
             Command::ExtendSelectRowEnd => "Extend selection to row end",
             Command::ExtendSelectFirst => "Extend selection to first row",
             Command::ExtendSelectLast => "Extend selection to last row",
+            Command::SelectRow => "Select row",
+            Command::SelectColumn => "Select column",
             Command::SelectAll => "Select all",
             Command::SaveRow => "Save row changes",
             Command::Undo => "Undo",
@@ -706,6 +710,8 @@ impl Command {
             Command::ExtendSelectRowEnd => "extend_select_row_end",
             Command::ExtendSelectFirst => "extend_select_first",
             Command::ExtendSelectLast => "extend_select_last",
+            Command::SelectRow => "select_row",
+            Command::SelectColumn => "select_column",
             Command::SelectAll => "select_all",
             Command::SaveRow => "save_row",
             Command::Undo => "undo",
@@ -910,6 +916,8 @@ impl Command {
             Command::ExtendSelectRowEnd,
             Command::ExtendSelectFirst,
             Command::ExtendSelectLast,
+            Command::SelectRow,
+            Command::SelectColumn,
             Command::SelectAll,
             Command::SaveRow,
             Command::Undo,
@@ -1114,7 +1122,9 @@ impl Command {
             | Command::ExtendSelectRowStart
             | Command::ExtendSelectRowEnd
             | Command::ExtendSelectFirst
-            | Command::ExtendSelectLast => "Navigation",
+            | Command::ExtendSelectLast
+            | Command::SelectRow
+            | Command::SelectColumn => "Navigation",
 
             Command::SelectAll | Command::Undo | Command::Redo => "Actions",
 

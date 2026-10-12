@@ -64,6 +64,8 @@ pub mod actions {
             SelectToTop,
             SelectToBottom,
             SelectAll,
+            SelectRow,
+            SelectColumn,
             ClearSelection,
             Copy,
             CopyRow,
@@ -270,6 +272,14 @@ impl gpui::Render for DataTable {
         let s = self.state.clone();
         let on_select_all = move |_: &SelectAll, _: &mut Window, cx: &mut App| {
             s.update(cx, |state, cx| state.select_all(cx));
+        };
+        let s = self.state.clone();
+        let on_select_row = move |_: &SelectRow, _: &mut Window, cx: &mut App| {
+            s.update(cx, |state, cx| state.select_active_row(cx));
+        };
+        let s = self.state.clone();
+        let on_select_column = move |_: &SelectColumn, _: &mut Window, cx: &mut App| {
+            s.update(cx, |state, cx| state.select_active_column(cx));
         };
         let s = self.state.clone();
         let on_clear_selection = move |_: &ClearSelection, _: &mut Window, cx: &mut App| {
@@ -594,6 +604,8 @@ impl gpui::Render for DataTable {
             .on_action(on_select_top)
             .on_action(on_select_bottom)
             .on_action(on_select_all)
+            .on_action(on_select_row)
+            .on_action(on_select_column)
             .on_action(on_clear_selection)
             .on_action(on_start_edit)
             .on_action(on_confirm_edit)
@@ -812,15 +824,16 @@ impl DataTable {
                     .border_color(theme.border)
                     .hover(|s| s.bg(theme.table_hover))
                     .cursor_pointer()
-                    .on_click(move |_event: &ClickEvent, _window, cx| {
+                    // Left click selects the column (Shift extends from the
+                    // anchor); the sort arrow at the right cycles the sort.
+                    .on_click(move |event: &ClickEvent, window, cx| {
                         state_for_click.update(cx, |state, cx| {
-                            state.cycle_sort(col_ix, cx);
+                            state.focus(window, cx);
+                            state.click_column_header(col_ix, event.modifiers(), cx);
                         });
                     })
                     // Right-click opens the menu scoped to this column: its
-                    // ordering and filtering in one flat list. Left click keeps
-                    // cycling the sort — the fastest interaction in the grid,
-                    // not to be spent on opening a menu for the rare case.
+                    // ordering and filtering in one flat list.
                     .on_mouse_down(MouseButton::Right, {
                         let state_for_menu = state_entity.clone();
                         move |event: &MouseDownEvent, window, cx| {
@@ -872,19 +885,8 @@ impl DataTable {
                             )
                         },
                     )
-                    .when_some(sort_direction, |d, direction| {
-                        let arrow = match direction {
-                            SortDirection::Ascending => AppIcon::ArrowUp,
-                            SortDirection::Descending => AppIcon::ArrowDown,
-                        };
-
-                        d.child(
-                            div().flex_shrink_0().ml_auto().child(
-                                Icon::new(arrow)
-                                    .size(GridMetrics::HEADER_ICON)
-                                    .color(ChromeColors::tint(theme)),
-                            ),
-                        )
+                    .when(state.is_sortable(), |d| {
+                        d.child(sort_button(&state_entity, col_ix, sort_direction, theme))
                     })
                     // An annotated header pins the name line to the top and
                     // draws the facts along the bottom, so columns with and
@@ -1091,17 +1093,8 @@ impl DataTable {
                             .text_color(muted)
                             .child(SharedString::from(col_spec.type_name.to_string())),
                     )
-                    .when_some(sort_direction, |line, direction| {
-                        let arrow = match direction {
-                            SortDirection::Ascending => AppIcon::ArrowUp,
-                            SortDirection::Descending => AppIcon::ArrowDown,
-                        };
-                        line.child(
-                            div()
-                                .flex_shrink_0()
-                                .ml_auto()
-                                .child(Icon::new(arrow).size(GridMetrics::HEADER_ICON).color(tint)),
-                        )
+                    .when(state.is_sortable(), |line| {
+                        line.child(sort_button(&self.state, col_ix, sort_direction, theme))
                     });
 
                 let presence_line = presence.map(|ratio| {
@@ -1157,8 +1150,11 @@ impl DataTable {
                     })
                     .hover(|cell| cell.bg(theme.table_hover))
                     .cursor_pointer()
-                    .on_click(move |_event: &ClickEvent, _window, cx| {
-                        state_for_click.update(cx, |state, cx| state.cycle_sort(col_ix, cx));
+                    .on_click(move |event: &ClickEvent, window, cx| {
+                        state_for_click.update(cx, |state, cx| {
+                            state.focus(window, cx);
+                            state.click_column_header(col_ix, event.modifiers(), cx);
+                        });
                     })
                     .on_mouse_down(
                         MouseButton::Right,
@@ -1600,6 +1596,17 @@ fn render_rows(
                 .child(
                     pinned_row_number_cell(h_offset, theme.table)
                         .debug_selector(move || format!("row-number-{row_ix}"))
+                        .id(("row-number", row_ix))
+                        .cursor_pointer()
+                        .on_click({
+                            let state_entity = state_entity.clone();
+                            move |event: &ClickEvent, window, cx| {
+                                state_entity.update(cx, |state, cx| {
+                                    state.focus(window, cx);
+                                    state.click_row_number(row_ix, event.modifiers(), cx);
+                                });
+                            }
+                        })
                         .child(
                             div()
                                 .flex()
@@ -1616,6 +1623,35 @@ fn render_rows(
                 .into_any_element()
         })
         .collect()
+}
+
+/// The sort control of a column header: the current direction in the tint
+/// color, or a muted up-down arrow while the column is unsorted. A click
+/// cycles the sort and stops there, so it does not also select the column.
+fn sort_button(
+    state: &Entity<DataTableState>,
+    col_ix: usize,
+    direction: Option<SortDirection>,
+    theme: &gpui_component::theme::Theme,
+) -> impl IntoElement {
+    let (arrow, color) = match direction {
+        Some(SortDirection::Ascending) => (AppIcon::ArrowUp, ChromeColors::tint(theme)),
+        Some(SortDirection::Descending) => (AppIcon::ArrowDown, ChromeColors::tint(theme)),
+        None => (AppIcon::ArrowUpDown, theme.muted_foreground),
+    };
+    let state = state.clone();
+
+    div()
+        .debug_selector(move || format!("header-sort-{col_ix}"))
+        .id(("header-sort", col_ix))
+        .flex_shrink_0()
+        .ml_auto()
+        .cursor_pointer()
+        .child(Icon::new(arrow).size(GridMetrics::HEADER_ICON).color(color))
+        .on_click(move |_event: &ClickEvent, _window, cx| {
+            cx.stop_propagation();
+            state.update(cx, |state, cx| state.cycle_sort(col_ix, cx));
+        })
 }
 
 /// The row-number column of a header or body row, kept at the left edge while
@@ -1869,6 +1905,89 @@ mod tests {
         });
         visual.run_until_parked();
         assert_eq!(offsets(visual, &state).1, px(-1000.0));
+    }
+
+    /// A click on a row number selects the row and Shift+click extends it; a
+    /// click on a column name selects the column without sorting; the sort
+    /// arrow sorts without touching the selection.
+    #[gpui::test]
+    fn row_numbers_and_column_names_select_and_the_arrow_sorts(cx: &mut TestAppContext) {
+        use super::super::selection::{CellCoord, CellRange};
+
+        cx.update(crate::theme::init);
+
+        let state_holder: std::rc::Rc<std::cell::RefCell<Option<Entity<DataTableState>>>> =
+            std::rc::Rc::default();
+        let holder_for_view = state_holder.clone();
+
+        let (_, visual) = cx.add_window_view(move |_window, cx| {
+            let state = cx.new(|cx| DataTableState::new(overflow_model(), cx));
+            let table = cx.new(|cx| DataTable::new("select-test-table", state.clone(), cx));
+            holder_for_view.replace(Some(state));
+            ScrollHarness { table }
+        });
+        visual.run_until_parked();
+
+        let state = state_holder
+            .borrow()
+            .clone()
+            .expect("the state entity must be created");
+        let selected = |visual: &mut VisualTestContext| {
+            visual.update(|_, cx| state.read(cx).selection().selected_range())
+        };
+
+        let row_number = |visual: &mut VisualTestContext, selector: &'static str| {
+            visual
+                .debug_bounds(selector)
+                .expect("the row number must render")
+                .center()
+        };
+
+        let first = row_number(visual, "row-number-1");
+        visual.simulate_click(first, gpui::Modifiers::default());
+        visual.run_until_parked();
+        assert_eq!(
+            selected(visual),
+            Some(CellRange::new(CellCoord::new(1, 0), CellCoord::new(1, 1)))
+        );
+
+        let third = row_number(visual, "row-number-3");
+        visual.simulate_click(third, gpui::Modifiers::shift());
+        visual.run_until_parked();
+        assert_eq!(
+            selected(visual),
+            Some(CellRange::new(CellCoord::new(1, 0), CellCoord::new(3, 1)))
+        );
+
+        let rows_1_to_3 = Some(CellRange::new(CellCoord::new(1, 0), CellCoord::new(3, 1)));
+        let arrow = visual
+            .debug_bounds("header-sort-1")
+            .expect("the sort arrow must render");
+        visual.simulate_click(arrow.center(), gpui::Modifiers::default());
+        visual.run_until_parked();
+        let sorted_column = |visual: &mut VisualTestContext| {
+            visual.update(|_, cx| state.read(cx).sort().map(|sort| sort.column_ix))
+        };
+        assert_eq!(sorted_column(visual), Some(1));
+        assert_eq!(selected(visual), rows_1_to_3, "the arrow must not select");
+
+        // The name of column 1 sits left of its sort arrow, in the same row.
+        let name = gpui::point(arrow.origin.x - px(40.0), arrow.center().y);
+        visual.simulate_click(name, gpui::Modifiers::default());
+        visual.run_until_parked();
+        let row_count = visual.update(|_, cx| state.read(cx).row_count());
+        assert_eq!(
+            selected(visual),
+            Some(CellRange::new(
+                CellCoord::new(0, 1),
+                CellCoord::new(row_count - 1, 1)
+            ))
+        );
+        assert_eq!(
+            sorted_column(visual),
+            Some(1),
+            "a name click must not change the sort"
+        );
     }
 
     #[gpui::test]

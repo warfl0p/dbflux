@@ -4180,6 +4180,8 @@ settings:
       extend_select_row_end: Estender seleção até o fim da linha
       extend_select_first: Estender seleção até a primeira linha
       extend_select_last: Estender seleção até a última linha
+      select_row: Selecionar linha
+      select_column: Selecionar coluna
       select_all: Selecionar tudo
       save_row: Salvar alterações da linha
       undo: Desfazer

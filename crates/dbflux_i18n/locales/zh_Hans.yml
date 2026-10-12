@@ -4180,6 +4180,8 @@ settings:
       extend_select_row_end: 扩展选区到行尾
       extend_select_first: 扩展选区到第一行
       extend_select_last: 扩展选区到最后一行
+      select_row: 选择整行
+      select_column: 选择整列
       select_all: 全选
       save_row: 保存行更改
       undo: 撤销

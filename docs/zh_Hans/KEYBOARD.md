@@ -455,6 +455,7 @@ Alt 拖动鼠标选择一样，按顺序用换行符连接非空行片段；若�
 | `Ctrl+Home` / `Ctrl+End` | 第一行 / 最后一行 |
 | `Shift+Home` / `Shift+End`，`Ctrl+Shift+Home` / `Ctrl+Shift+End` | 将选区扩展到行或表格的边缘 |
 | `Ctrl+a` / `Cmd+a` | 全选 |
+| `Shift+Space` / `Ctrl+Shift+Space` | 选择当前单元格所在的整行 / 整列 |
 | `Escape` | 清除选区 |
 | `Ctrl+c` / `Cmd+c`，`y y` | 复制选区 |
 | `Shift+y Shift+y` | 复制整行 |

@@ -633,6 +633,7 @@ foco y no se está editando ninguna celda.
 | `Ctrl+Home` / `Ctrl+End` | Primera / última fila |
 | `Shift+Home` / `Shift+End`, `Ctrl+Shift+Home` / `Ctrl+Shift+End` | Extender la selección hasta el borde de la fila o de la tabla |
 | `Ctrl+a` / `Cmd+a` | Seleccionar todo |
+| `Shift+Space` / `Ctrl+Shift+Space` | Seleccionar la fila / columna entera de la celda con el foco |
 | `Escape` | Quitar la selección |
 | `Ctrl+c` / `Cmd+c`, `y y` | Copiar la selección |
 | `Shift+y Shift+y` | Copiar la fila |
