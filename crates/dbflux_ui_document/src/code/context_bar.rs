@@ -218,16 +218,19 @@ impl CodeDocument {
         self.editor.cached_comment_prefix = editor_profile.comment_prefix;
         self.editor.cached_effective_language = query_language.clone();
 
-        let completion_provider: Rc<dyn CompletionProvider> =
-            Rc::new(QueryCompletionProvider::new(
-                query_language,
-                self.app_state.clone(),
-                connection_id,
-                self.source.exec_ctx.database.clone(),
-                self.source.exec_ctx.schema.clone(),
-                self.editor.completion_query_generation.clone(),
-                self.editor.catalog_names.clone(),
-            ));
+        let query_completion = QueryCompletionProvider::new(
+            query_language,
+            self.app_state.clone(),
+            connection_id,
+            self.source.exec_ctx.database.clone(),
+            self.source.exec_ctx.schema.clone(),
+            self.editor.completion_query_generation.clone(),
+            self.editor.catalog_names.clone(),
+        );
+        // The schema list arrives with the connection, not with the first
+        // completion, so the highlighter learns it here.
+        let catalog_names_changed = query_completion.refresh_catalog_names(cx);
+        let completion_provider: Rc<dyn CompletionProvider> = Rc::new(query_completion);
         let code_action_provider: Rc<dyn CodeActionProvider> = Rc::new(SqlCodeActionProvider::new(
             self.app_state.clone(),
             connection_id,
@@ -247,6 +250,8 @@ impl CodeDocument {
             // syntax colors from the buffer until the user types again.
             if editor_mode_changed {
                 state.set_highlighter(editor_mode, cx);
+            } else if catalog_names_changed {
+                cx.notify();
             }
         });
 

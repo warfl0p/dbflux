@@ -18,8 +18,8 @@ use gpui_component::input::{
 use crate::completion_support::normalize_identifier;
 
 /// Schema and relation names of the document's connection, normalized with
-/// `normalize_identifier`. Filled by the completion provider whenever it
-/// rebuilds its metadata.
+/// `normalize_identifier`. Refreshed whenever the editor syncs with its
+/// connection, and on every completion.
 #[derive(Default)]
 pub(crate) struct CatalogNames {
     pub(crate) schemas: HashSet<String>,
