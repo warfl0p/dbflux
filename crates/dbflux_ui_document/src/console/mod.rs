@@ -164,6 +164,7 @@ impl NativeConsole {
                     target.database.clone(),
                     None,
                     Rc::new(Cell::new(0)),
+                    Default::default(),
                 ));
                 provider
             });

@@ -19,7 +19,7 @@ use tree_sitter::{InputEdit, ParseOptions, Parser, Point};
 
 use super::{LanguageRegistry, SyntaxHighlighter};
 
-pub(crate) fn input_highlighter_factory() -> InputHighlighterFactory {
+pub fn input_highlighter_factory() -> InputHighlighterFactory {
     Rc::new(|language| {
         let config = LanguageRegistry::singleton().language(language)?;
         config.has_grammar().then(|| {

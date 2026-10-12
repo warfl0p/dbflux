@@ -11,10 +11,10 @@ pub(crate) use diagnostic_styles::*;
 #[cfg(feature = "tree-sitter")]
 mod input_adapter;
 #[cfg(feature = "tree-sitter")]
-pub(crate) use input_adapter::input_highlighter_factory;
+pub use input_adapter::input_highlighter_factory;
 
 #[cfg(not(feature = "tree-sitter"))]
-pub(crate) fn input_highlighter_factory() -> gpui_base::input::InputHighlighterFactory {
+pub fn input_highlighter_factory() -> gpui_base::input::InputHighlighterFactory {
     std::rc::Rc::new(|_| None)
 }
 

@@ -226,6 +226,7 @@ impl CodeDocument {
                 self.source.exec_ctx.database.clone(),
                 self.source.exec_ctx.schema.clone(),
                 self.editor.completion_query_generation.clone(),
+                self.editor.catalog_names.clone(),
             ));
         let code_action_provider: Rc<dyn CodeActionProvider> = Rc::new(SqlCodeActionProvider::new(
             self.app_state.clone(),
