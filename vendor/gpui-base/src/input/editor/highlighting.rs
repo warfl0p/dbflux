@@ -41,10 +41,14 @@ pub trait InputHighlighter {
 
     /// Return ordered, non-overlapping style runs that fully cover `range`.
     /// Use [`HighlightStyle::default`] for text without a semantic style.
+    ///
+    /// Called on every paint of the visible lines. The resolver is passed as
+    /// its `Arc` so an implementation can cache runs per resolver and tell a
+    /// theme change apart by identity.
     fn styles(
         &self,
         range: &Range<usize>,
-        resolver: &dyn HighlightStyleResolver,
+        resolver: &SharedHighlightStyleResolver,
     ) -> Vec<(Range<usize>, HighlightStyle)>;
 
     fn fold_ranges(&self, text: &Rope) -> Vec<FoldRange>;

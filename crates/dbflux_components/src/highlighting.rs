@@ -299,6 +299,102 @@ mod tests {
             .collect()
     }
 
+    /// The editor caches style runs per highlighter revision (the
+    /// `highlighter.rs` patch in `vendor/gpui-component/VENDOR.md`), so a
+    /// text change that left the revision alone would paint stale colors.
+    #[test]
+    fn highlighter_revision_changes_with_the_text_and_only_then() {
+        use gpui_component::highlighter::SyntaxHighlighter;
+
+        register_languages();
+        let mut highlighter = SyntaxHighlighter::new("sql");
+        let text = gpui_component::Rope::from("SELECT 1;");
+        highlighter.update(None, &text, None);
+        let parsed = highlighter.revision();
+
+        highlighter.update(None, &text, None);
+        assert_eq!(highlighter.revision(), parsed, "same text, same styles");
+
+        highlighter.update(None, &gpui_component::Rope::from("SELECT 2;"), None);
+        let edited = highlighter.revision();
+        assert_ne!(edited, parsed, "a parsed edit");
+
+        highlighter.edit_tree(None, &gpui_component::Rope::from("SELECT 3;"));
+        assert_ne!(
+            highlighter.revision(),
+            edited,
+            "a large-text edit awaiting its parse"
+        );
+    }
+
+    /// The editor paints through `cached_styles`, which keeps runs per line
+    /// and matches only lines it has not seen. Every window a scroll can ask
+    /// for must color each byte as a fresh match of that window does,
+    /// including lines inside a block comment or string that started above
+    /// the window.
+    #[test]
+    fn cached_styles_color_every_byte_as_a_fresh_match() {
+        use gpui_component::highlighter::{HighlightTheme, SyntaxHighlighter};
+        use gpui_component::input::SharedHighlightStyleResolver;
+
+        fn colors(
+            styles: &[(std::ops::Range<usize>, gpui::HighlightStyle)],
+            range: &std::ops::Range<usize>,
+        ) -> Vec<Option<gpui::Hsla>> {
+            let mut colors = vec![None; range.len()];
+            for (run, style) in styles {
+                for offset in run.clone() {
+                    colors[offset - range.start] = style.color;
+                }
+            }
+            colors
+        }
+
+        fn assert_windows_match(
+            highlighter: &SyntaxHighlighter,
+            source: &str,
+            resolver: &SharedHighlightStyleResolver,
+        ) {
+            let line_starts: Vec<usize> = std::iter::once(0)
+                .chain(source.match_indices('\n').map(|(index, _)| index + 1))
+                .collect();
+            for first in 0..line_starts.len() {
+                for last in first..line_starts.len() {
+                    let end = line_starts.get(last + 1).copied().unwrap_or(source.len());
+                    let range = line_starts[first]..end;
+                    let cached = highlighter.cached_styles(&range, resolver);
+                    let fresh = highlighter.styles(&range, resolver.as_ref());
+                    assert_eq!(
+                        colors(&cached, &range),
+                        colors(&fresh, &range),
+                        "lines {first}..={last}"
+                    );
+                }
+            }
+            let mid_line = 3..source.len() - 2;
+            assert_eq!(
+                colors(&highlighter.cached_styles(&mid_line, resolver), &mid_line),
+                colors(&highlighter.styles(&mid_line, resolver.as_ref()), &mid_line),
+            );
+        }
+
+        register_languages();
+        let dark: SharedHighlightStyleResolver = HighlightTheme::default_dark();
+        let light: SharedHighlightStyleResolver = HighlightTheme::default_light();
+        let source = "SELECT id, 'two\nline' AS label\nFROM raw.driver d\n/* a block\ncomment */\nWHERE d.n = 1;\n-- tail\nSELECT 2;";
+        let mut highlighter = SyntaxHighlighter::new("sql");
+        highlighter.update(None, &gpui_component::Rope::from(source), None);
+
+        assert_windows_match(&highlighter, source, &dark);
+        assert_windows_match(&highlighter, source, &light);
+
+        let edited = source.replacen("/* a block", "-- a block", 1);
+        highlighter.update(None, &gpui_component::Rope::from(edited.as_str()), None);
+        // Same theme as the last pass, so only the revision can drop the
+        // runs cached for the old text.
+        assert_windows_match(&highlighter, &edited, &light);
+    }
+
     #[test]
     fn sql_numbers_and_keywords_take_their_roles() {
         let roles = sql_roles(

@@ -4,8 +4,9 @@ use crate::highlighter::LanguageRegistry;
 
 use anyhow::{Context, Result, anyhow};
 use gpui::{HighlightStyle, SharedString};
-use gpui_base::input::RopeExt as _;
+use gpui_base::input::{RopeExt as _, SharedHighlightStyleResolver};
 use ropey::{ChunkCursor, Rope};
+use std::cell::RefCell;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::{
@@ -55,7 +56,32 @@ pub struct SyntaxHighlighter {
     /// Parsed injection trees.
     /// These are built once in update() and queried multiple times in match_styles().
     injection_layers: Vec<InjectionLayer>,
+
+    /// Bumped whenever the text or tree changes, so callers can tell whether
+    /// styles computed earlier still hold.
+    revision: u64,
+
+    line_style_cache: RefCell<LineStyleCache>,
 }
+
+/// Style runs per line from earlier paints, for one revision and one theme.
+///
+/// The editor asks for the visible lines' styles on every paint. Caret blinks
+/// and hovers repeat the same lines, and a scroll moves the window by a few
+/// lines, so keeping runs per line leaves only newly visible lines to match.
+#[derive(Default)]
+struct LineStyleCache {
+    revision: u64,
+    /// Held, not just compared by address, so a theme allocated where a
+    /// dropped one lived can never match.
+    resolver: Option<SharedHighlightStyleResolver>,
+    lines: HashMap<Range<usize>, Vec<(Range<usize>, HighlightStyle)>>,
+}
+
+/// ponytail: the cache is dropped whole past this many lines, about a few MB
+/// of runs; evict least recently painted lines if long scroll sessions over
+/// huge scripts make the refill noticeable.
+const MAX_CACHED_LINES: usize = 4096;
 
 /// A parsed injection layer.
 /// Stores the parsed tree and the ranges it covers.
@@ -364,6 +390,8 @@ impl SyntaxHighlighter {
             parser: Parser::new(),
             tree: None,
             injection_layers: Vec::new(),
+            revision: 0,
+            line_style_cache: RefCell::default(),
         }
     }
 
@@ -484,6 +512,8 @@ impl SyntaxHighlighter {
             parser,
             tree: None,
             injection_layers: Vec::new(),
+            revision: 0,
+            line_style_cache: RefCell::default(),
         })
     }
 
@@ -503,6 +533,12 @@ impl SyntaxHighlighter {
             tree.edit(&edit);
         }
         self.text = text.clone();
+        self.revision += 1;
+    }
+
+    /// Changes whenever the text or tree changes, and only then.
+    pub fn revision(&self) -> u64 {
+        self.revision
     }
 
     /// Returns the language name for this highlighter.
@@ -532,6 +568,7 @@ impl SyntaxHighlighter {
         if self.text.eq(text) {
             return true;
         }
+        self.revision += 1;
 
         // If there's no grammar for the language, just update the text.
         if self.parser.language().is_none() {
@@ -906,6 +943,7 @@ impl SyntaxHighlighter {
 
         self.tree = Some(tree);
         self.injection_layers = injection_layers;
+        self.revision += 1;
     }
 
     /// Parse injection layers after the main tree is updated.
@@ -1031,6 +1069,69 @@ impl SyntaxHighlighter {
         highlights
     }
 
+    /// [`Self::styles`], reusing the runs of lines matched earlier for the
+    /// same revision and theme. Only the uncached lines of `range` are
+    /// matched, each contiguous group of them with one query.
+    pub fn cached_styles(
+        &self,
+        range: &Range<usize>,
+        resolver: &SharedHighlightStyleResolver,
+    ) -> Vec<(Range<usize>, HighlightStyle)> {
+        if range.is_empty() || range.end > self.text.len() {
+            return self.styles(range, resolver.as_ref());
+        }
+
+        let mut cache = self.line_style_cache.borrow_mut();
+        let same_resolver = cache
+            .resolver
+            .as_ref()
+            .is_some_and(|cached| Arc::ptr_eq(cached, resolver));
+        if cache.revision != self.revision
+            || !same_resolver
+            || cache.lines.len() > MAX_CACHED_LINES
+        {
+            cache.revision = self.revision;
+            cache.resolver = Some(resolver.clone());
+            cache.lines.clear();
+        }
+
+        let mut styles = Vec::new();
+        let mut uncached: Vec<Range<usize>> = Vec::new();
+        for line in line_segments(&self.text, range) {
+            if !cache.lines.contains_key(&line) {
+                uncached.push(line);
+                continue;
+            }
+            self.match_uncached_lines(&mut uncached, &mut cache, &mut styles, resolver);
+            if let Some(runs) = cache.lines.get(&line) {
+                styles.extend(runs.iter().cloned());
+            }
+        }
+        self.match_uncached_lines(&mut uncached, &mut cache, &mut styles, resolver);
+        styles
+    }
+
+    /// Match `lines`, a contiguous group, with one query, and cache the runs
+    /// split back into lines.
+    fn match_uncached_lines(
+        &self,
+        lines: &mut Vec<Range<usize>>,
+        cache: &mut LineStyleCache,
+        styles: &mut Vec<(Range<usize>, HighlightStyle)>,
+        resolver: &SharedHighlightStyleResolver,
+    ) {
+        let lines = std::mem::take(lines);
+        let (Some(first), Some(last)) = (lines.first(), lines.last()) else {
+            return;
+        };
+        let runs = self.styles(&(first.start..last.end), resolver.as_ref());
+        let per_line = split_runs_by_line(runs, &lines);
+        for (line, line_runs) in lines.into_iter().zip(per_line) {
+            styles.extend(line_runs.iter().cloned());
+            cache.lines.insert(line, line_runs);
+        }
+    }
+
     /// Returns the syntax highlight styles for a range of text.
     ///
     /// The argument `range` is the range of bytes in the text to highlight.
@@ -1105,6 +1206,48 @@ impl SyntaxHighlighter {
 
         styles
     }
+}
+
+/// `range` cut at line starts: each piece is one line's bytes, its `\n`
+/// included, clipped to `range`.
+fn line_segments(text: &Rope, range: &Range<usize>) -> Vec<Range<usize>> {
+    let first_row = text.offset_to_point(range.start).row;
+    let last_row = text.offset_to_point(range.end.saturating_sub(1)).row;
+    (first_row..=last_row)
+        .map(|row| {
+            let start = text.line_start_offset(row).max(range.start);
+            let end = text.line_start_offset(row + 1).min(range.end);
+            start..end
+        })
+        .filter(|segment| !segment.is_empty())
+        .collect()
+}
+
+/// Split ordered runs that cover `lines` (contiguous, ordered) into the runs
+/// of each line, cutting a run that crosses a line start.
+fn split_runs_by_line(
+    runs: Vec<(Range<usize>, HighlightStyle)>,
+    lines: &[Range<usize>],
+) -> Vec<Vec<(Range<usize>, HighlightStyle)>> {
+    let mut per_line: Vec<Vec<_>> = vec![Vec::new(); lines.len()];
+    let mut index = 0;
+    for (run, style) in runs {
+        let mut start = run.start;
+        while start < run.end {
+            while lines.get(index).is_some_and(|line| line.end <= start) {
+                index += 1;
+            }
+            let Some(line) = lines.get(index) else {
+                break;
+            };
+            let end = run.end.min(line.end);
+            if let Some(line_runs) = per_line.get_mut(index) {
+                line_runs.push((start.max(line.start)..end, style));
+            }
+            start = end;
+        }
+    }
+    per_line
 }
 
 /// To merge intersection ranges, let the subsequent range cover
