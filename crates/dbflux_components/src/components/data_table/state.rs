@@ -912,17 +912,13 @@ impl DataTableState {
             return;
         }
 
-        // Columns start after the row-number column; scrolling to the first
-        // column keeps the row numbers in view.
+        // Columns start after the row-number column, which stays pinned at
+        // the left edge, so cells are visible only to its right.
         #[expect(
             clippy::indexing_slicing,
-            reason = "scroll_to_column returns early above when col >= self.column_offsets.len(), and the else arm runs only when col != 0, so col is in bounds"
+            reason = "scroll_to_column returns early above when col >= self.column_offsets.len(), so col is in bounds"
         )]
-        let col_left = if col == 0 {
-            px(0.0)
-        } else {
-            ROW_NUMBER_WIDTH + px(self.column_offsets[col])
-        };
+        let col_left = ROW_NUMBER_WIDTH + px(self.column_offsets[col]);
         #[expect(
             clippy::indexing_slicing,
             reason = "col is in bounds (early return above); the preceding bounds check makes column_offsets[col] safe, including the eager unwrap_or argument"
@@ -939,11 +935,11 @@ impl DataTableState {
         }
 
         let current_offset = self.horizontal_offset;
-        let visible_left = current_offset;
+        let visible_left = current_offset + ROW_NUMBER_WIDTH;
         let visible_right = current_offset + viewport_width;
 
         let new_offset = if col_left < visible_left {
-            col_left
+            col_left - ROW_NUMBER_WIDTH
         } else if col_right > visible_right {
             col_right - viewport_width
         } else {
