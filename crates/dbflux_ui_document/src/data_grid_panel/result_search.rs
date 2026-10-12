@@ -152,28 +152,12 @@ impl DataGridPanel {
         self.result_search.all_order = order;
     }
 
-    /// The sub-toolbar segments of a query result: the statement caption
-    /// after the view switch, the search field at the right end.
+    /// The sub-toolbar segments of a query result: the search field at the
+    /// right end. The statement caption is kept for reference but not shown,
+    /// since the editor already tells which statement ran.
     pub(super) fn result_toolbar_segments(entity: &Entity<Self>, cx: &App) -> Vec<ToolbarSegment> {
         let panel = entity.read(cx);
         let mut segments = Vec::new();
-
-        if let Some(caption) = panel.result_search.caption.clone() {
-            segments.push(ToolbarSegment {
-                position: SegmentPosition::Left,
-                index: 1,
-                builder: Box::new(move |_window, cx| {
-                    div()
-                        .id("result-statement-caption")
-                        .flex_shrink_0()
-                        .font_family(dbflux_components::fonts::editor_family(cx))
-                        .text_size(EditorMetrics::RESULT_CAPTION_FONT)
-                        .text_color(cx.theme().muted_foreground)
-                        .child(caption.clone())
-                        .into_any_element()
-                }),
-            });
-        }
 
         if let Some(input) = panel.result_search.input.clone() {
             segments.push(ToolbarSegment {
@@ -430,31 +414,21 @@ mod tests {
     }
 
     #[gpui::test]
-    fn the_sub_toolbar_carries_the_caption_and_the_search_field(cx: &mut TestAppContext) {
+    fn the_sub_toolbar_shows_only_the_search_field(cx: &mut TestAppContext) {
         let (panel, window) = rendered_result(cx);
 
         window.update(|_, app| {
+            panel.update(app, |panel, cx| {
+                panel.set_result_caption(Some("Statement L1–1 · people".into()), cx);
+            });
+
             let segments = DataGridPanel::result_toolbar_segments(&panel, app);
             let positions: Vec<SegmentPosition> =
                 segments.iter().map(|segment| segment.position).collect();
             assert_eq!(
                 positions,
                 vec![SegmentPosition::Right],
-                "a result without a caption shows only the search field"
-            );
-
-            panel.update(app, |panel, cx| {
-                panel.set_result_caption(Some("Statement L1–1 · people".into()), cx);
-            });
-
-            let segments = DataGridPanel::result_toolbar_segments(&panel, app);
-            let positions: Vec<(SegmentPosition, u16)> = segments
-                .iter()
-                .map(|segment| (segment.position, segment.index))
-                .collect();
-            assert_eq!(
-                positions,
-                vec![(SegmentPosition::Left, 1), (SegmentPosition::Right, 0)]
+                "the statement caption stays out of the sub-toolbar"
             );
         });
     }
