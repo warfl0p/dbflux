@@ -1831,9 +1831,13 @@ impl CodeDocument {
         };
 
         let generation = grid.read(cx).result_generation();
-        let request = QueryRequest::new(dbflux_core::count_query_from_sql(&query))
-            .with_database(origin.context.database.clone())
-            .with_limit(1);
+        let request = query_request_for_execution(
+            dbflux_core::count_query_from_sql(&query),
+            origin.context.database.clone(),
+            &origin.exec_ctx,
+            self.effective_language().clone(),
+            1,
+        );
         let task = self.execute_in_result_context(origin.context, request, cx);
 
         cx.spawn(async move |_this, cx| {
@@ -2513,6 +2517,16 @@ impl CodeDocument {
             }
         })
         .detach();
+    }
+}
+
+/// Reads the single value a `COUNT(*)` query returns as a row count.
+fn count_value(value: &dbflux_core::Value) -> Option<u64> {
+    use dbflux_core::Value;
+    match value {
+        Value::Int(count) => u64::try_from(*count).ok(),
+        Value::Text(count) | Value::Decimal(count) => count.trim().parse().ok(),
+        _ => None,
     }
 }
 
