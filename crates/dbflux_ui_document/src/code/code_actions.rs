@@ -229,13 +229,101 @@ impl CodeActionProvider for SqlCodeActionProvider {
     }
 }
 
+impl CodeDocument {
+    /// The formatter of the connected driver's language service, or `None`
+    /// without a connection or when the service has none.
+    pub(super) fn formatter(&self, cx: &App) -> Option<fn(&str) -> String> {
+        let connection_id = self.connection_id?;
+        let connected = self.app_state.read(cx).connections().get(&connection_id)?;
+        connected.connection.language_service().formatter()
+    }
+
+    /// Formats the selection, or without one the statement Run would execute
+    /// (see [`format_edit`]).
+    pub(super) fn format_query(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if self.read_only {
+            return false;
+        }
+
+        let Some(format) = self.formatter(cx) else {
+            return false;
+        };
+
+        let (selection, cursor, text) = {
+            let state = self.editor.input_state.read(cx);
+            (
+                state.selected_range(),
+                state.cursor(),
+                state.value().to_string(),
+            )
+        };
+
+        let has_selection = !selection.is_empty();
+        let Some((range, formatted)) =
+            format_edit(self.effective_language(), &text, selection, cursor, format)
+        else {
+            return true;
+        };
+
+        let replaced = super::comment::utf16_range(&text, &range);
+        let next_selection = if has_selection {
+            range.start..range.start + formatted.len()
+        } else {
+            range.start..range.start
+        };
+
+        self.editor.rewriting_buffer = true;
+        self.editor.input_state.update(cx, |state, cx| {
+            let scroll_offset = state.scroll_offset();
+            let cursor = state.cursor_position();
+            state.set_cursor_position(cursor, window, cx);
+            state.replace_text_in_range(Some(replaced), &formatted, window, cx);
+            state.set_selected_range(next_selection, cx);
+            state.set_scroll_offset(scroll_offset, cx);
+        });
+
+        true
+    }
+}
+
+/// The edit Format makes: the byte range of `text` to replace and its
+/// formatted text, or `None` when there is nothing to change.
+///
+/// A non-empty `selection` is formatted as is. Without one, the statement Run
+/// would execute is: the one under `cursor`, or the whole buffer when Run
+/// runs it whole. Whitespace around the formatted text stays as it was.
+fn format_edit(
+    language: &QueryLanguage,
+    text: &str,
+    selection: StdRange<usize>,
+    cursor: usize,
+    format: fn(&str) -> String,
+) -> Option<(StdRange<usize>, String)> {
+    let range = if selection.is_empty() {
+        super::statements::cursor_statement(language, text, cursor).unwrap_or(0..text.len())
+    } else {
+        selection.start.min(selection.end)..selection.start.max(selection.end)
+    };
+
+    let source = text.get(range.clone())?;
+    let start = range.start + (source.len() - source.trim_start().len());
+    let end = range.start + source.trim_end().len();
+    let original = text
+        .get(start..end)
+        .filter(|original| !original.is_empty())?;
+
+    let formatted = format(original);
+    (formatted != original).then_some((start..end, formatted))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         CoreCodeAction, QualifySchemaColumns, SchemaColumns, SerializedEdit,
-        core_edit_to_lsp_action,
+        core_edit_to_lsp_action, format_edit,
     };
     use dbflux_components::controls::{Rope, RopeExt};
+    use dbflux_core::{QueryLanguage, format_sql};
 
     fn column(name: &str) -> dbflux_core::ColumnInfo {
         dbflux_core::ColumnInfo {
@@ -321,5 +409,56 @@ mod tests {
         let utf16_offset = rope.offset_to_offset_utf16(byte_offset);
 
         assert_eq!(rope.offset_utf16_to_offset(utf16_offset), byte_offset);
+    }
+
+    fn apply_format(text: &str, selection: std::ops::Range<usize>, cursor: usize) -> String {
+        let mut result = text.to_string();
+        if let Some((range, formatted)) =
+            format_edit(&QueryLanguage::Sql, text, selection, cursor, format_sql)
+        {
+            result.replace_range(range, &formatted);
+        }
+        result
+    }
+
+    #[test]
+    fn format_without_selection_formats_only_the_statement_under_the_cursor() {
+        let text = "select a from t;\n\nselect b from u where b = 1;\n";
+        let cursor = text.find("from u").expect("second statement");
+
+        assert_eq!(
+            apply_format(text, cursor..cursor, cursor),
+            "select a from t;\n\nSELECT\n  b\nFROM\n  u\nWHERE\n  b = 1;\n"
+        );
+    }
+
+    #[test]
+    fn format_with_a_selection_formats_the_selection() {
+        let text = "select a from t;\nselect b from u;";
+        let formatted = apply_format(text, 0..text.len(), 0);
+
+        assert_eq!(
+            formatted,
+            "SELECT\n  a\nFROM\n  t;\nSELECT\n  b\nFROM\n  u;"
+        );
+    }
+
+    #[test]
+    fn format_of_a_single_statement_keeps_the_surrounding_whitespace() {
+        assert_eq!(
+            apply_format("\n  select 1 \n", 0..0, 0),
+            "\n  SELECT\n  1 \n"
+        );
+    }
+
+    #[test]
+    fn format_of_formatted_or_blank_text_makes_no_edit() {
+        for text in ["SELECT\n  1", "  \n "] {
+            assert_eq!(
+                format_edit(&QueryLanguage::Sql, text, 0..0, 0, format_sql),
+                None,
+                "{text:?}"
+            );
+        }
     }
 }

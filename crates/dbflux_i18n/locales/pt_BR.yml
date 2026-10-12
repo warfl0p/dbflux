@@ -1265,6 +1265,7 @@ document:
       saved: Salvo
       save: Salvar
       formatter_unavailable: Formatador indisponível
+      format: Formatar
       query_history: Histórico de consultas
       explain_query: Explicar consulta
       open_in_chart: Abrir a consulta atual em um documento de gráfico
@@ -3699,6 +3700,8 @@ palette:
       name: "Adicionar pasta externa de scripts…"
     toggle_comment:
       name: Alternar comentário de linha
+    format_query:
+      name: Formatar consulta
     open_history:
       name: Abrir histórico de consultas
     cancel_query:
@@ -4088,6 +4091,7 @@ settings:
       open_script_file: Abrir arquivo de script…
       add_external_scripts_folder: "Adicionar pasta externa de scripts…"
       toggle_comment: Alternar comentário de linha
+      format_query: Formatar consulta
       export_results: Exportar resultados
       clear_filter: Limpar filtro
       next_result_tab: Próxima aba de resultado

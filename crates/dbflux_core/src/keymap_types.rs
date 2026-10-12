@@ -81,6 +81,8 @@ pub enum Command {
     /// the sidebar lists in place.
     AddExternalScriptsFolder,
     ToggleComment,
+    /// Format the selection, or the statement under the cursor.
+    FormatQuery,
 
     // === Results ===
     ExportResults,
@@ -286,6 +288,7 @@ impl Command {
             "run_query_in_new_tab" => Some(Command::RunQueryInNewTab),
             "save_query" => Some(Command::SaveQuery),
             "toggle_comment" => Some(Command::ToggleComment),
+            "format_query" => Some(Command::FormatQuery),
             "open_history" => Some(Command::ToggleHistoryDropdown),
             "cancel_query" => Some(Command::CancelQuery),
             "close_tab" => Some(Command::CloseCurrentTab),
@@ -395,6 +398,7 @@ impl Command {
             Command::OpenScriptFile => "Open script file…",
             Command::AddExternalScriptsFolder => "Add external scripts folder…",
             Command::ToggleComment => "Toggle line comment",
+            Command::FormatQuery => "Format query",
 
             Command::ExportResults => "Export results",
             Command::ClearFilter => "Clear filter",
@@ -594,6 +598,7 @@ impl Command {
             Command::OpenScriptFile => "open_script_file",
             Command::AddExternalScriptsFolder => "add_external_scripts_folder",
             Command::ToggleComment => "toggle_comment",
+            Command::FormatQuery => "format_query",
 
             Command::ExportResults => "export_results",
             Command::ClearFilter => "clear_filter",
@@ -811,6 +816,7 @@ impl Command {
             Command::OpenScriptFile,
             Command::AddExternalScriptsFolder,
             Command::ToggleComment,
+            Command::FormatQuery,
             Command::ExportResults,
             Command::ClearFilter,
             Command::NextResultTab,
@@ -1003,7 +1009,8 @@ impl Command {
             | Command::SaveFileAs
             | Command::OpenScriptFile
             | Command::AddExternalScriptsFolder
-            | Command::ToggleComment => "Editor",
+            | Command::ToggleComment
+            | Command::FormatQuery => "Editor",
 
             Command::ExportResults
             | Command::ClearFilter
@@ -1676,6 +1683,7 @@ mod tests {
             "run_query_in_new_tab",
             "save_query",
             "toggle_comment",
+            "format_query",
             "open_history",
             "cancel_query",
             "close_tab",

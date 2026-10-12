@@ -195,6 +195,28 @@ fn test_editor_toggle_comment_binding() {
 }
 
 #[test]
+fn test_editor_format_query_binding() {
+    let keymap = default_keymap();
+
+    #[cfg(target_os = "macos")]
+    let chord = KeyChord::new(
+        "l",
+        Modifiers {
+            platform: true,
+            alt: true,
+            ..Modifiers::none()
+        },
+    );
+    #[cfg(not(target_os = "macos"))]
+    let chord = KeyChord::new("f", Modifiers::ctrl_shift());
+
+    assert_eq!(
+        keymap.resolve(ContextId::Editor, &chord),
+        Some(Command::FormatQuery)
+    );
+}
+
+#[test]
 fn test_global_fallback_from_sidebar() {
     let keymap = default_keymap();
 

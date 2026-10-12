@@ -74,6 +74,26 @@ se ejecuta tal cual.
   <img src="../images/editor/multi-statement-light.webp" alt="Una pestaña de query que ejecutó tres sentencias como script, con una pestaña de resultado por sentencia">
 </picture>
 
+## Formatear
+
+`Ctrl+Shift+F` (`Cmd+Option+L` en macOS, donde `Cmd+Shift+F` es buscar y
+reemplazar) — **Format query**. El botón Format de la barra de herramientas, el
+menú de acciones del panel y **Format query** en la paleta de comandos hacen lo
+mismo.
+
+Con una selección, Format formatea la selección. Sin selección, formatea la
+sentencia bajo el cursor, la misma que ejecuta `Ctrl+Enter`, así que las demás
+sentencias del buffer no cambian. Para formatear todas las sentencias,
+selecciona todo (`Ctrl+A`) primero. Las palabras clave pasan a mayúsculas y las
+cláusulas se sangran con dos espacios; el espacio en blanco alrededor del texto
+formateado se conserva.
+
+El formateador viene del language service del driver conectado. PostgreSQL,
+MySQL/MariaDB, SQLite, ClickHouse, DuckDB, Redshift y Turso tienen uno. Sin
+conexión, o con un driver sin formateador (SQL Server, cuyos identificadores
+entre corchetes el formateador rompería, y los lenguajes no SQL), el botón Format
+queda deshabilitado y muestra **Formatter unavailable**.
+
 ## Confirmación de queries peligrosas
 
 DBFlux detecta operaciones peligrosas entre lenguajes — `DELETE`/`DROP`/

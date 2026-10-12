@@ -3671,7 +3671,7 @@ mod result_tab_keyboard_tests {
     #[gpui::test]
     fn the_pane_actions_list_the_result_tabs_and_the_results_area(cx: &mut TestAppContext) {
         let (document, window) = document_with_result_tabs(cx, 2);
-        let actions = window.update(|_, cx| document.read(cx).pane_actions(&document));
+        let actions = window.update(|_, cx| document.read(cx).pane_actions(&document, cx));
 
         let entries: Vec<(&str, Option<Command>)> = actions
             .iter()
@@ -3749,7 +3749,7 @@ mod result_tab_keyboard_tests {
         let menu: Vec<String> = window.update(|_, cx| {
             document
                 .read(cx)
-                .pane_actions(&document)
+                .pane_actions(&document, cx)
                 .iter()
                 .map(|action| action.id.to_string())
                 .collect()

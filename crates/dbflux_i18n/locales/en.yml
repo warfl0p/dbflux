@@ -1265,6 +1265,7 @@ document:
       saved: Saved
       save: Save
       formatter_unavailable: Formatter unavailable
+      format: Format
       query_history: Query history
       explain_query: Explain query
       open_in_chart: Open current query in a chart document
@@ -3699,6 +3700,8 @@ palette:
       name: "Add external scripts folder…"
     toggle_comment:
       name: Toggle line comment
+    format_query:
+      name: Format query
     open_history:
       name: Open query history
     cancel_query:
@@ -4088,6 +4091,7 @@ settings:
       open_script_file: Open script file…
       add_external_scripts_folder: "Add external scripts folder…"
       toggle_comment: Toggle line comment
+      format_query: Format query
       export_results: Export results
       clear_filter: Clear filter
       next_result_tab: Next result tab

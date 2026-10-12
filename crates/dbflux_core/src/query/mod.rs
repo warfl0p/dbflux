@@ -43,8 +43,8 @@ pub use language_service::{
     DiagnosticSeverity, EditorDiagnostic, LanguageService, SchemaColumns, SqlLanguageService,
     TextPosition, TextPositionRange, TextRange, ValidationResult, aggregate_writes_output,
     classify_query_for_language, classify_query_for_language_with_service,
-    classify_visual_mutation, detect_dangerous_query, detect_dangerous_sql, sql_statement_keywords,
-    strip_leading_comments,
+    classify_visual_mutation, detect_dangerous_query, detect_dangerous_sql, format_sql,
+    sql_statement_keywords, strip_leading_comments,
 };
 pub use name_suggestion::{MAX_NAME_SUGGESTIONS, MAX_SUGGESTED_NAME_LENGTH, suggest_names};
 pub use relaxed_json::{normalize_relaxed_json, parse_relaxed_json};

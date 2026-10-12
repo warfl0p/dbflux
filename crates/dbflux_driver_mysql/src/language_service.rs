@@ -1,5 +1,6 @@
 use dbflux_core::{
     DangerousQueryKind, EditorDiagnostic, LanguageService, ValidationResult, detect_dangerous_sql,
+    format_sql,
 };
 
 /// Language service for MySQL and MariaDB.
@@ -26,6 +27,10 @@ impl LanguageService for MySqlLanguageService {
 
     fn editor_diagnostics(&self, _query: &str) -> Vec<EditorDiagnostic> {
         Vec::new()
+    }
+
+    fn formatter(&self) -> Option<fn(&str) -> String> {
+        Some(format_sql)
     }
 }
 
@@ -75,5 +80,16 @@ mod tests {
             svc.detect_dangerous("DROP TABLE users"),
             Some(DangerousQueryKind::Drop)
         );
+    }
+
+    #[test]
+    fn formatter_keeps_quoted_identifiers() {
+        let format = MySqlLanguageService
+            .formatter()
+            .expect("the service must offer a formatter");
+        let formatted = format("select `order`.id from `order` where `order`.id = 1");
+
+        assert!(formatted.starts_with("SELECT"), "{formatted}");
+        assert_eq!(formatted.matches("`order`").count(), 3, "{formatted}");
     }
 }
