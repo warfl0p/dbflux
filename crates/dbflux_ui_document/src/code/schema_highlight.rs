@@ -12,7 +12,8 @@ use std::rc::Rc;
 
 use gpui::{Context, HighlightStyle, SharedString, Window};
 use gpui_component::input::{
-    FoldRange, HighlightStyleResolver, InputEdit, InputHighlighter, InputHighlighterFactory, Rope,
+    FoldRange, InputEdit, InputHighlighter, InputHighlighterFactory, Rope,
+    SharedHighlightStyleResolver,
 };
 
 use crate::completion_support::normalize_identifier;
@@ -73,7 +74,7 @@ impl InputHighlighter for SchemaAwareHighlighter {
     fn styles(
         &self,
         range: &Range<usize>,
-        resolver: &dyn HighlightStyleResolver,
+        resolver: &SharedHighlightStyleResolver,
     ) -> Vec<(Range<usize>, HighlightStyle)> {
         let mut styles = self.inner.styles(range, resolver);
         if let (Some(table), Some(schema)) = (resolver.style("type"), resolver.style("namespace")) {
