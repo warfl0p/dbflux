@@ -43,7 +43,7 @@ pub(crate) struct QueryCompletionProvider {
     /// to detect deletions the menu plumbing ignored.
     completion_query_generation: Rc<Cell<u64>>,
     /// Shared with the editor's highlighter, which colors a bare schema name
-    /// as a schema; refreshed on every SQL metadata build.
+    /// as a schema; filled by `refresh_catalog_names`.
     catalog_names: super::schema_highlight::SharedCatalogNames,
 }
 
@@ -275,7 +275,6 @@ impl QueryCompletionProvider {
             });
         }
 
-        self.store_catalog_names(&metadata);
         metadata
     }
 
@@ -285,25 +284,26 @@ impl QueryCompletionProvider {
         if !matches!(self.query_language, dbflux_core::QueryLanguage::Sql) {
             return false;
         }
-        let before = std::mem::take(&mut *self.catalog_names.borrow_mut());
-        self.sql_completion_metadata(cx);
-        let names = self.catalog_names.borrow();
-        names.schemas != before.schemas || names.relations != before.relations
-    }
-
-    fn store_catalog_names(&self, metadata: &SqlCompletionMetadata) {
-        let mut names = self.catalog_names.borrow_mut();
-        names.schemas = metadata
+        let metadata = self.sql_completion_metadata(cx);
+        let schemas: HashSet<String> = metadata
             .schema_names
             .iter()
             .map(|schema| normalize_identifier(schema))
             .collect();
-        names.relations = metadata
+        let relations: HashSet<String> = metadata
             .table_names_iter()
             .chain(metadata.view_names_iter())
             .chain(metadata.unqualified_relations.iter().map(String::as_str))
             .map(|relation| normalize_identifier(relation.rsplit('.').next().unwrap_or(relation)))
             .collect();
+
+        let mut names = self.catalog_names.borrow_mut();
+        if names.schemas == schemas && names.relations == relations {
+            return false;
+        }
+        names.schemas = schemas;
+        names.relations = relations;
+        true
     }
 
     fn mongo_completion_metadata(&self, cx: &App) -> MongoCompletionMetadata {
