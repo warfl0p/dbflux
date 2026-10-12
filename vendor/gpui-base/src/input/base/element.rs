@@ -1789,7 +1789,7 @@ impl<M: InputModeKind> TextElement<M> {
                 } else {
                     highlighter.styles(
                         &(byte_start..byte_end),
-                        state.editor_style.highlight_styles.as_ref(),
+                        &state.editor_style.highlight_styles,
                     )
                 };
 

@@ -2639,8 +2639,8 @@ mod tests {
             px, size,
         };
         use gpui_component::input::{
-            FoldRange, HighlightStyleResolver, InputEdit, InputHighlighter,
-            InputHighlighterFactory, Rope,
+            FoldRange, InputEdit, InputHighlighter, InputHighlighterFactory, Rope,
+            SharedHighlightStyleResolver,
         };
         use std::cell::Cell;
         use std::ops::Range;
@@ -2665,7 +2665,7 @@ mod tests {
             fn styles(
                 &self,
                 range: &Range<usize>,
-                _resolver: &dyn HighlightStyleResolver,
+                _resolver: &SharedHighlightStyleResolver,
             ) -> Vec<(Range<usize>, HighlightStyle)> {
                 vec![(range.clone(), HighlightStyle::default())]
             }

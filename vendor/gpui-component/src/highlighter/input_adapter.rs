@@ -11,8 +11,8 @@ use std::{
 
 use gpui::{HighlightStyle, SharedString, Task};
 use gpui_base::input::{
-    EditorState, FoldRange, HighlightStyleResolver, InputEdit as BaseInputEdit, InputHighlighter,
-    InputHighlighterFactory,
+    EditorState, FoldRange, InputEdit as BaseInputEdit, InputHighlighter, InputHighlighterFactory,
+    SharedHighlightStyleResolver,
 };
 use ropey::Rope;
 use tree_sitter::{InputEdit, ParseOptions, Parser, Point};
@@ -162,9 +162,9 @@ impl InputHighlighter for TreeSitterInputHighlighter {
     fn styles(
         &self,
         range: &Range<usize>,
-        resolver: &dyn HighlightStyleResolver,
+        resolver: &SharedHighlightStyleResolver,
     ) -> Vec<(Range<usize>, HighlightStyle)> {
-        self.inner.borrow().styles(range, resolver)
+        self.inner.borrow().cached_styles(range, resolver)
     }
     fn fold_ranges(&self, _: &Rope) -> Vec<FoldRange> {
         self.inner
