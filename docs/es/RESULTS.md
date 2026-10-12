@@ -19,8 +19,11 @@ pantalla ancha, muévelos a la derecha del editor con el botón de panel de la
 cabecera de resultados, la entrada **Mostrar los resultados a la derecha** de
 las acciones del panel o **Mover los resultados junto al editor o debajo** en la
 paleta de comandos. El mismo control los vuelve a poner debajo. Arrastra el
-divisor para cambiar el tamaño de cada lado. Las pestañas de consulta nuevas se
-abren con la última posición elegida.
+divisor para cambiar el tamaño de cada lado. DBFlux recuerda dónde dejas el
+divisor, por separado debajo y junto al editor, y cada pestaña de consulta se
+abre con él, también después de reiniciar. Un divisor arrastrado casi hasta un
+borde no se restaura. Las pestañas de consulta nuevas se abren con la última
+posición elegida.
 
 En cualquiera de las dos posiciones, `Ctrl+j` lleva el teclado del editor a los
 resultados y `Ctrl+k` lo devuelve.

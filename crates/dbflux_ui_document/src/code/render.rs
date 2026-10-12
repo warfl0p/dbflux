@@ -37,6 +37,22 @@ fn format_label(can_format: bool) -> SharedString {
     }
 }
 
+/// The editor's share of a two-panel split, from the measured panel sizes.
+pub(super) fn editor_share(sizes: &[Pixels]) -> Option<f32> {
+    let [editor, results] = sizes else {
+        return None;
+    };
+    let total = editor.as_f32() + results.as_f32();
+    (total > 0.0).then(|| editor.as_f32() / total)
+}
+
+/// Initial panel sizes for a split whose editor takes `editor_share`. The
+/// group scales them to its container, so only their ratio matters.
+fn split_sizes(editor_share: f32) -> (Pixels, Pixels) {
+    let total = 1000.0;
+    (px(total * editor_share), px(total * (1.0 - editor_share)))
+}
+
 impl CodeDocument {
     /// The toolbar as pane actions (see [`crate::pane::PaneAction`]): the
     /// same buttons, under the same conditions, so the whole toolbar is
@@ -860,6 +876,29 @@ impl CodeDocument {
             )
     }
 
+    /// Saves the editor's share of the split once the user finishes dragging
+    /// its divider, so the next split for `position` opens the same way.
+    fn save_split_on_resize(
+        &self,
+        position: ResultsPosition,
+        cx: &mut Context<Self>,
+    ) -> impl Fn(&Entity<ResizableState>, &mut Window, &mut App) + 'static {
+        let document = cx.entity().downgrade();
+        move |state, _window, cx| {
+            let Some(share) = editor_share(state.read(cx).sizes()) else {
+                return;
+            };
+            if let Err(error) = document.update(cx, |document, cx| {
+                let app_state = document.app_state.clone();
+                document
+                    .editor_shares
+                    .set(position, share, app_state.read(cx));
+            }) {
+                log::warn!("Could not record the results split: {error}");
+            }
+        }
+    }
+
     fn render_collapsed_results_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
         let tab_count = self.result_tabs.result_tabs.len();
@@ -1238,19 +1277,22 @@ impl Render for CodeDocument {
                         SqlQueryLayout::Split
                             if self.results_position == ResultsPosition::Right =>
                         {
+                            let (editor_size, results_size) =
+                                split_sizes(self.editor_shares.get(ResultsPosition::Right));
                             h_resizable(SharedString::from(format!(
                                 "sql-split-right-{}",
                                 self.id.0
                             )))
+                            .on_resize(self.save_split_on_resize(ResultsPosition::Right, cx))
                             .child(
                                 resizable_panel()
-                                    .size(px(200.0))
+                                    .size(editor_size)
                                     .size_range(px(200.0)..px(10_000.0))
                                     .child(editor_view),
                             )
                             .child(
                                 resizable_panel()
-                                    .size(px(200.0))
+                                    .size(results_size)
                                     .size_range(px(200.0)..px(10_000.0))
                                     .child(results_view),
                             )
@@ -1258,16 +1300,19 @@ impl Render for CodeDocument {
                         }
 
                         SqlQueryLayout::Split => {
+                            let (editor_size, results_size) =
+                                split_sizes(self.editor_shares.get(ResultsPosition::Bottom));
                             v_resizable(SharedString::from(format!("sql-split-{}", self.id.0)))
+                                .on_resize(self.save_split_on_resize(ResultsPosition::Bottom, cx))
                                 .child(
                                     resizable_panel()
-                                        .size(px(200.0))
+                                        .size(editor_size)
                                         .size_range(px(100.0)..px(1000.0))
                                         .child(editor_view),
                                 )
                                 .child(
                                     resizable_panel()
-                                        .size(px(200.0))
+                                        .size(results_size)
                                         .size_range(EditorMetrics::RESULTS_MIN_HEIGHT..px(1000.0))
                                         .child(results_view),
                                 )
