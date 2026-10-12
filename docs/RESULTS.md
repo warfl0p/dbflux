@@ -38,6 +38,11 @@ When the results panel has focus:
 - `f` focuses the toolbar; `/` focuses the search/filter.
 - `z` toggles collapsing the panel.
 - `m` (or `Shift+F10`) opens the row/cell context menu.
+- `Shift+Space` / `Ctrl+Shift+Space` — select the whole row / column of the focused
+  cell. A click on a row number or a column name does the same, and
+  `Shift`+click extends the selection to it.
+
+The row numbers stay at the left edge while the grid scrolls sideways.
 
 ## Record view
 
@@ -57,7 +62,8 @@ cells, so unsaved changes, Save Row and revert work the same in both layouts;
 
 Right-click a column header for a menu scoped to that column: order ascending
 or descending, clear the ordering, and every filter operator, in one flat
-list. A left click on the header still cycles the sort.
+list. A left click on the header selects the column; the arrow at the right
+of the header cycles the sort.
 
 ## Value panel
 

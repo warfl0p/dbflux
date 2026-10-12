@@ -145,26 +145,34 @@ impl SelectionState {
             .unwrap_or(false)
     }
 
-    /// Select an entire row.
-    #[allow(dead_code)]
-    pub fn select_row(&mut self, row: usize, col_count: usize) {
+    /// Select whole rows: `row` alone, or with `extend` every row from the
+    /// anchor's row to `row`. The cursor lands on the first column of `row`,
+    /// so selecting a row does not move the view sideways.
+    pub fn select_rows(&mut self, row: usize, extend: bool, col_count: usize) {
         if col_count == 0 {
             return;
         }
-        self.anchor = Some(CellCoord::new(row, 0));
-        self.active = Some(CellCoord::new(row, col_count - 1));
+        let anchor_row = match self.anchor {
+            Some(anchor) if extend => anchor.row,
+            _ => row,
+        };
+        self.anchor = Some(CellCoord::new(anchor_row, col_count - 1));
+        self.active = Some(CellCoord::new(row, 0));
     }
 
-    /// Extend selection to include an entire row.
-    #[allow(dead_code)]
-    pub fn extend_to_row(&mut self, row: usize, col_count: usize) {
-        if col_count == 0 {
+    /// Select whole columns: `col` alone, or with `extend` every column from
+    /// the anchor's column to `col`. The cursor lands on the first row of
+    /// `col`.
+    pub fn select_columns(&mut self, col: usize, extend: bool, row_count: usize) {
+        if row_count == 0 {
             return;
         }
-        if self.anchor.is_none() {
-            self.anchor = Some(CellCoord::new(row, 0));
-        }
-        self.active = Some(CellCoord::new(row, col_count - 1));
+        let anchor_col = match self.anchor {
+            Some(anchor) if extend => anchor.col,
+            _ => col,
+        };
+        self.anchor = Some(CellCoord::new(row_count - 1, anchor_col));
+        self.active = Some(CellCoord::new(0, col));
     }
 
     /// Select all cells in the table.
@@ -211,5 +219,52 @@ mod tests {
 
         sel.extend_to(CellCoord::new(4, 5));
         assert!(sel.is_selected(CellCoord::new(3, 4)));
+    }
+
+    #[test]
+    fn rows_and_columns_select_whole_and_extend_from_the_anchor() {
+        let mut sel = SelectionState::new();
+
+        sel.select_rows(2, false, 4);
+        assert_eq!(
+            sel.selected_range(),
+            Some(CellRange::new(CellCoord::new(2, 0), CellCoord::new(2, 3)))
+        );
+        assert_eq!(
+            sel.active,
+            Some(CellCoord::new(2, 0)),
+            "cursor on the first column"
+        );
+
+        sel.select_rows(5, true, 4);
+        assert_eq!(
+            sel.selected_range(),
+            Some(CellRange::new(CellCoord::new(2, 0), CellCoord::new(5, 3)))
+        );
+
+        sel.select_columns(1, false, 10);
+        assert_eq!(
+            sel.selected_range(),
+            Some(CellRange::new(CellCoord::new(0, 1), CellCoord::new(9, 1)))
+        );
+        assert_eq!(
+            sel.active,
+            Some(CellCoord::new(0, 1)),
+            "cursor on the first row"
+        );
+
+        sel.select_columns(3, true, 10);
+        assert_eq!(
+            sel.selected_range(),
+            Some(CellRange::new(CellCoord::new(0, 1), CellCoord::new(9, 3)))
+        );
+
+        // A cell selection extends to whole rows from the cell's row.
+        sel.select_cell(CellCoord::new(4, 2));
+        sel.select_rows(6, true, 4);
+        assert_eq!(
+            sel.selected_range(),
+            Some(CellRange::new(CellCoord::new(4, 0), CellCoord::new(6, 3)))
+        );
     }
 }

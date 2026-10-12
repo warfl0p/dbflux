@@ -83,9 +83,11 @@ pub(crate) const DATA_GRID: SurfaceRegistry = SurfaceRegistry {
     ],
     entries: &[
         ("cell-*", KeyboardPath::Command(Command::SelectNext)),
+        ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
+        ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         // The table menu of the column carries Order ascending / descending.
         (
-            "header-col-*",
+            "header-sort-*",
             KeyboardPath::Command(Command::OpenContextMenu),
         ),
         // Every row of the table menu and its submenus.
@@ -704,13 +706,8 @@ pub(crate) const DELIMITED: SurfaceRegistry = SurfaceRegistry {
             "segmented-delimited-text-mode-*",
             KeyboardPath::Command(Command::CycleResultView),
         ),
-        (
-            "header-col-*",
-            KeyboardPath::MouseOnly(
-                "a header click has no action in this document: rows stay in file order, \
-                 and renaming the column is in the pane actions menu",
-            ),
-        ),
+        ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
+        ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         (
             "delimited-load-more",
             KeyboardPath::Command(Command::ResultsNextPage),
@@ -796,12 +793,8 @@ pub(crate) const PARQUET: SurfaceRegistry = SurfaceRegistry {
     ],
     entries: &[
         ("cell-*", KeyboardPath::Command(Command::SelectNext)),
-        (
-            "header-col-*",
-            KeyboardPath::MouseOnly(
-                "a header click has no action in this document: rows stay in file order",
-            ),
-        ),
+        ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
+        ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         (
             "parquet-load-more",
             KeyboardPath::Command(Command::ResultsNextPage),
@@ -878,12 +871,8 @@ pub(crate) const SPREADSHEET: SurfaceRegistry = SurfaceRegistry {
             "segmented-spreadsheet-view-*",
             KeyboardPath::Command(Command::CycleDocumentView),
         ),
-        (
-            "header-col-*",
-            KeyboardPath::MouseOnly(
-                "a header click has no action in this document: rows stay in sheet order",
-            ),
-        ),
+        ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
+        ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         (
             "spreadsheet-sheet-*",
             KeyboardPath::Command(Command::NextResultTab),

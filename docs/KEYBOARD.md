@@ -606,6 +606,7 @@ edited.
 | `Ctrl+Home` / `Ctrl+End` | First / last row |
 | `Shift+Home` / `Shift+End`, `Ctrl+Shift+Home` / `Ctrl+Shift+End` | Extend the selection to the row or table edge |
 | `Ctrl+a` / `Cmd+a` | Select all |
+| `Shift+Space` / `Ctrl+Shift+Space` | Select the whole row / column of the focused cell |
 | `Escape` | Clear the selection |
 | `Ctrl+c` / `Cmd+c`, `y y` | Copy the selection |
 | `Shift+y Shift+y` | Copy the row |

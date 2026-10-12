@@ -967,20 +967,27 @@ fn the_extension_hint_is_the_text_after_the_last_dot() {
     assert_eq!(extension_hint(".csv"), None);
 }
 
-/// A header click has no action here, so the registry must not name a
-/// command for it.
+/// A header click selects the column, as `Select column` does. The file keeps
+/// its row order, so the header has no sort control to register.
 #[test]
-fn the_registry_lists_the_column_headers_as_mouse_only() {
-    let header = DELIMITED
-        .entries
-        .iter()
-        .find(|(pattern, _)| *pattern == "header-col-*")
-        .map(|(_, path)| *path);
+fn the_registry_lists_the_column_headers_as_select_column() {
+    let path_of = |id: &str| {
+        DELIMITED
+            .entries
+            .iter()
+            .find(|(pattern, _)| *pattern == id)
+            .map(|(_, path)| *path)
+    };
 
     assert!(
-        matches!(header, Some(KeyboardPath::MouseOnly(reason)) if !reason.starts_with("gap:")),
-        "{header:?}"
+        matches!(
+            path_of("header-col-*"),
+            Some(KeyboardPath::Command(Command::SelectColumn))
+        ),
+        "{:?}",
+        path_of("header-col-*")
     );
+    assert_eq!(path_of("header-sort-*"), None);
 }
 
 /// The keyboard is on the loading notice when the first page arrives, and

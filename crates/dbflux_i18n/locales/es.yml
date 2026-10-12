@@ -4226,6 +4226,8 @@ settings:
       extend_select_row_end: Extender selección al final de la fila
       extend_select_first: Extender selección a la primera fila
       extend_select_last: Extender selección a la última fila
+      select_row: Seleccionar fila
+      select_column: Seleccionar columna
       select_all: Seleccionar todo
       save_row: Guardar cambios de fila
       undo: Deshacer

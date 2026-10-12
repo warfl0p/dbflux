@@ -1488,6 +1488,17 @@ fn data_table_layer() -> KeymapLayer {
     // Ctrl elsewhere); binding the literal Ctrl chord too would shadow the
     // editor's interrupt semantics on macOS.
     layer.bind(KeyChord::new("a", Modifiers::primary()), Command::SelectAll);
+    // Whole row and whole column; the same as a click on the row number or
+    // the column name. Ctrl+Space, the spreadsheet key for a column, already
+    // toggles the row inspector in the results grid.
+    layer.bind(
+        KeyChord::new("space", Modifiers::shift()),
+        Command::SelectRow,
+    );
+    layer.bind(
+        KeyChord::new("space", Modifiers::ctrl_shift()),
+        Command::SelectColumn,
+    );
     layer.bind(KeyChord::new("escape", Modifiers::none()), Command::Cancel);
 
     // Copy

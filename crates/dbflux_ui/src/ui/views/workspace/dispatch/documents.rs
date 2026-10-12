@@ -145,6 +145,8 @@ impl Workspace {
             | Command::ExtendSelectRowEnd
             | Command::ExtendSelectFirst
             | Command::ExtendSelectLast
+            | Command::SelectRow
+            | Command::SelectColumn
             | Command::SelectAll
             | Command::SaveRow
             | Command::Undo

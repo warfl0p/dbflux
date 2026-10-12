@@ -1105,6 +1105,7 @@ impl SpreadsheetDocument {
             let mut state = DataTableState::new(table_model, cx);
             state.set_positional_editing(editable);
             state.set_insertable(editable);
+            state.set_sortable(false);
             state
         });
         let table = cx.new(|cx| DataTable::new("spreadsheet-table", table_state.clone(), cx));
