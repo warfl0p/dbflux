@@ -92,22 +92,25 @@ impl RenderOnce for CompletionMenuItem {
             .filter_text
             .as_deref()
             .unwrap_or(self.highlight_prefix.as_ref());
+        let syntax_style = item
+            .kind
+            .and_then(syntax_capture_for_kind)
+            .and_then(|capture| cx.theme().highlight_theme.style.syntax.style(capture));
+        // Matched characters are bold, as in VS Code, and keep the label's
+        // kind color: a separate match color could equal it (tables and
+        // `blue`). Labels without a kind color take the match color too.
         let highlight_style = HighlightStyle {
-            color: Some(cx.theme().blue),
+            font_weight: Some(gpui::FontWeight::BOLD),
+            color: syntax_style
+                .and_then(|style| style.color)
+                .is_none()
+                .then(|| cx.theme().blue),
             ..Default::default()
         };
         let highlights: Vec<_> = fuzzy_match_ranges(&item.label, query)
             .into_iter()
             .map(|range| (range, highlight_style))
             .collect();
-
-        // The selected row keeps the accent foreground so the label stays
-        // readable on the accent background.
-        let syntax_style = item
-            .kind
-            .filter(|_| !self.selected)
-            .and_then(syntax_capture_for_kind)
-            .and_then(|capture| cx.theme().highlight_theme.style.syntax.style(capture));
         let kind_description = item
             .label_details
             .as_ref()
@@ -122,10 +125,9 @@ impl RenderOnce for CompletionMenuItem {
             .rounded(cx.theme().radius.half())
             .when(item.deprecated.unwrap_or(false), |this| this.line_through())
             .hover(|this| this.bg(cx.theme().accent.opacity(0.8)))
-            .when(self.selected, |this| {
-                this.bg(cx.theme().tokens.accent)
-                    .text_color(cx.theme().accent_foreground)
-            })
+            // Only the background marks the selected row, so its label keeps
+            // its kind color.
+            .when(self.selected, |this| this.bg(cx.theme().primary.opacity(0.35)))
             .child(
                 div()
                     .flex_1()
@@ -146,9 +148,7 @@ impl RenderOnce for CompletionMenuItem {
                 this.child(
                     div()
                         .flex_none()
-                        .when(!self.selected, |this| {
-                            this.text_color(cx.theme().muted_foreground)
-                        })
+                        .text_color(cx.theme().muted_foreground)
                         .child(description),
                 )
             })
