@@ -42,6 +42,9 @@ pub(crate) struct QueryCompletionProvider {
     /// Bumped per `completions()` call; the editor's Change handler uses it
     /// to detect deletions the menu plumbing ignored.
     completion_query_generation: Rc<Cell<u64>>,
+    /// Shared with the editor's highlighter, which colors a bare schema name
+    /// as a schema; refreshed on every SQL metadata build.
+    catalog_names: super::schema_highlight::SharedCatalogNames,
 }
 
 impl QueryCompletionProvider {
@@ -52,6 +55,7 @@ impl QueryCompletionProvider {
         database: Option<String>,
         schema: Option<String>,
         completion_query_generation: Rc<Cell<u64>>,
+        catalog_names: super::schema_highlight::SharedCatalogNames,
     ) -> Self {
         Self {
             query_language,
@@ -63,6 +67,7 @@ impl QueryCompletionProvider {
             prefetched_databases: Rc::new(RefCell::new(HashSet::new())),
             sql_context: SqlContextEngine::new(),
             completion_query_generation,
+            catalog_names,
         }
     }
 
@@ -269,6 +274,20 @@ impl QueryCompletionProvider {
                 selected_schema: self.schema.as_deref().map(normalize_identifier),
             });
         }
+
+        let mut names = self.catalog_names.borrow_mut();
+        names.schemas = metadata
+            .schema_names
+            .iter()
+            .map(|schema| normalize_identifier(schema))
+            .collect();
+        names.relations = metadata
+            .table_names_iter()
+            .chain(metadata.view_names_iter())
+            .chain(metadata.unqualified_relations.iter().map(String::as_str))
+            .map(|relation| normalize_identifier(relation.rsplit('.').next().unwrap_or(relation)))
+            .collect();
+        drop(names);
 
         metadata
     }

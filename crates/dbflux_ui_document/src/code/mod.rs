@@ -69,6 +69,7 @@ mod focus;
 mod live_output;
 pub(crate) mod pane;
 mod render;
+pub(crate) mod schema_highlight;
 mod statements;
 mod vim;
 
@@ -396,6 +397,8 @@ pub(super) struct EditorState {
     /// (cursor deleted back past the menu's trigger start) and would leave a
     /// stale menu open; the Change handler force-closes it then.
     pub(super) completion_query_generation: Rc<Cell<u64>>,
+    /// Shared between the completion provider and the SQL highlighter.
+    pub(super) catalog_names: schema_highlight::SharedCatalogNames,
     /// Value of `completion_query_generation` at the previous `Change` event.
     pub(super) last_completion_generation: u64,
     /// The language this document declares for itself: derived from the active
@@ -744,6 +747,13 @@ impl CodeDocument {
         });
 
         let completion_query_generation = Rc::new(std::cell::Cell::new(0u64));
+        let catalog_names = schema_highlight::SharedCatalogNames::default();
+        input_state.update(cx, |state, cx| {
+            state.set_highlighter_factory(
+                schema_highlight::schema_aware_highlighter_factory(catalog_names.clone()),
+                cx,
+            );
+        });
         let supports_connection_context = editor_profile.supports_connection_context;
 
         let input_change_sub = cx.subscribe_in(
@@ -974,6 +984,7 @@ impl CodeDocument {
                 exec_ctx.database.clone(),
                 exec_ctx.schema.clone(),
                 completion_query_generation.clone(),
+                catalog_names.clone(),
             ));
 
         let code_action_provider: Rc<dyn CodeActionProvider> = Rc::new(SqlCodeActionProvider::new(
@@ -1086,6 +1097,7 @@ impl CodeDocument {
                 last_change_length: 0,
                 rewriting_buffer: false,
                 completion_query_generation,
+                catalog_names,
                 last_completion_generation: 0,
                 cached_effective_language: query_language.clone(),
                 language_binding,
