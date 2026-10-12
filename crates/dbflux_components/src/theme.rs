@@ -539,7 +539,7 @@ impl Palette {
             semantic_foreground: rgb_to_hsla(0x09090B),
 
             hover_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.04),
-            alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.012),
+            alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.035),
             selected_row_wash: rgb_to_hsla_alpha(0xD48CC8, 0.07),
             selected_item_wash: rgb_to_hsla_alpha(0xD48CC8, 0.12),
             overlay: rgb_to_hsla_alpha(0x050507, 0.62),
@@ -581,7 +581,7 @@ impl Palette {
             semantic_foreground: rgb_to_hsla(0xFFFFFF),
 
             hover_wash: rgb_to_hsla_alpha(0x141118, 0.04),
-            alternating_row_wash: rgb_to_hsla_alpha(0x141118, 0.015),
+            alternating_row_wash: rgb_to_hsla_alpha(0x141118, 0.035),
             selected_row_wash: rgb_to_hsla_alpha(0x702963, 0.07),
             selected_item_wash: rgb_to_hsla_alpha(0x702963, 0.14),
             overlay: rgb_to_hsla_alpha(0x1E1423, 0.28),
