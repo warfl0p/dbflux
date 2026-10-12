@@ -19,7 +19,7 @@ use crate::completion_support::normalize_identifier;
 
 /// Schema and relation names of the document's connection, normalized with
 /// `normalize_identifier`. Refreshed whenever the editor syncs with its
-/// connection, and on every completion.
+/// connection.
 #[derive(Default)]
 pub(crate) struct CatalogNames {
     pub(crate) schemas: HashSet<String>,
