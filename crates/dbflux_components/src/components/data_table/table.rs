@@ -959,12 +959,17 @@ impl DataTable {
             .font_family(fonts::grid_family(cx))
             .child(
                 div()
+                    .relative()
                     .flex()
                     .h_full()
                     .min_w(px(total_width))
                     .ml(-h_offset)
                     .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
-                    .children(header_cells),
+                    .children(header_cells)
+                    .child(
+                        pinned_row_number_cell(h_offset, theme.table_head)
+                            .debug_selector(|| "row-number-header".to_string()),
+                    ),
             )
     }
 
@@ -1033,6 +1038,7 @@ impl DataTable {
                 .collect::<Vec<_>>();
 
             div()
+                .relative()
                 .flex()
                 .flex_shrink_0()
                 .h(DocumentPresentation::group_row_height(cx))
@@ -1043,6 +1049,7 @@ impl DataTable {
                 .text_size(fonts::grid_px(cx, CollectionMetrics::GROUP_FONT))
                 .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
                 .children(cells)
+                .child(pinned_row_number_cell(h_offset, theme.table_head))
         });
 
         let name_cells = model
@@ -1207,6 +1214,7 @@ impl DataTable {
             .when_some(group_row, |header, row| header.child(row))
             .child(
                 div()
+                    .relative()
                     .flex()
                     .flex_shrink_0()
                     .h(name_row_height)
@@ -1216,7 +1224,8 @@ impl DataTable {
                     .border_color(theme.input)
                     .when(!has_presence, |row| row.items_center())
                     .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
-                    .children(name_cells),
+                    .children(name_cells)
+                    .child(pinned_row_number_cell(h_offset, theme.table_head)),
             )
     }
 
@@ -1260,6 +1269,7 @@ impl DataTable {
                     edit_buffer,
                     state.document_presentation(),
                     total_width,
+                    state.horizontal_offset(),
                     font_size,
                     row_height,
                     nested_icon,
@@ -1306,6 +1316,7 @@ fn render_rows(
     edit_buffer: &super::model::EditBuffer,
     document: Option<&DocumentPresentation>,
     total_width: f32,
+    h_offset: Pixels,
     font_size: Pixels,
     row_height: Pixels,
     nested_icon: Pixels,
@@ -1566,8 +1577,16 @@ fn render_rows(
                 })
                 .collect();
 
+            // Row state background (dirty=yellow, error=red); the row holding
+            // the focused cell gets the selected-row wash; clean rows
+            // otherwise alternate.
+            let row_wash = row_bg
+                .or(is_active_row.then_some(theme.table_active))
+                .or((row_ix % 2 == 1).then_some(theme.table_even));
+
             div()
                 .id(("row", row_ix))
+                .relative()
                 .flex()
                 .flex_shrink_0()
                 .w(px(total_width))
@@ -1575,33 +1594,44 @@ fn render_rows(
                 .overflow_hidden()
                 .border_b_1()
                 .border_color(theme.table_row_border)
-                // Row state background (dirty=yellow, error=red)
-                .when_some(row_bg, |d, bg| d.bg(bg))
-                // The row holding the focused cell gets the selected-row
-                // wash; clean rows otherwise alternate.
-                .when(row_bg.is_none() && is_active_row, |d| {
-                    d.bg(theme.table_active)
-                })
-                .when(row_bg.is_none() && !is_active_row && row_ix % 2 == 1, |d| {
-                    d.bg(theme.table_even)
-                })
-                .child(
-                    div()
-                        .flex()
-                        .flex_shrink_0()
-                        .items_center()
-                        .justify_end()
-                        .w(ROW_NUMBER_WIDTH)
-                        .h_full()
-                        .pr(CELL_PADDING_X)
-                        .text_size(font_size)
-                        .text_color(if is_active_row { tint } else { theme.input })
-                        .child((row_ix + 1).to_string()),
-                )
+                .when_some(row_wash, |d, bg| d.bg(bg))
+                .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
                 .children(cells)
+                .child(
+                    pinned_row_number_cell(h_offset, theme.table)
+                        .debug_selector(move || format!("row-number-{row_ix}"))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_end()
+                                .size_full()
+                                .pr(CELL_PADDING_X)
+                                .text_size(font_size)
+                                .text_color(if is_active_row { tint } else { theme.input })
+                                .when_some(row_wash, |d, bg| d.bg(bg))
+                                .child((row_ix + 1).to_string()),
+                        ),
+                )
                 .into_any_element()
         })
         .collect()
+}
+
+/// The row-number column of a header or body row, kept at the left edge while
+/// the cells scroll under it. Its row is shifted left by `h_offset`, so the
+/// cell moves back by the same amount; it is the row's last child so it paints
+/// over the cells, and it blocks clicks (not the wheel) so a covered cell
+/// cannot be activated through it. `background` must be opaque.
+fn pinned_row_number_cell(h_offset: Pixels, background: Hsla) -> gpui::Div {
+    div()
+        .absolute()
+        .top_0()
+        .bottom_0()
+        .left(h_offset)
+        .w(ROW_NUMBER_WIDTH)
+        .bg(background)
+        .block_mouse_except_scroll()
 }
 
 #[cfg(test)]
@@ -1770,6 +1800,77 @@ mod tests {
 
     /// A host makes a table read-only while its edits must not change (a
     /// save or a reload is running): undo and redo then change nothing.
+    /// The row numbers and the header corner stay at the left edge while the
+    /// cells scroll sideways under them, and scrolling to a column leaves it
+    /// to the right of the numbers instead of under them.
+    #[gpui::test]
+    fn row_numbers_stay_at_the_left_edge_when_scrolled_sideways(cx: &mut TestAppContext) {
+        cx.update(crate::theme::init);
+
+        let state_holder: std::rc::Rc<std::cell::RefCell<Option<Entity<DataTableState>>>> =
+            std::rc::Rc::default();
+        let holder_for_view = state_holder.clone();
+
+        let (_, visual) = cx.add_window_view(move |_window, cx| {
+            let state = cx.new(|cx| DataTableState::new(overflow_model(), cx));
+            let table = cx.new(|cx| DataTable::new("pinned-test-table", state.clone(), cx));
+            holder_for_view.replace(Some(state));
+            ScrollHarness { table }
+        });
+
+        let state = state_holder
+            .borrow()
+            .clone()
+            .expect("the state entity must be created");
+
+        visual.update(|_, cx| {
+            state.update(cx, |state, cx| {
+                state.set_column_width(0, 1000.0, cx);
+                state.set_column_width(1, 1000.0, cx);
+            });
+        });
+        visual.run_until_parked();
+
+        let number_before = visual
+            .debug_bounds("row-number-0")
+            .expect("the first row number must render");
+        let corner_before = visual
+            .debug_bounds("row-number-header")
+            .expect("the header corner must render");
+
+        visual.update(|_, cx| {
+            state.update(cx, |state, cx| {
+                state
+                    .horizontal_scroll_handle()
+                    .set_offset(gpui::point(px(-1100.0), px(0.0)));
+                state.sync_horizontal_offset(cx);
+            });
+        });
+        visual.run_until_parked();
+        assert_eq!(
+            offsets(visual, &state).1,
+            px(-1100.0),
+            "the grid must scroll"
+        );
+        assert_eq!(visual.debug_bounds("row-number-0"), Some(number_before));
+        assert_eq!(
+            visual.debug_bounds("row-number-header"),
+            Some(corner_before)
+        );
+
+        // Column 1 starts 1000 px into the cells, so at 1100 its first 100 px
+        // are under the numbers; scrolling to it puts its left edge just
+        // right of them.
+        visual.update(|_, cx| state.read(cx).scroll_to_column(1));
+        visual.update(|_, cx| {
+            state.update(cx, |state, cx| {
+                state.sync_horizontal_offset(cx);
+            });
+        });
+        visual.run_until_parked();
+        assert_eq!(offsets(visual, &state).1, px(-1000.0));
+    }
+
     #[gpui::test]
     fn undo_and_redo_change_nothing_in_a_read_only_table(cx: &mut TestAppContext) {
         use super::super::model::CellValue;
