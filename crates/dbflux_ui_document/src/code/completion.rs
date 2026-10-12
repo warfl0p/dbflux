@@ -275,6 +275,23 @@ impl QueryCompletionProvider {
             });
         }
 
+        self.store_catalog_names(&metadata);
+        metadata
+    }
+
+    /// Refreshes the names the highlighter colors schemas by, from the
+    /// connection's current catalog. Returns whether they changed.
+    pub(crate) fn refresh_catalog_names(&self, cx: &App) -> bool {
+        if !matches!(self.query_language, dbflux_core::QueryLanguage::Sql) {
+            return false;
+        }
+        let before = std::mem::take(&mut *self.catalog_names.borrow_mut());
+        self.sql_completion_metadata(cx);
+        let names = self.catalog_names.borrow();
+        names.schemas != before.schemas || names.relations != before.relations
+    }
+
+    fn store_catalog_names(&self, metadata: &SqlCompletionMetadata) {
         let mut names = self.catalog_names.borrow_mut();
         names.schemas = metadata
             .schema_names
@@ -287,9 +304,6 @@ impl QueryCompletionProvider {
             .chain(metadata.unqualified_relations.iter().map(String::as_str))
             .map(|relation| normalize_identifier(relation.rsplit('.').next().unwrap_or(relation)))
             .collect();
-        drop(names);
-
-        metadata
     }
 
     fn mongo_completion_metadata(&self, cx: &App) -> MongoCompletionMetadata {
