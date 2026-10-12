@@ -36,6 +36,7 @@ All notable changes to DBFlux will be documented in this file.
 
 ### Changed
 
+* **The editor and results split is remembered** — Dragging the divider between the SQL editor and its results now sticks: every query tab opens with the split you left, also after a restart, with one split for results below the editor and one for results beside it. Hiding and showing the results pane keeps it too. A divider dragged almost to one edge is not restored, so the pane cannot reopen collapsed. See Results.
 * **Active statement highlighted in the gutter only** — The statement under the cursor in the code editor is now marked only in the gutter, with its bar, fill and bold line numbers. The text area behind it keeps the editor background, so the line you are editing is no longer tinted; the cursor line shows the theme's regular active-line color.
 
 ### Fixed

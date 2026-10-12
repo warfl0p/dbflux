@@ -3743,7 +3743,7 @@ mod result_tab_keyboard_tests {
     // Explicit imports rather than the parent glob: combining `use super::*`
     // with `#[gpui::test]` sends the gpui_macros expansion into unbounded
     // recursion.
-    use crate::code::{CodeDocument, SqlQueryFocus, SqlQueryLayout};
+    use crate::code::{CodeDocument, ResultsPosition, SqlQueryFocus, SqlQueryLayout};
     use crate::pane::PaneActionRun;
     use dbflux_app::keymap::Command;
     use dbflux_components::theme;
@@ -3924,6 +3924,49 @@ mod result_tab_keyboard_tests {
             editor_focused,
             "with no result left, the editor has the keys"
         );
+    }
+
+    /// A dragged split is saved per results position, so a query tab opened
+    /// later starts from it, while a near-collapsed split is never restored.
+    #[gpui::test]
+    fn results_split_is_saved_per_position_and_restored_by_new_tabs(cx: &mut TestAppContext) {
+        let (document, window) = document_with_result_tabs(cx, 1);
+
+        let shares = window.update(|window, cx| {
+            let app_state = document.read(cx).app_state.clone();
+            document.update(cx, |document, cx| {
+                document
+                    .editor_shares
+                    .set(ResultsPosition::Bottom, 0.7, app_state.read(cx));
+                document
+                    .editor_shares
+                    .set(ResultsPosition::Right, 0.02, app_state.read(cx));
+            });
+            let later = cx.new(|cx| {
+                CodeDocument::new_with_language(app_state, None, QueryLanguage::Sql, window, cx)
+            });
+            later.read(cx).editor_shares
+        });
+
+        assert_eq!(shares.get(ResultsPosition::Bottom), 0.7);
+        assert_eq!(
+            shares.get(ResultsPosition::Right),
+            0.5,
+            "a near-collapsed split keeps the default"
+        );
+    }
+
+    #[test]
+    fn editor_share_is_the_editor_fraction_of_both_panels() {
+        assert_eq!(
+            super::super::render::editor_share(&[gpui::px(300.0), gpui::px(100.0)]),
+            Some(0.75)
+        );
+        assert_eq!(
+            super::super::render::editor_share(&[gpui::px(0.0), gpui::px(0.0)]),
+            None
+        );
+        assert_eq!(super::super::render::editor_share(&[gpui::px(300.0)]), None);
     }
 
     #[gpui::test]

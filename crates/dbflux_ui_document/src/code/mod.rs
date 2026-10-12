@@ -45,7 +45,7 @@ use gpui_component::highlighter::{
     Diagnostic as InputDiagnostic, DiagnosticSeverity as InputDiagnosticSeverity,
 };
 use gpui_component::input::EditorState as GpuiEditorState;
-use gpui_component::resizable::{h_resizable, resizable_panel, v_resizable};
+use gpui_component::resizable::{ResizableState, h_resizable, resizable_panel, v_resizable};
 use lsp_types::{
     CompletionContext, CompletionItem, CompletionItemKind, CompletionResponse, CompletionTextEdit,
     InsertTextFormat, Position as LspPosition, Range as LspRange, TextEdit,
@@ -187,6 +187,83 @@ impl ResultsPosition {
             .set(RESULTS_POSITION_KEY, self.storage_value())
         {
             log::error!("Could not save the results position: {error}");
+        }
+    }
+}
+
+/// UI state keys holding the editor's share of the split for each results
+/// position, which every query tab opens with.
+const BOTTOM_SPLIT_KEY: &str = "query_results_split_bottom";
+const RIGHT_SPLIT_KEY: &str = "query_results_split_right";
+
+/// The editor's share of the split before the user drags the divider.
+const DEFAULT_EDITOR_SHARE: f32 = 0.5;
+
+/// The editor's share of the split, kept per results position because a
+/// comfortable split below the editor is rarely the same one beside it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct EditorShares {
+    bottom: f32,
+    right: f32,
+}
+
+impl EditorShares {
+    fn load(app_state: &AppStateEntity) -> Self {
+        let load = |key: &str| match app_state.storage_runtime().ui_state().get(key) {
+            Ok(Some(value)) => value
+                .parse::<f32>()
+                .ok()
+                .filter(|share| Self::is_usable(*share))
+                .unwrap_or(DEFAULT_EDITOR_SHARE),
+            Ok(None) => DEFAULT_EDITOR_SHARE,
+            Err(error) => {
+                log::warn!("Could not read the saved results split: {error}");
+                DEFAULT_EDITOR_SHARE
+            }
+        };
+
+        Self {
+            bottom: load(BOTTOM_SPLIT_KEY),
+            right: load(RIGHT_SPLIT_KEY),
+        }
+    }
+
+    /// A share that leaves one side under a fifteenth of the other is not
+    /// restored, as in DBeaver, so a near-collapsed divider does not stick.
+    fn is_usable(share: f32) -> bool {
+        share.is_finite() && (1.0 / 16.0..=15.0 / 16.0).contains(&share)
+    }
+
+    pub(crate) fn get(self, position: ResultsPosition) -> f32 {
+        match position {
+            ResultsPosition::Bottom => self.bottom,
+            ResultsPosition::Right => self.right,
+        }
+    }
+
+    /// Records a share the user dragged to, and saves it for later tabs.
+    fn set(&mut self, position: ResultsPosition, share: f32, app_state: &AppStateEntity) {
+        if !Self::is_usable(share) || share == self.get(position) {
+            return;
+        }
+
+        let key = match position {
+            ResultsPosition::Bottom => {
+                self.bottom = share;
+                BOTTOM_SPLIT_KEY
+            }
+            ResultsPosition::Right => {
+                self.right = share;
+                RIGHT_SPLIT_KEY
+            }
+        };
+
+        if let Err(error) = app_state
+            .storage_runtime()
+            .ui_state()
+            .set(key, &share.to_string())
+        {
+            log::error!("Could not save the results split: {error}");
         }
     }
 }
@@ -570,6 +647,7 @@ pub struct CodeDocument {
     // Layout/focus
     layout: SqlQueryLayout,
     results_position: ResultsPosition,
+    editor_shares: EditorShares,
     focus_handle: FocusHandle,
     focus_mode: SqlQueryFocus,
     /// Keyboard focus for the multi-statement script confirmation.
@@ -1121,6 +1199,7 @@ impl CodeDocument {
 
         let vim = dbflux_components::vim::VimBinding::new(input_state.clone(), window, cx);
         let results_position = ResultsPosition::load(app_state.read(cx));
+        let editor_shares = EditorShares::load(app_state.read(cx));
 
         let mut document = Self {
             id: doc_id,
@@ -1200,6 +1279,7 @@ impl CodeDocument {
             },
             layout: SqlQueryLayout::EditorOnly,
             results_position,
+            editor_shares,
             focus_handle: cx.focus_handle(),
             focus_mode: SqlQueryFocus::Editor,
             script_confirm_focus: ModalFocus::new(cx),
