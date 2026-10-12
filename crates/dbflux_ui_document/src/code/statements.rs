@@ -69,26 +69,12 @@ pub(super) fn statement_at_cursor(ranges: &[Range<usize>], cursor: usize) -> Opt
         .cloned()
 }
 
-/// The toolbar's run summary (AppByzEditor): "3 statements · last run
-/// 0.32 s", either part alone when the other is unknown, `None` when both
-/// are.
-pub(super) fn run_summary_label(
-    statement_count: Option<usize>,
-    last_run_seconds: Option<f64>,
-) -> Option<String> {
-    let statements = statement_count.map(|count| {
-        if count == 1 {
-            dbflux_i18n::t!("document.code.toolbar.statements.one", count = count)
-        } else {
-            dbflux_i18n::t!("document.code.toolbar.statements.many", count = count)
-        }
-    });
-    let last_run = last_run_seconds.map(crate::labels::code_toolbar_last_run_label);
-
-    match (statements, last_run) {
-        (Some(statements), Some(last_run)) => Some(format!("{statements} · {last_run}")),
-        (Some(part), None) | (None, Some(part)) => Some(part),
-        (None, None) => None,
+/// The statement count shown in the context bar: "3 statements".
+pub(super) fn statement_count_label(count: usize) -> String {
+    if count == 1 {
+        dbflux_i18n::t!("document.code.toolbar.statements.one", count = count)
+    } else {
+        dbflux_i18n::t!("document.code.toolbar.statements.many", count = count)
     }
 }
 
@@ -277,7 +263,7 @@ impl CodeDocument {
 #[cfg(test)]
 mod tests {
     use super::{
-        cursor_statement, result_statement_captions, run_summary_label, statement_at_cursor,
+        cursor_statement, result_statement_captions, statement_at_cursor, statement_count_label,
     };
     use dbflux_core::QueryLanguage;
 
@@ -350,20 +336,9 @@ mod tests {
     }
 
     #[test]
-    fn run_summary_joins_the_statement_count_and_the_last_run() {
-        assert_eq!(
-            run_summary_label(Some(3), Some(0.3214)).as_deref(),
-            Some("3 statements · last run 0.32 s")
-        );
-        assert_eq!(
-            run_summary_label(Some(1), None).as_deref(),
-            Some("1 statement")
-        );
-        assert_eq!(
-            run_summary_label(None, Some(1.0)).as_deref(),
-            Some("last run 1.00 s")
-        );
-        assert_eq!(run_summary_label(None, None), None);
+    fn statement_count_label_names_one_or_many_statements() {
+        assert_eq!(statement_count_label(3), "3 statements");
+        assert_eq!(statement_count_label(1), "1 statement");
     }
 
     #[test]

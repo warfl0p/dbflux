@@ -312,6 +312,10 @@ fn shell_coverage() -> Coverage {
             "sql-doc-*",
             "the code editor chrome coverage in dbflux_ui_document",
         )
+        .delegate(
+            "sql-toolbar",
+            "the code editor chrome coverage in dbflux_ui_document",
+        )
         .with_palette(palette)
 }
 

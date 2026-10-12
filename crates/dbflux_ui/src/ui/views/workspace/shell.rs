@@ -344,6 +344,9 @@ impl Workspace {
             });
         });
 
+        let document_actions = self.tab_manager.update(cx, |manager, cx| {
+            manager.active_title_bar_actions(window, cx)
+        });
         let bell = self.render_notification_bell(cx);
 
         div()
@@ -357,11 +360,28 @@ impl Workspace {
             .when(!client_decorated, |bar| {
                 bar.pr(ShellMetrics::TITLE_BAR_PADDING_X)
             })
+            // The active document's toolbar sits at the left edge; the drag
+            // area fills the rest of the left half, so the search stays centered.
             .child(
-                platform::csd_drag_area("title-bar-drag-area")
+                div()
+                    .flex()
                     .flex_1()
                     .flex_basis(px(0.0))
-                    .h_full(),
+                    .h_full()
+                    .items_center()
+                    .when_some(document_actions, |area, actions| {
+                        area.child(
+                            div()
+                                .flex_shrink_0()
+                                .pr(ShellMetrics::TITLE_BAR_PADDING_X)
+                                .child(actions),
+                        )
+                    })
+                    .child(
+                        platform::csd_drag_area("title-bar-drag-area")
+                            .flex_1()
+                            .h_full(),
+                    ),
             )
             .child(command_search)
             .child(

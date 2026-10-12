@@ -194,7 +194,8 @@ Hay cuatro puntos de entrada.
 ### Botón de gráfico en el editor de queries
 
 Cualquier query que produzca resultados tabulares se puede graficar. En la
-toolbar del editor de queries, haz clic en el botón de gráfico (tooltip: "Open
+toolbar del editor de queries, a la izquierda de la barra de título de la
+ventana, haz clic en el botón de gráfico (tooltip: "Open
 current query in a chart document") para abrir la query actual en un documento
 de gráfico.
 

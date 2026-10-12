@@ -1539,7 +1539,6 @@ impl CodeDocument {
                 .id("script-file-state")
                 .flex()
                 .min_w_0()
-                .ml_auto()
                 .items_center()
                 .gap(EditorMetrics::FILE_GAP)
                 .font_family(dbflux_components::fonts::editor_family(cx))
@@ -1648,10 +1647,13 @@ impl CodeDocument {
         // rather than overflowing the bar's right edge.
         let (connection_icon, connection_icon_color) = self.connection_driver_icon(cx);
         let script_file_state = self.render_script_file_state(cx);
+        let statement_count = self.render_statement_count(cx);
 
-        let main_row = div()
+        let controls = div()
+            .id("exec-context-controls")
             .flex()
             .flex_wrap()
+            .min_w_0()
             .items_center()
             .gap(EditorMetrics::CONTEXT_GAP)
             .child(
@@ -1869,8 +1871,32 @@ impl CodeDocument {
                             cx,
                         )),
                 )
-            })
-            .when_some(script_file_state, |el, state| el.child(state));
+            });
+
+        // The statement count and file path sit beside the controls rather than in
+        // their wrapping row, so a long path truncates instead of overflowing.
+        let main_row = div()
+            .flex()
+            .items_center()
+            .gap(EditorMetrics::CONTEXT_GAP)
+            .child(controls)
+            .when(
+                statement_count.is_some() || script_file_state.is_some(),
+                |el| {
+                    el.child(
+                        div()
+                            .id("exec-context-run-state")
+                            .flex()
+                            .flex_1()
+                            .min_w_0()
+                            .justify_end()
+                            .items_center()
+                            .gap(EditorMetrics::TOOLBAR_GAP)
+                            .children(statement_count)
+                            .children(script_file_state),
+                    )
+                },
+            );
 
         // Outer bar: column layout so the custom date-range row can sit below
         // the main controls without stretching the bar's width.

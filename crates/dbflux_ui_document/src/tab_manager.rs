@@ -56,6 +56,12 @@ impl Tab {
         }
     }
 
+    pub fn title_bar_actions(&self, window: &mut Window, cx: &mut App) -> Option<AnyElement> {
+        match self {
+            Tab::Pane(p) => p.title_bar_actions(window, cx),
+        }
+    }
+
     pub fn focus(&self, window: &mut Window, cx: &mut App) {
         match self {
             Tab::Pane(p) => p.focus(window, cx),
@@ -689,6 +695,16 @@ impl TabManager {
         self.active_tab()
             .map(|tab| tab.side_panels(window, cx))
             .unwrap_or_default()
+    }
+
+    /// The active tab's title-bar toolbar, if it has one.
+    pub fn active_title_bar_actions(
+        &self,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<AnyElement> {
+        self.active_tab()
+            .and_then(|tab| tab.title_bar_actions(window, cx))
     }
 
     /// Dispatches a command to the active tab.

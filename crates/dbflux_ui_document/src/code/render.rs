@@ -288,7 +288,13 @@ impl CodeDocument {
         actions
     }
 
-    fn render_toolbar(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
+    /// The run toolbar, drawn by the workspace in the window title bar while
+    /// this document is active.
+    pub(super) fn render_toolbar(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let theme = cx.theme().clone();
         let is_executing = self.state == DocumentState::Executing;
         let is_db_language = self.supports_connection_context();
@@ -314,15 +320,6 @@ impl CodeDocument {
             (AppIcon::Play, dbflux_i18n::t!("document.code.toolbar.run"))
         };
 
-        let execution_time = self
-            .execution
-            .active_execution_index
-            .and_then(|i| self.execution.execution_history.get(i))
-            .and_then(|r| {
-                r.finished_at
-                    .map(|finished| finished.duration_since(r.started_at))
-            });
-
         // Keep this shortcut in sync with the RunQuery binding (Cmd+Enter on
         // macOS, Ctrl+Enter elsewhere) registered in `keymap::defaults`.
         #[cfg(target_os = "macos")]
@@ -333,22 +330,12 @@ impl CodeDocument {
         let show_run_group = !is_read_only && is_db_language && !is_executing;
         let refresh_menu_focused = self.refresh.refresh_dropdown.read(cx).is_focused(window);
 
-        let run_summary = super::statements::run_summary_label(
-            self.statement_count().filter(|_| is_db_language),
-            execution_time.map(|duration| duration.as_secs_f64()),
-        );
-
         div()
             .id("sql-toolbar")
             .flex()
             .flex_shrink_0()
             .items_center()
             .gap(EditorMetrics::TOOLBAR_GAP)
-            .h(EditorMetrics::BAR_HEIGHT)
-            .px(EditorMetrics::BAR_PADDING_X)
-            .border_b_1()
-            .border_color(theme.border)
-            .bg(theme.popover)
             .when(!is_read_only, |el| {
                 el.child(
                     Button::new("run-query-btn", run_label)
@@ -408,26 +395,6 @@ impl CodeDocument {
                     .menu_focused(refresh_menu_focused),
                 )
             })
-            .child(div().flex_1())
-            .when_some(run_summary, |el, summary| {
-                el.child(
-                    div()
-                        .id("toolbar-run-summary")
-                        .flex()
-                        .flex_shrink_0()
-                        .items_center()
-                        .gap(EditorMetrics::LAST_RUN_GAP)
-                        .font_family(dbflux_components::fonts::editor_family(cx))
-                        .text_size(EditorMetrics::LAST_RUN_FONT)
-                        .text_color(theme.muted_foreground)
-                        .child(
-                            Icon::new(AppIcon::History)
-                                .size(EditorMetrics::LAST_RUN_ICON)
-                                .color(theme.muted_foreground),
-                        )
-                        .child(summary),
-                )
-            })
             // A query buffer shows its file state in the context bar.
             .when(self.session.show_saved_label && !is_db_language, |el| {
                 el.child(
@@ -447,6 +414,25 @@ impl CodeDocument {
                         .child(dbflux_i18n::t!("document.code.toolbar.saved")),
                 )
             })
+    }
+
+    /// The editor's statement count, shown in the context bar left of the
+    /// file path. The last run's duration is in the status bar.
+    pub(super) fn render_statement_count(&self, cx: &App) -> Option<AnyElement> {
+        let count = self
+            .statement_count()
+            .filter(|_| self.supports_connection_context())?;
+
+        Some(
+            div()
+                .id("context-bar-statement-count")
+                .flex_shrink_0()
+                .font_family(dbflux_components::fonts::editor_family(cx))
+                .text_size(EditorMetrics::LAST_RUN_FONT)
+                .text_color(cx.theme().muted_foreground)
+                .child(super::statements::statement_count_label(count))
+                .into_any_element(),
+        )
     }
 
     /// Renders the icon group: Save, Format, History, Explain, Chart.
@@ -1221,7 +1207,6 @@ impl Render for CodeDocument {
 
         let context_bar = self.render_context_bar(cx).into_any_element();
         let production_banner = self.render_production_banner(cx);
-        let toolbar = self.render_toolbar(window, cx).into_any_element();
 
         let editor_view = if self.routine_definition_pending {
             self.render_awaiting_connection(cx).into_any_element()
@@ -1244,7 +1229,6 @@ impl Render for CodeDocument {
             .track_focus(&self.focus_handle)
             .child(context_bar)
             .when_some(production_banner, |el, banner| el.child(banner))
-            .child(toolbar)
             .child(
                 div()
                     .flex_1()
