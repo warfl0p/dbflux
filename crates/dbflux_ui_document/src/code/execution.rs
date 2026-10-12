@@ -2530,16 +2530,6 @@ fn count_value(value: &dbflux_core::Value) -> Option<u64> {
     }
 }
 
-/// Reads the single value a `COUNT(*)` query returns as a row count.
-fn count_value(value: &dbflux_core::Value) -> Option<u64> {
-    use dbflux_core::Value;
-    match value {
-        Value::Int(count) => u64::try_from(*count).ok(),
-        Value::Text(count) | Value::Decimal(count) => count.trim().parse().ok(),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{query_request_for_execution, resolve_source_context};
