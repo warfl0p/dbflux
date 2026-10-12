@@ -28,12 +28,25 @@ fn toolbar_divider(theme: &gpui_component::theme::Theme) -> impl IntoElement {
         .bg(theme.border)
 }
 
+/// The Format button's label, which says why it is disabled.
+fn format_label(can_format: bool) -> SharedString {
+    if can_format {
+        dbflux_i18n::t!("document.code.toolbar.format").into()
+    } else {
+        dbflux_i18n::t!("document.code.toolbar.formatter_unavailable").into()
+    }
+}
+
 impl CodeDocument {
     /// The toolbar as pane actions (see [`crate::pane::PaneAction`]): the
     /// same buttons, under the same conditions, so the whole toolbar is
     /// reachable from the pane-actions menu. `entity` is this document, for
     /// the entries that call back into it.
-    pub(crate) fn pane_actions(&self, entity: &Entity<Self>) -> Vec<crate::pane::PaneAction> {
+    pub(crate) fn pane_actions(
+        &self,
+        entity: &Entity<Self>,
+        cx: &App,
+    ) -> Vec<crate::pane::PaneAction> {
         use crate::pane::PaneAction;
 
         if self.read_only {
@@ -89,14 +102,16 @@ impl CodeDocument {
             .icon(AppIcon::Save),
         );
 
+        let can_format = self.formatter(cx).is_some();
         actions.push(
-            PaneAction::callback(
+            PaneAction::command(
                 "format",
-                dbflux_i18n::t!("document.code.toolbar.formatter_unavailable"),
-                |_window, _cx| {},
+                format_label(can_format),
+                Command::FormatQuery,
+                context,
             )
             .icon(AppIcon::Zap)
-            .enabled(false),
+            .enabled(can_format),
         );
 
         actions.push(
@@ -444,6 +459,7 @@ impl CodeDocument {
     ) -> impl IntoElement {
         let history_open = self.history.history_panel.read(cx).is_visible();
         let is_db_language = self.supports_connection_context();
+        let can_format = self.formatter(cx).is_some();
 
         div()
             .flex()
@@ -467,16 +483,17 @@ impl CodeDocument {
                     })),
                 )
             })
-            // Format button — hidden for read-only documents (no formatter available)
+            // Format button — hidden for read-only documents, disabled when the
+            // language service has no formatter
             .when(!is_read_only, |el| {
                 el.child(
-                    Button::new(
-                        "toolbar-format-btn",
-                        dbflux_i18n::t!("document.code.toolbar.formatter_unavailable"),
-                    )
-                    .icon(AppIcon::Zap)
-                    .icon_only()
-                    .disabled(true),
+                    Button::new("toolbar-format-btn", format_label(can_format))
+                        .icon(AppIcon::Zap)
+                        .icon_only()
+                        .disabled(!can_format)
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.format_query(window, cx);
+                        })),
                 )
             })
             // History button — hidden for read-only documents

@@ -443,6 +443,7 @@ fn editor_layer() -> KeymapLayer {
         KeyChord::new("/", Modifiers::primary()),
         Command::ToggleComment,
     );
+    layer.bind(format_query_chord(), Command::FormatQuery);
 
     // The toolbar menu from the text itself: Shift+F10 types nothing, so it
     // is free in every Vim mode and without Vim.
@@ -452,6 +453,26 @@ fn editor_layer() -> KeymapLayer {
     );
 
     layer
+}
+
+/// Ctrl+Shift+F as in DBeaver. On macOS the editor binds Cmd+Shift+F to
+/// Replace, so Format takes Cmd+Option+L, DataGrip's Reformat Code.
+fn format_query_chord() -> KeyChord {
+    #[cfg(target_os = "macos")]
+    {
+        KeyChord::new(
+            "l",
+            Modifiers {
+                platform: true,
+                alt: true,
+                ..Modifiers::none()
+            },
+        )
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        KeyChord::new("f", Modifiers::ctrl_shift())
+    }
 }
 
 fn event_streams_picker_layer() -> KeymapLayer {

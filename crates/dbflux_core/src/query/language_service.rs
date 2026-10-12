@@ -512,6 +512,12 @@ pub trait LanguageService: Send + Sync {
     ) -> Vec<CodeAction> {
         Vec::new()
     }
+
+    /// The formatter behind the editor's Format command, or `None` (the
+    /// default) when the language has none, which disables the command.
+    fn formatter(&self) -> Option<fn(&str) -> String> {
+        None
+    }
 }
 
 /// Default SQL language service that handles standard SQL dangerous-query detection.
@@ -540,6 +546,10 @@ impl LanguageService for SqlLanguageService {
         schema: &dyn SchemaColumns,
     ) -> Vec<CodeAction> {
         sql_code_actions(query, offset, schema)
+    }
+
+    fn formatter(&self) -> Option<fn(&str) -> String> {
+        Some(format_sql)
     }
 }
 
@@ -769,21 +779,25 @@ fn qualify_column_actions(
         .collect()
 }
 
-/// Offers to reformat the statement under the cursor with `sqlformat`
-/// defaults (2-space indent, uppercase keywords), unless it is already
-/// formatted that way.
-fn format_statement_action(statement: &str, range: std::ops::Range<usize>) -> Option<CodeAction> {
-    if statement.trim().is_empty() {
-        return None;
-    }
-
+/// Formats SQL with `sqlformat`: 2-space indent, uppercase keywords.
+pub fn format_sql(sql: &str) -> String {
     let options = sqlformat::FormatOptions {
         indent: sqlformat::Indent::Spaces(2),
         uppercase: Some(true),
         ..sqlformat::FormatOptions::default()
     };
 
-    let formatted = sqlformat::format(statement, &sqlformat::QueryParams::None, &options);
+    sqlformat::format(sql, &sqlformat::QueryParams::None, &options)
+}
+
+/// Offers to reformat the statement under the cursor with [`format_sql`],
+/// unless it is already formatted that way.
+fn format_statement_action(statement: &str, range: std::ops::Range<usize>) -> Option<CodeAction> {
+    if statement.trim().is_empty() {
+        return None;
+    }
+
+    let formatted = format_sql(statement);
 
     if formatted.trim() == statement.trim() {
         return None;

@@ -67,6 +67,24 @@ runs as-is.
   <img src="images/editor/multi-statement-light.webp" alt="A query tab that ran three statements as a script, with one result tab per statement">
 </picture>
 
+## Formatting
+
+`Ctrl+Shift+F` (`Cmd+Option+L` on macOS, where `Cmd+Shift+F` is find and
+replace) — **Format query**. The toolbar's Format button, the pane actions menu
+and the command palette's **Format query** do the same.
+
+With a selection, Format formats the selection. Without one, it formats the
+statement under the cursor, the same statement `Ctrl+Enter` runs, so the other
+statements in the buffer stay as they are. To format every statement, select
+all (`Ctrl+A`) first. Keywords are uppercased and clauses are indented by two
+spaces; the whitespace around the formatted text is kept.
+
+The formatter comes from the connected driver's language service. PostgreSQL,
+MySQL/MariaDB, SQLite, ClickHouse, DuckDB, Redshift and Turso have one. Without
+a connection, or on a driver without a formatter (SQL Server, whose bracketed
+identifiers the formatter would break, and the non-SQL languages), the Format
+button stays disabled and reads **Formatter unavailable**.
+
 ## Dangerous-query confirmation
 
 DBFlux detects dangerous operations across languages — SQL `DELETE`/`DROP`/
