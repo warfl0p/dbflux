@@ -1388,15 +1388,14 @@ impl CodeDocument {
                 record.error = Some(error_msg.clone());
                 self.state = DocumentState::Error;
 
-                // A read-only refusal on an unattended run is expected: the
-                // fallback to Manual below tells the user, so it is not shown
-                // as a failed query.
-                if !read_only_refused {
-                    let title: SharedString = if is_script {
-                        dbflux_i18n::t!("document.code.execution.result_title.script_failed").into()
-                    } else {
-                        dbflux_i18n::t!("document.code.execution.result_title.query_failed").into()
-                    };
+                // A failed query already shows its error in the results panel,
+                // so only scripts get a toast. A read-only refusal on an
+                // unattended run is expected: the fallback to Manual below
+                // tells the user.
+                if is_script && !read_only_refused {
+                    let title: SharedString =
+                        dbflux_i18n::t!("document.code.execution.result_title.script_failed")
+                            .into();
                     let now = dbflux_core::chrono::Local::now()
                         .format("%H:%M:%S")
                         .to_string();
