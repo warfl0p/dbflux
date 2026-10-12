@@ -36,6 +36,7 @@ All notable changes to DBFlux will be documented in this file.
 ### Changed
 
 * **Active statement highlighted in the gutter only** — The statement under the cursor in the code editor is now marked only in the gutter, with its bar, fill and bold line numbers. The text area behind it keeps the editor background, so the line you are editing is no longer tinted; the cursor line shows the theme's regular active-line color.
+* **Query editor toolbar in the title bar** — Run, New tab, Save, Format, History, Explain, Chart and Refresh now sit at the left of the window title bar while a query tab is active, and the statement count and last run time sit left of the file path in the context bar. The editor and its results gain the height of the toolbar row they used to sit under.
 
 ### Fixed
 

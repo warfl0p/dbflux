@@ -292,6 +292,13 @@ impl CodeDocument {
             Box::new(move |_window, cx| e.update(cx, |d, cx| d.side_panels(cx)))
         });
 
+        handle.title_bar_actions = Some({
+            let e = entity.clone();
+            Box::new(move |window, cx| {
+                e.update(cx, |d, cx| d.render_toolbar(window, cx).into_any_element())
+            })
+        });
+
         handle.pane_actions = Some({
             let e = entity.clone();
             Box::new(move |cx| e.read(cx).pane_actions(&e))
@@ -312,9 +319,26 @@ mod tests {
     use dbflux_ui_base::AppStateEntity;
     use dbflux_ui_base::keymap::init_keymap;
     use dbflux_ui_base::toast::{ToastGlobal, ToastHost};
-    use gpui::{AppContext as _, Entity, TestAppContext, VisualTestContext};
+    use gpui::{
+        AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render, TestAppContext,
+        VisualTestContext, Window, div,
+    };
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    /// Draws the document under its title-bar toolbar, as the workspace does.
+    struct TitleBarHost {
+        document: Entity<CodeDocument>,
+    }
+
+    impl Render for TitleBarHost {
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let toolbar = self.document.update(cx, |document, cx| {
+                document.render_toolbar(window, cx).into_any_element()
+            });
+            div().child(toolbar).child(self.document.clone())
+        }
+    }
 
     fn open_sql_document(
         cx: &mut TestAppContext,
@@ -349,7 +373,8 @@ mod tests {
                     CodeDocument::new_with_language(app_state.clone(), None, language, window, cx)
                 });
                 slot.replace(Some(document.clone()));
-                gpui_component::Root::new(document, window, cx)
+                let host = cx.new(|_cx| TitleBarHost { document });
+                gpui_component::Root::new(host, window, cx)
             }
         });
         window.run_until_parked();

@@ -355,6 +355,11 @@ pub struct PaneHandle {
     /// that never show one.
     pub side_panels: Option<Box<dyn Fn(&mut Window, &mut App) -> Vec<DocumentSidePanel>>>,
 
+    /// Returns the document's toolbar, drawn by the workspace in the window
+    /// title bar while the document is active. `None` for documents without
+    /// one.
+    pub title_bar_actions: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement>>,
+
     /// Returns the actions the document offers in its pane-actions menu right
     /// now (see [`PaneAction`]). `None` for documents that offer none; the
     /// workspace then opens no menu.
@@ -468,6 +473,7 @@ impl PaneHandle {
             take_pending_open_bucket: None,
             take_pending_open_object_editor: None,
             side_panels: None,
+            title_bar_actions: None,
             pane_actions: None,
             on_close: None,
             save_for_close: None,
@@ -721,6 +727,13 @@ impl PaneHandle {
             .as_ref()
             .map(|panels| panels(window, cx))
             .unwrap_or_default()
+    }
+
+    /// The toolbar the document shows in the title bar, if it has one.
+    pub fn title_bar_actions(&self, window: &mut Window, cx: &mut App) -> Option<AnyElement> {
+        self.title_bar_actions
+            .as_ref()
+            .map(|actions| actions(window, cx))
     }
 
     /// The entries of the document's pane-actions menu right now; empty for
