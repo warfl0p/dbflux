@@ -29,6 +29,12 @@ pub(crate) fn completion_replace_range(
     }
 }
 
+/// Width cap of the completion menu: wide enough for long table names next to
+/// their kind label. The library default (320 px) cuts them off.
+pub(crate) fn completion_menu_max_width(cx: &App) -> Pixels {
+    ui_px(cx, dbflux_components::tokens::ui(560.))
+}
+
 pub(crate) fn push_completion_item(
     items: &mut Vec<CompletionItem>,
     seen: &mut HashSet<String>,

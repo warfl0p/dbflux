@@ -8,7 +8,7 @@ use gpui::{
     Render, RenderOnce, SharedString, Styled, StyledText, Subscription, WeakEntity, Window,
     deferred, div, prelude::FluentBuilder, px, relative,
 };
-use lsp_types::CompletionItem;
+use lsp_types::{CompletionItem, CompletionItemKind};
 use std::ops::Range;
 
 const MAX_MENU_HEIGHT: Pixels = px(240.);
@@ -101,6 +101,18 @@ impl RenderOnce for CompletionMenuItem {
             .map(|range| (range, highlight_style))
             .collect();
 
+        // The selected row keeps the accent foreground so the label stays
+        // readable on the accent background.
+        let syntax_style = item
+            .kind
+            .filter(|_| !self.selected)
+            .and_then(syntax_capture_for_kind)
+            .and_then(|capture| cx.theme().highlight_theme.style.syntax.style(capture));
+        let kind_description = item
+            .label_details
+            .as_ref()
+            .and_then(|details| details.description.clone());
+
         h_flex()
             .id(self.ix)
             .gap_2()
@@ -114,7 +126,32 @@ impl RenderOnce for CompletionMenuItem {
                 this.bg(cx.theme().tokens.accent)
                     .text_color(cx.theme().accent_foreground)
             })
-            .child(div().child(StyledText::new(item.label.clone()).with_highlights(highlights)))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .when_some(syntax_style, |this, style| {
+                        this.when_some(style.color, |this, color| this.text_color(color))
+                            .when_some(style.font_weight, |this, weight| this.font_weight(weight))
+                            .when_some(style.font_style, |this, font_style| match font_style {
+                                gpui::FontStyle::Italic | gpui::FontStyle::Oblique => this.italic(),
+                                gpui::FontStyle::Normal => this,
+                            })
+                    })
+                    .child(StyledText::new(item.label.clone()).with_highlights(highlights)),
+            )
+            .when_some(kind_description, |this, description| {
+                this.child(
+                    div()
+                        .flex_none()
+                        .when(!self.selected, |this| {
+                            this.text_color(cx.theme().muted_foreground)
+                        })
+                        .child(description),
+                )
+            })
             .when(item.detail.is_some(), |this| {
                 this.child(
                     Label::new(item.detail.as_deref().unwrap_or("").to_string())
@@ -125,6 +162,29 @@ impl RenderOnce for CompletionMenuItem {
             })
             .children(self.children)
     }
+}
+
+/// The syntax highlight capture whose style colors a completion of `kind`,
+/// so a suggestion looks like the token it inserts. `VARIABLE` maps to
+/// `variable.alias`, which DBFlux's SQL completion uses for table aliases; a
+/// theme without that style falls back to `variable`.
+fn syntax_capture_for_kind(kind: CompletionItemKind) -> Option<&'static str> {
+    Some(match kind {
+        CompletionItemKind::KEYWORD => "keyword",
+        CompletionItemKind::FUNCTION
+        | CompletionItemKind::METHOD
+        | CompletionItemKind::CONSTRUCTOR => "function",
+        CompletionItemKind::STRUCT
+        | CompletionItemKind::CLASS
+        | CompletionItemKind::INTERFACE
+        | CompletionItemKind::ENUM => "type",
+        CompletionItemKind::MODULE => "namespace",
+        CompletionItemKind::FIELD | CompletionItemKind::PROPERTY => "field",
+        CompletionItemKind::VARIABLE => "variable.alias",
+        CompletionItemKind::OPERATOR => "operator",
+        CompletionItemKind::CONSTANT | CompletionItemKind::ENUM_MEMBER => "constant",
+        _ => return None,
+    })
 }
 
 /// Byte ranges of `label` that fuzzy-match `query` (fzf-style), merged into
@@ -353,7 +413,14 @@ impl CompletionMenu {
                 .iter()
                 .enumerate()
                 .max_by_key(|(_, item)| {
-                    item.label.len() + item.detail.as_ref().map(|d| d.len()).unwrap_or(0)
+                    item.label.len()
+                        + item.detail.as_ref().map(|d| d.len()).unwrap_or(0)
+                        + item
+                            .label_details
+                            .as_ref()
+                            .and_then(|details| details.description.as_ref())
+                            .map(|d| d.len())
+                            .unwrap_or(0)
                 })
                 .map(|(ix, _)| ix)
                 .unwrap_or(0);
