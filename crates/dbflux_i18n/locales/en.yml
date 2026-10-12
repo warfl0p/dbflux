@@ -1259,7 +1259,6 @@ document:
       cancel: Cancel
       checking: "Checking…"
       run: Run
-      last_run: "last run %{seconds} s"
       new_tab: New tab
       read_only: Read-only
       saved: Saved

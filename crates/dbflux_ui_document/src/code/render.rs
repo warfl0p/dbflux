@@ -418,41 +418,21 @@ impl CodeDocument {
             })
     }
 
-    /// The statement count and the last run's duration, shown in the context
-    /// bar left of the file path.
-    pub(super) fn render_run_summary(&self, cx: &App) -> Option<AnyElement> {
-        let theme = cx.theme();
-        let execution_time = self
-            .execution
-            .active_execution_index
-            .and_then(|i| self.execution.execution_history.get(i))
-            .and_then(|r| {
-                r.finished_at
-                    .map(|finished| finished.duration_since(r.started_at))
-            });
-
-        let summary = super::statements::run_summary_label(
-            self.statement_count()
-                .filter(|_| self.supports_connection_context()),
-            execution_time.map(|duration| duration.as_secs_f64()),
-        )?;
+    /// The editor's statement count, shown in the context bar left of the
+    /// file path. The last run's duration is in the status bar.
+    pub(super) fn render_statement_count(&self, cx: &App) -> Option<AnyElement> {
+        let count = self
+            .statement_count()
+            .filter(|_| self.supports_connection_context())?;
 
         Some(
             div()
-                .id("toolbar-run-summary")
-                .flex()
+                .id("context-bar-statement-count")
                 .flex_shrink_0()
-                .items_center()
-                .gap(EditorMetrics::LAST_RUN_GAP)
                 .font_family(dbflux_components::fonts::editor_family(cx))
                 .text_size(EditorMetrics::LAST_RUN_FONT)
-                .text_color(theme.muted_foreground)
-                .child(
-                    Icon::new(AppIcon::History)
-                        .size(EditorMetrics::LAST_RUN_ICON)
-                        .color(theme.muted_foreground),
-                )
-                .child(summary)
+                .text_color(cx.theme().muted_foreground)
+                .child(super::statements::statement_count_label(count))
                 .into_any_element(),
         )
     }

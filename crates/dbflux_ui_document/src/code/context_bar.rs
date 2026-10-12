@@ -1603,10 +1603,6 @@ impl CodeDocument {
             .border_color(theme.border)
             .bg(theme.popover)
             .child(button)
-            .children(
-                self.render_run_summary(cx)
-                    .map(|summary| div().ml_auto().child(summary)),
-            )
             .into_any_element()
     }
 
@@ -1651,7 +1647,7 @@ impl CodeDocument {
         // rather than overflowing the bar's right edge.
         let (connection_icon, connection_icon_color) = self.connection_driver_icon(cx);
         let script_file_state = self.render_script_file_state(cx);
-        let run_summary = self.render_run_summary(cx);
+        let statement_count = self.render_statement_count(cx);
 
         let controls = div()
             .id("exec-context-controls")
@@ -1877,27 +1873,30 @@ impl CodeDocument {
                 )
             });
 
-        // The run summary and file path sit beside the controls rather than in
+        // The statement count and file path sit beside the controls rather than in
         // their wrapping row, so a long path truncates instead of overflowing.
         let main_row = div()
             .flex()
             .items_center()
             .gap(EditorMetrics::CONTEXT_GAP)
             .child(controls)
-            .when(run_summary.is_some() || script_file_state.is_some(), |el| {
-                el.child(
-                    div()
-                        .id("exec-context-run-state")
-                        .flex()
-                        .flex_1()
-                        .min_w_0()
-                        .justify_end()
-                        .items_center()
-                        .gap(EditorMetrics::TOOLBAR_GAP)
-                        .children(run_summary)
-                        .children(script_file_state),
-                )
-            });
+            .when(
+                statement_count.is_some() || script_file_state.is_some(),
+                |el| {
+                    el.child(
+                        div()
+                            .id("exec-context-run-state")
+                            .flex()
+                            .flex_1()
+                            .min_w_0()
+                            .justify_end()
+                            .items_center()
+                            .gap(EditorMetrics::TOOLBAR_GAP)
+                            .children(statement_count)
+                            .children(script_file_state),
+                    )
+                },
+            );
 
         // Outer bar: column layout so the custom date-range row can sit below
         // the main controls without stretching the bar's width.
