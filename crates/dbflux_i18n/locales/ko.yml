@@ -3903,6 +3903,9 @@ settings:
         space: "스페이스"
         comma: "쉼표 (,)"
         backslash: "백슬래시 (\\)"
+    blank_line_delimiter:
+      label: "빈 줄로 문장 구분"
+      hint: "세미콜론뿐 아니라 빈 줄에서도 SQL 문장을 나눕니다. 그래서 커서 아래 문장을 실행하거나 자동 완성할 때 그 위의 끝나지 않은 문장을 무시합니다. 선택한 스크립트 전체를 실행할 때는 여전히 세미콜론에서만 나눕니다."
     restore_session:
       label: "시작 시 열린 탭 복원"
     reopen_connections:

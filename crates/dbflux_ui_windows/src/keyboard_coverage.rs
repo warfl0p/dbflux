@@ -166,6 +166,10 @@ pub(crate) const SETTINGS: SurfaceRegistry = SurfaceRegistry {
         ("requires-where", KeyboardPath::Command(Command::Execute)),
         ("restore-session", KeyboardPath::Command(Command::Execute)),
         ("vim-mode", KeyboardPath::Command(Command::Execute)),
+        (
+            "blank-line-delimiter",
+            KeyboardPath::Command(Command::Execute),
+        ),
         ("audit-enabled", KeyboardPath::Command(Command::Execute)),
         (
             "capture-query-text",

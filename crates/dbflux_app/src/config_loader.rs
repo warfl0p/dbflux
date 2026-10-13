@@ -110,6 +110,7 @@ pub fn save_general_settings(
         grid_font_family: settings.grid_font_family.clone(),
         grid_font_size: f64::from(settings.grid_font_size),
         toast_auto_dismiss_secs: i64::from(settings.toast_auto_dismiss_secs),
+        blank_line_delimits_statements: i32::from(settings.blank_line_delimits_statements),
         updated_at: String::new(),
     };
     repo.upsert(&dto)?;
@@ -1121,6 +1122,7 @@ fn load_general_settings(
         ),
         toast_auto_dismiss_secs: u32::try_from(dto.toast_auto_dismiss_secs)
             .unwrap_or(GeneralSettings::DEFAULT_TOAST_AUTO_DISMISS_SECS),
+        blank_line_delimits_statements: dto.blank_line_delimits_statements != 0,
     }
 }
 
@@ -2554,6 +2556,7 @@ mod tests {
             grid_font_family: None,
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
+            blank_line_delimits_statements: 0,
             updated_at: String::new(),
         };
 
@@ -2649,6 +2652,7 @@ mod tests {
             grid_font_family: None,
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
+            blank_line_delimits_statements: 0,
             updated_at: String::new(),
         };
         runtime
@@ -2829,6 +2833,30 @@ mod tests {
     }
 
     #[test]
+    fn blank_line_delimiter_is_off_by_default_and_round_trips_through_save_and_load() {
+        let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
+
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(
+            !loaded.general_settings.blank_line_delimits_statements,
+            "a fresh install keeps splitting statements on `;` only"
+        );
+
+        let mut settings = GeneralSettings {
+            blank_line_delimits_statements: true,
+            ..Default::default()
+        };
+        super::save_general_settings(&runtime, &settings).expect("save with the delimiter on");
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(loaded.general_settings.blank_line_delimits_statements);
+
+        settings.blank_line_delimits_statements = false;
+        super::save_general_settings(&runtime, &settings).expect("save with the delimiter off");
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(!loaded.general_settings.blank_line_delimits_statements);
+    }
+
+    #[test]
     fn vim_leader_is_space_by_default_and_round_trips_through_save_and_load() {
         let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
 
@@ -2975,6 +3003,7 @@ mod tests {
             grid_font_family: None,
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
+            blank_line_delimits_statements: 0,
             updated_at: String::new(),
         };
         runtime

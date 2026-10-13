@@ -49,6 +49,7 @@ impl GeneralSection {
             current.dangerous_requires_preview != saved.dangerous_requires_preview,
             current.vim_mode != saved.vim_mode,
             current.vim_leader != saved.vim_leader,
+            current.blank_line_delimits_statements != saved.blank_line_delimits_statements,
             current.toast_auto_dismiss_secs != saved.toast_auto_dismiss_secs,
         ];
 
@@ -120,6 +121,7 @@ impl GeneralSection {
             GeneralFormRow::GridFontSize,
             GeneralFormRow::VimMode,
             GeneralFormRow::VimLeader,
+            GeneralFormRow::BlankLineDelimiter,
             GeneralFormRow::RestoreSession,
             GeneralFormRow::ReopenConnections,
             GeneralFormRow::DefaultFocus,
@@ -259,6 +261,11 @@ impl GeneralSection {
             Some(GeneralFormRow::VimLeader) => {
                 self.dropdown_vim_leader
                     .update(cx, |dropdown, cx| dropdown.toggle_open(cx));
+                cx.notify();
+            }
+            Some(GeneralFormRow::BlankLineDelimiter) => {
+                self.gen_settings.blank_line_delimits_statements =
+                    !self.gen_settings.blank_line_delimits_statements;
                 cx.notify();
             }
             Some(GeneralFormRow::RestoreSession) => {
@@ -965,6 +972,17 @@ impl GeneralSection {
                 Some(dbflux_i18n::t!("settings.general.vim_leader.hint")),
                 self.dropdown_vim_leader.clone(),
                 GeneralFormRow::VimLeader,
+                cx,
+            ))
+            .child(self.render_gen_checkbox(
+                "blank-line-delimiter",
+                dbflux_i18n::t!("settings.general.blank_line_delimiter.label"),
+                Some(dbflux_i18n::t!(
+                    "settings.general.blank_line_delimiter.hint"
+                )),
+                self.gen_settings.blank_line_delimits_statements,
+                GeneralFormRow::BlankLineDelimiter,
+                |this, value, _cx| this.gen_settings.blank_line_delimits_statements = value,
                 cx,
             ));
 

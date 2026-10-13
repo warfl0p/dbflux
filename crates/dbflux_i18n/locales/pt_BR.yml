@@ -3903,6 +3903,9 @@ settings:
         space: "Espaço"
         comma: "Vírgula (,)"
         backslash: "Barra invertida (\\)"
+    blank_line_delimiter:
+      label: "Uma linha em branco termina uma instrução"
+      hint: "Divide as instruções SQL nas linhas em branco além dos ponto e vírgulas, para que executar ou completar a instrução sob o cursor ignore uma instrução inacabada acima dela. Executar um script inteiro selecionado continua dividindo apenas nos ponto e vírgulas."
     restore_session:
       label: "Restaurar as abas abertas na inicialização"
     reopen_connections:

@@ -382,7 +382,8 @@ impl QueryCompletionProvider {
 
         self.prefetch_database_schema(connection_id, cx);
 
-        let statement_range = dbflux_core::QueryLanguage::Sql.statement_bounds_at(source, cursor);
+        let statement_range =
+            dbflux_core::QueryLanguage::Sql.statement_bounds_at(source, cursor, false);
         let referenced = dbflux_core::extract_referenced_tables(&source[statement_range]);
         if referenced.is_empty() {
             return;
@@ -1400,6 +1401,39 @@ impl QueryCompletionProvider {
     }
 }
 
+/// `source` with every character outside the blank-line block that holds
+/// `cursor` replaced by spaces, one per byte, line breaks kept. Completion
+/// then reads only that block, so an unfinished statement above it cannot
+/// change the context, while every offset and line of the buffer stays where
+/// it was for the replace ranges.
+fn mask_outside_statement_block(source: &str, cursor: usize) -> std::borrow::Cow<'_, str> {
+    let blocks = dbflux_core::QueryLanguage::Sql
+        .blank_line_blocks(source)
+        .unwrap_or_default();
+    if blocks.len() < 2 {
+        return std::borrow::Cow::Borrowed(source);
+    }
+
+    let Some(block) = blocks
+        .iter()
+        .rev()
+        .find(|block| block.start <= cursor)
+        .or(blocks.first())
+    else {
+        return std::borrow::Cow::Borrowed(source);
+    };
+
+    let mut masked = String::with_capacity(source.len());
+    for (offset, ch) in source.char_indices() {
+        if block.contains(&offset) || matches!(ch, '\n' | '\r') {
+            masked.push(ch);
+        } else {
+            masked.extend(std::iter::repeat_n(' ', ch.len_utf8()));
+        }
+    }
+    std::borrow::Cow::Owned(masked)
+}
+
 impl CompletionProvider for QueryCompletionProvider {
     fn completions(
         &self,
@@ -1422,6 +1456,16 @@ impl CompletionProvider for QueryCompletionProvider {
         );
 
         let items = if use_sql {
+            let source = if self
+                .app_state
+                .read(_cx)
+                .general_settings()
+                .blank_line_delimits_statements
+            {
+                mask_outside_statement_block(&source, cursor)
+            } else {
+                std::borrow::Cow::Borrowed(source.as_str())
+            };
             self.prefetch_sql_table_details(&source, cursor, _cx);
             self.completion_items_for_sql(&source, cursor, _cx)
         } else {
@@ -2026,7 +2070,8 @@ fn resolve_qualifier(
         }
     }
 
-    let statement_range = dbflux_core::QueryLanguage::Sql.statement_bounds_at(source, cursor);
+    let statement_range =
+        dbflux_core::QueryLanguage::Sql.statement_bounds_at(source, cursor, false);
     let aliases = extract_sql_aliases(&source[statement_range]);
     aliases.get(&normalized).cloned().unwrap_or(normalized)
 }
@@ -2069,7 +2114,8 @@ fn columns_from_referenced_tables<'a>(
     source: &str,
     cursor: usize,
 ) -> Vec<&'a str> {
-    let statement_range = dbflux_core::QueryLanguage::Sql.statement_bounds_at(source, cursor);
+    let statement_range =
+        dbflux_core::QueryLanguage::Sql.statement_bounds_at(source, cursor, false);
     let mut columns = Vec::new();
 
     for table_ref in dbflux_core::extract_referenced_tables(&source[statement_range]) {
@@ -2169,14 +2215,34 @@ fn is_sql_table_context(sql_before_cursor: &str) -> bool {
 mod tests {
     use super::{
         CompletionItem, KnownTableListing, SqlCompletionMetadata, build_sql_completion_metadata,
-        known_relational_tables, should_use_sql_completion, sql_completion_items_with_context,
-        tables_needing_details, target_database_snapshot,
+        known_relational_tables, mask_outside_statement_block, should_use_sql_completion,
+        sql_completion_items_with_context, tables_needing_details, target_database_snapshot,
     };
     use crate::completion_support::normalize_identifier;
     use dbflux_core::{
         CollectionInfo, ColumnInfo, DatabaseCategory, DatabaseInfo, DbSchemaInfo, DocumentSchema,
         FieldInfo, QueryLanguage, QueryTableRef, RelationalSchema, SchemaSnapshot, TableInfo,
     };
+
+    /// Completion with the blank-line delimiter reads only the cursor's block,
+    /// at the offsets and lines it has in the buffer.
+    #[test]
+    fn the_mask_keeps_only_the_cursor_block_in_place() {
+        let source = "SELECT * FROM brokén WHERE (\n\nSELECT id FROM users\n\nSELECT 2";
+        let cursor = source.find("users").expect("cursor block");
+        let masked = mask_outside_statement_block(source, cursor);
+
+        assert_eq!(masked.len(), source.len());
+        assert_eq!(masked.matches('\n').count(), source.matches('\n').count());
+        assert_eq!(masked.trim(), "SELECT id FROM users");
+        let block = source.find("SELECT id").expect("block");
+        assert_eq!(&masked[block..block + 20], "SELECT id FROM users");
+
+        assert!(matches!(
+            mask_outside_statement_block("SELECT 1", 3),
+            std::borrow::Cow::Borrowed(_)
+        ));
+    }
 
     /// The heuristic-only path (no cursor analysis): the exact pre-context
     /// behavior every legacy test below asserts.

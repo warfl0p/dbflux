@@ -1235,15 +1235,21 @@ impl QueryLanguage {
     /// Byte bounds of the statement containing `offset` in `text`.
     ///
     /// Statement boundaries follow the same rules as
-    /// [`QueryLanguage::split_statements`]; for non-SQL editor modes the whole
+    /// [`QueryLanguage::split_statements`], and with `blank_line_delimits` a
+    /// blank line ends a statement too; for non-SQL editor modes the whole
     /// buffer is a single statement.
-    pub fn statement_bounds_at(&self, text: &str, offset: usize) -> std::ops::Range<usize> {
+    pub fn statement_bounds_at(
+        &self,
+        text: &str,
+        offset: usize,
+        blank_line_delimits: bool,
+    ) -> std::ops::Range<usize> {
         if self.editor_mode() != "sql" {
             return 0..text.len();
         }
 
         let offset = offset.min(text.len());
-        sql_statement_ranges(text)
+        scan_sql_segments(text, true, blank_line_delimits)
             .into_iter()
             .find(|range| offset <= range.end)
             .unwrap_or(0..text.len())
@@ -1256,25 +1262,54 @@ impl QueryLanguage {
     /// `None` for a language whose buffer is not split into statements, so a
     /// caller can tell a single statement apart from a language without a
     /// statement splitter.
-    pub fn statement_ranges(&self, text: &str) -> Option<Vec<std::ops::Range<usize>>> {
+    ///
+    /// With `blank_line_delimits`, a blank line (empty or whitespace only,
+    /// outside strings, comments and dollar-quoted bodies) also ends a
+    /// statement, so a statement left without its `;` does not run into the
+    /// next one.
+    pub fn statement_ranges(
+        &self,
+        text: &str,
+        blank_line_delimits: bool,
+    ) -> Option<Vec<std::ops::Range<usize>>> {
         if self.editor_mode() != "sql" {
             return None;
         }
 
-        Some(
-            sql_statement_ranges(text)
-                .into_iter()
-                .filter_map(|range| {
-                    let segment = text.get(range.clone())?;
-                    let leading = segment.len() - segment.trim_start().len();
-                    let trailing = segment.len() - segment.trim_end().len();
-                    let trimmed = (range.start + leading)..(range.end - trailing);
-
-                    (trimmed.start < trimmed.end).then_some(trimmed)
-                })
-                .collect(),
-        )
+        Some(trimmed_segments(
+            text,
+            scan_sql_segments(text, true, blank_line_delimits),
+        ))
     }
+
+    /// Byte ranges of the blank-line-separated blocks of `text`, each trimmed
+    /// of surrounding whitespace; `;` does not split a block. `None` for a
+    /// language without a statement splitter.
+    pub fn blank_line_blocks(&self, text: &str) -> Option<Vec<std::ops::Range<usize>>> {
+        if self.editor_mode() != "sql" {
+            return None;
+        }
+
+        Some(trimmed_segments(text, scan_sql_segments(text, false, true)))
+    }
+}
+
+/// `ranges` trimmed of surrounding whitespace, whitespace-only ones dropped.
+fn trimmed_segments(
+    text: &str,
+    ranges: Vec<std::ops::Range<usize>>,
+) -> Vec<std::ops::Range<usize>> {
+    ranges
+        .into_iter()
+        .filter_map(|range| {
+            let segment = text.get(range.clone())?;
+            let leading = segment.len() - segment.trim_start().len();
+            let trailing = segment.len() - segment.trim_end().len();
+            let trimmed = (range.start + leading)..(range.end - trailing);
+
+            (trimmed.start < trimmed.end).then_some(trimmed)
+        })
+        .collect()
 }
 
 /// How a driver's query editor should present and behave, independent of the
@@ -1327,18 +1362,33 @@ fn split_sql_statements(text: &str) -> Vec<String> {
 /// Byte ranges of the `;`-delimited segments in `text` (separators excluded,
 /// segments untrimmed, empty segments kept). Shared scanner behind
 /// [`split_sql_statements`] and [`QueryLanguage::statement_bounds_at`].
+pub(crate) fn sql_statement_ranges(text: &str) -> Vec<std::ops::Range<usize>> {
+    scan_sql_segments(text, true, false)
+}
+
+/// Byte ranges of the segments of `text` between delimiters (separators
+/// excluded, segments untrimmed, empty segments kept): `;` when
+/// `split_on_semicolon`, a blank line (a line break followed by a line of only
+/// spaces, tabs or `\r`, then another line break) when `split_on_blank_line`.
+/// Neither splits inside a string, quoted identifier, comment or
+/// dollar-quoted body.
 ///
 /// Bounds proof for the indexed accesses below: `chars` is built once from
 /// `char_indices`, so `len == chars.len()` and every `byte` offset is a char
 /// boundary of `text`. Each `chars[index]` sits under `while index < len`, and
 /// every lookahead `chars[index + 1]` is separately guarded by
 /// `index + 1 < len`, in all four state machines (line comment, block
-/// comment, quoted string/identifier, dollar quote).
+/// comment, quoted string/identifier, dollar quote). The blank-line lookahead
+/// reads `chars[next]` only under `next < len`.
 #[expect(
     clippy::indexing_slicing,
-    reason = "every chars[index] is under `while index < len` and every chars[index + 1] lookahead under a separate `index + 1 < len` guard; offsets come from char_indices so text[range] slices stay on char boundaries"
+    reason = "every chars[index] is under `while index < len`, every chars[index + 1] lookahead under a separate `index + 1 < len` guard, and the blank-line lookahead chars[next] under `next < len`; offsets come from char_indices so text[range] slices stay on char boundaries"
 )]
-pub(crate) fn sql_statement_ranges(text: &str) -> Vec<std::ops::Range<usize>> {
+fn scan_sql_segments(
+    text: &str,
+    split_on_semicolon: bool,
+    split_on_blank_line: bool,
+) -> Vec<std::ops::Range<usize>> {
     let chars: Vec<(usize, char)> = text.char_indices().collect();
     let len = chars.len();
 
@@ -1443,11 +1493,28 @@ pub(crate) fn sql_statement_ranges(text: &str) -> Vec<std::ops::Range<usize>> {
         }
 
         // Statement terminator.
-        if ch == ';' {
+        if ch == ';' && split_on_semicolon {
             ranges.push(segment_start..byte);
             segment_start = byte + 1;
             index += 1;
             continue;
+        }
+
+        // Blank line: this line break, a line of only spaces, tabs or `\r`,
+        // and the next line break. The segment resumes at that second break,
+        // which can itself open another blank line.
+        if ch == '\n' && split_on_blank_line {
+            let mut next = index + 1;
+            while next < len && matches!(chars[next].1, ' ' | '\t' | '\r') {
+                next += 1;
+            }
+
+            if next < len && chars[next].1 == '\n' {
+                ranges.push(segment_start..byte);
+                segment_start = chars[next].0;
+                index = next;
+                continue;
+            }
         }
 
         index += 1;
@@ -2520,7 +2587,7 @@ mod tests {
     fn statement_ranges_locate_the_split_statements_in_the_buffer() {
         let text = "SELECT 1;\n\n  SELECT 'a;b'\n  FROM t;\n   ";
         let ranges = QueryLanguage::Sql
-            .statement_ranges(text)
+            .statement_ranges(text, false)
             .expect("SQL splits into statements");
 
         let located: Vec<&str> = ranges.iter().map(|range| &text[range.clone()]).collect();
@@ -2532,7 +2599,7 @@ mod tests {
     #[test]
     fn statement_ranges_are_none_without_a_statement_splitter() {
         assert_eq!(
-            QueryLanguage::MongoQuery.statement_ranges("db.users.find()"),
+            QueryLanguage::MongoQuery.statement_ranges("db.users.find()", false),
             None
         );
     }
@@ -2639,7 +2706,7 @@ mod tests {
     fn statement_bounds_at_whole_buffer_without_semicolon() {
         let text = "SELECT inv.total_amount FROM invoices inv";
         assert_eq!(
-            QueryLanguage::Sql.statement_bounds_at(text, 9),
+            QueryLanguage::Sql.statement_bounds_at(text, 9, false),
             0..text.len()
         );
     }
@@ -2647,10 +2714,10 @@ mod tests {
     #[test]
     fn statement_bounds_at_selects_statement_under_cursor() {
         let text = "SELECT 1; SELECT inv.issued_at FROM invoices inv; SELECT 3";
-        let range = QueryLanguage::Sql.statement_bounds_at(text, 12);
+        let range = QueryLanguage::Sql.statement_bounds_at(text, 12, false);
         assert_eq!(&text[range], " SELECT inv.issued_at FROM invoices inv");
 
-        let last = QueryLanguage::Sql.statement_bounds_at(text, text.len());
+        let last = QueryLanguage::Sql.statement_bounds_at(text, text.len(), false);
         assert_eq!(&text[last], " SELECT 3");
     }
 
@@ -2658,16 +2725,73 @@ mod tests {
     fn statement_bounds_at_ignores_semicolons_in_strings_and_comments() {
         let text = "SELECT ';' AS x, inv.total_amount FROM invoices inv -- trailing; comment";
         assert_eq!(
-            QueryLanguage::Sql.statement_bounds_at(text, 20),
+            QueryLanguage::Sql.statement_bounds_at(text, 20, false),
             0..text.len()
         );
+    }
+
+    /// With the blank-line delimiter, a statement left without its `;` ends
+    /// at the blank line below it instead of running into the next one; a
+    /// blank line inside a string, comment or dollar-quoted body does not
+    /// split, and without the delimiter nothing changes.
+    #[test]
+    fn a_blank_line_ends_a_statement_when_it_delimits() {
+        let text = "SELECT broken FROM\n\nSELECT 1;\n  \t\r\nSELECT 'a\n\nb';\n/* x\n\ny */ SELECT $$\n\n$$";
+        let statements = |blank_line_delimits| {
+            QueryLanguage::Sql
+                .statement_ranges(text, blank_line_delimits)
+                .expect("SQL splits")
+                .into_iter()
+                .map(|range| &text[range])
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            statements(true),
+            vec![
+                "SELECT broken FROM",
+                "SELECT 1",
+                "SELECT 'a\n\nb'",
+                "/* x\n\ny */ SELECT $$\n\n$$",
+            ]
+        );
+        assert_eq!(
+            statements(false),
+            vec![
+                "SELECT broken FROM\n\nSELECT 1",
+                "SELECT 'a\n\nb'",
+                "/* x\n\ny */ SELECT $$\n\n$$",
+            ]
+        );
+
+        let on_select_one = text.find("SELECT 1").expect("statement") + 3;
+        let bounds = QueryLanguage::Sql.statement_bounds_at(text, on_select_one, true);
+        assert_eq!(text[bounds].trim(), "SELECT 1");
+    }
+
+    /// Blank-line blocks keep their `;`-separated statements together.
+    #[test]
+    fn blank_line_blocks_split_only_at_blank_lines() {
+        let text = "SELECT 1; SELECT 2;\n\nBEGIN\n  SELECT 3;\nEND;";
+        let blocks: Vec<_> = QueryLanguage::Sql
+            .blank_line_blocks(text)
+            .expect("SQL splits")
+            .into_iter()
+            .map(|range| &text[range])
+            .collect();
+
+        assert_eq!(
+            blocks,
+            vec!["SELECT 1; SELECT 2;", "BEGIN\n  SELECT 3;\nEND;"]
+        );
+        assert_eq!(QueryLanguage::MongoQuery.blank_line_blocks(text), None);
     }
 
     #[test]
     fn statement_bounds_at_non_sql_returns_whole_buffer() {
         let text = "db.users.find(); db.orders.find()";
         assert_eq!(
-            QueryLanguage::MongoQuery.statement_bounds_at(text, 25),
+            QueryLanguage::MongoQuery.statement_bounds_at(text, 25, false),
             0..text.len()
         );
     }

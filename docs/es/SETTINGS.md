@@ -84,6 +84,7 @@ y permanece en English por ahora.
 | ---------------------------- | ------- | -------- |
 | **Vim mode in editors**      | Off     | Edición modal en todos los editores de varias líneas (editor de código, editor de objetos, diálogos JSON, panel de valor, vista JSON y pipeline de colecciones; solo movimientos en los visores de solo lectura): modos Normal e Insertar con `h`, `j`, `k`, `l`, `i`, `Escape`, `x` y `u`. Se aplica a los editores abiertos al guardar. Ver la sección de [modo Vim](KEYBOARD.md#modo-vim-opcional) en la referencia de teclado. |
 | **Leader key**               | Space   | La tecla que inicia las secuencias de líder de Vim en los modos Normal y Visual, como la líder y luego `a` para las acciones del panel: espacio, coma o barra invertida. Se aplica a los editores abiertos al guardar, y los atajos de líder que cambiaste en **Keybindings** la siguen. |
+| **A blank line ends a statement** | Off | Una línea en blanco termina una sentencia SQL igual que `;`, así que ejecutar o completar la sentencia bajo el cursor ignora una sentencia sin terminar por encima. Ejecutar un script entero seleccionado sigue dividiendo solo en los `;`. Ver [el editor](EDITOR.md). |
 
 ### Inicio y sesión
 

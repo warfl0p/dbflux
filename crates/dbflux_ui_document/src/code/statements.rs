@@ -41,10 +41,30 @@ pub(super) fn cursor_statement(
     language: &QueryLanguage,
     buffer: &str,
     cursor: usize,
+    blank_line_delimits: bool,
 ) -> Option<Range<usize>> {
-    let ranges = language.statement_ranges(buffer)?;
+    let ranges = language.statement_ranges(buffer, blank_line_delimits)?;
 
-    if dbflux_core::contains_compound_block(buffer) {
+    if !blank_line_delimits {
+        if dbflux_core::contains_compound_block(buffer) {
+            return None;
+        }
+        return statement_at_cursor(&ranges, cursor);
+    }
+
+    // A compound block (a procedure body) splits at its inner `;`, so it runs
+    // as the whole blank-line block it sits in; a block elsewhere in the
+    // buffer no longer makes the whole buffer run.
+    let blocks = language.blank_line_blocks(buffer)?;
+    if let Some(block) = statement_at_cursor(&blocks, cursor)
+        && buffer
+            .get(block.clone())
+            .is_some_and(dbflux_core::contains_compound_block)
+    {
+        return Some(block);
+    }
+
+    if blocks.len() == 1 && dbflux_core::contains_compound_block(buffer) {
         return None;
     }
 
@@ -156,7 +176,7 @@ pub(super) fn result_statement_captions(
         return unnamed;
     };
 
-    let Some(ranges) = language.statement_ranges(query) else {
+    let Some(ranges) = language.statement_ranges(query, false) else {
         return unnamed;
     };
 
@@ -186,7 +206,9 @@ impl CodeDocument {
     /// after every edit and whenever the effective language changes.
     pub(super) fn refresh_statements(&mut self, cx: &mut Context<Self>) {
         let text = self.editor.input_state.read(cx).value();
-        let ranges = self.effective_language().statement_ranges(&text);
+        let ranges = self
+            .effective_language()
+            .statement_ranges(&text, self.blank_line_delimits(cx));
 
         let unchanged = ranges == self.editor.statement_ranges
             && self.editor.gutter_style.is_some()
@@ -197,6 +219,14 @@ impl CodeDocument {
 
         self.editor.statement_ranges = ranges;
         self.install_statement_gutter(cx);
+    }
+
+    /// Whether a blank line ends a statement, from the General settings.
+    pub(super) fn blank_line_delimits(&self, cx: &App) -> bool {
+        self.app_state
+            .read(cx)
+            .general_settings()
+            .blank_line_delimits_statements
     }
 
     /// Reinstalls the gutter when the theme changed since it was installed,
@@ -284,7 +314,7 @@ mod tests {
     const BUFFER: &str = "SELECT count(*) FROM orders;\n\nSELECT c.country,\n       o.total\nFROM orders o\nJOIN customers c ON c.id = o.customer_id;\n";
 
     fn statement_under(buffer: &str, cursor: usize) -> Option<&str> {
-        let ranges = QueryLanguage::Sql.statement_ranges(buffer)?;
+        let ranges = QueryLanguage::Sql.statement_ranges(buffer, false)?;
         statement_at_cursor(&ranges, cursor).map(|range| &buffer[range])
     }
 
@@ -326,15 +356,53 @@ mod tests {
         let on_delete = buffer.find("DELETE").expect("delete line");
 
         assert_eq!(
-            cursor_statement(&QueryLanguage::Sql, buffer, on_delete),
+            cursor_statement(&QueryLanguage::Sql, buffer, on_delete, false),
             None
         );
 
         let transaction = "BEGIN;\nDELETE FROM logs;\nCOMMIT;";
         let on_delete = transaction.find("DELETE").expect("delete line");
-        let range = cursor_statement(&QueryLanguage::Sql, transaction, on_delete)
+        let range = cursor_statement(&QueryLanguage::Sql, transaction, on_delete, false)
             .expect("a transaction is not a compound block");
         assert_eq!(&transaction[range], "DELETE FROM logs");
+    }
+
+    /// With the blank-line delimiter an unfinished statement above the cursor
+    /// does not run along with the one under it, and a procedure body runs as
+    /// its own block instead of making the whole buffer run.
+    #[test]
+    fn a_blank_line_keeps_a_broken_statement_out_of_the_run() {
+        let buffer = "SELECT broken FROM\n\nSELECT 1";
+        let on_select_one = buffer.rfind("SELECT").expect("second statement") + 2;
+        let run = |blank_line_delimits| {
+            cursor_statement(
+                &QueryLanguage::Sql,
+                buffer,
+                on_select_one,
+                blank_line_delimits,
+            )
+            .map(|range| &buffer[range])
+        };
+        assert_eq!(run(true), Some("SELECT 1"));
+        assert_eq!(
+            run(false),
+            None,
+            "without it the whole buffer is one statement"
+        );
+
+        let procedure = "CREATE PROCEDURE p()\nBEGIN\n  DELETE FROM logs;\n  SELECT 2;\nEND;\n\nSELECT broken FROM\n\nSELECT 1;";
+        let on_delete = procedure.find("DELETE").expect("delete line");
+        let block = cursor_statement(&QueryLanguage::Sql, procedure, on_delete, true)
+            .map(|range| &procedure[range]);
+        assert_eq!(
+            block,
+            Some("CREATE PROCEDURE p()\nBEGIN\n  DELETE FROM logs;\n  SELECT 2;\nEND;")
+        );
+
+        let on_select_one = procedure.rfind("SELECT 1").expect("last statement");
+        let last = cursor_statement(&QueryLanguage::Sql, procedure, on_select_one, true)
+            .map(|range| &procedure[range]);
+        assert_eq!(last, Some("SELECT 1"));
     }
 
     #[test]

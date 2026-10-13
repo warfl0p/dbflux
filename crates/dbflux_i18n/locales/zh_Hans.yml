@@ -3903,6 +3903,9 @@ settings:
         space: "空格"
         comma: "逗号 (,)"
         backslash: "反斜杠 (\\)"
+    blank_line_delimiter:
+      label: "空行结束语句"
+      hint: "除分号外，也在空行处拆分 SQL 语句，因此运行或补全光标所在的语句时会忽略其上方未写完的语句。运行选中的整个脚本时仍只按分号拆分。"
     restore_session:
       label: "启动时恢复打开的标签页"
     reopen_connections:

@@ -401,6 +401,12 @@ pub struct GeneralSettings {
     #[serde(default = "default_vim_leader")]
     pub vim_leader: String,
 
+    /// A blank line ends a SQL statement in the editor, as `;` does, so a
+    /// statement left without its `;` above the cursor does not run into the
+    /// one below. Off by default.
+    #[serde(default)]
+    pub blank_line_delimits_statements: bool,
+
     // -- Fonts --
     /// Interface font family. `None` uses the bundled interface font.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -526,6 +532,7 @@ impl Default for GeneralSettings {
             key_value_size_limit_mib: default_key_value_size_limit_mib(),
             toast_auto_dismiss_secs: Self::DEFAULT_TOAST_AUTO_DISMISS_SECS,
             vim_mode: false,
+            blank_line_delimits_statements: false,
             vim_leader: default_vim_leader(),
             ui_font_family: None,
             ui_font_size: Self::DEFAULT_UI_FONT_SIZE,

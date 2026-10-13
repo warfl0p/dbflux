@@ -52,6 +52,13 @@ También un buffer con un bloque compuesto, como el cuerpo `BEGIN ... END` de un
 procedimiento o trigger, ya que el `;` dentro de él no termina una sentencia; un
 `BEGIN` que abre una transacción no es un bloque.
 
+Con **A blank line ends a statement** activado (Settings > General > Editor),
+una línea en blanco termina una sentencia igual que `;`, así que una sentencia
+sin terminar por encima del cursor no se ejecuta junto con la que está bajo él,
+y el autocompletado también la ignora. Un bloque compuesto se ejecuta entonces
+como el bloque entre líneas en blanco que lo contiene. Seleccionar el buffer
+completo sigue ejecutándolo como un script dividido solo en los `;`.
+
 Cuando la ejecución omite filas efectivamente, el editor muestra una advertencia por consulta y la cuadrícula señala el conjunto de resultados afectado, aunque no se haya conservado ninguna fila. Un resultado que alcanza exactamente el límite sin omitir filas no genera la advertencia. Un límite de filas conservadas solo restringe las filas almacenadas; los límites de bytes y tiempo son controles de ejecución independientes. Esto no implica que el editor tenga un límite de filas predeterminado.
 
 ## Scripts multi-statement

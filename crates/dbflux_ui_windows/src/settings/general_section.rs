@@ -38,6 +38,7 @@ pub(super) enum GeneralFormRow {
     GridFontSize,
     VimMode,
     VimLeader,
+    BlankLineDelimiter,
     RestoreSession,
     ReopenConnections,
     DefaultFocus,
@@ -1960,6 +1961,10 @@ mod tests {
 
         let expected = [
             ("vim-mode", "settings.general.vim_mode.label"),
+            (
+                "blank-line-delimiter",
+                "settings.general.blank_line_delimiter.label",
+            ),
             ("restore-session", "settings.general.restore_session.label"),
             ("reopen-conns", "settings.general.reopen_connections.label"),
             (
