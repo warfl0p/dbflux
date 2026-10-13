@@ -1282,6 +1282,51 @@ impl QueryLanguage {
         ))
     }
 
+    /// Byte offsets of the line breaks that end a statement as a blank line
+    /// does, so a statement left without its `;` stops there. A parser that
+    /// reads `text` with each of them as a `;` (see
+    /// [`QueryLanguage::with_blank_line_delimiters`]) ends the statement above
+    /// the blank line instead of running it into the one below. Empty for a
+    /// language without a statement splitter.
+    pub fn blank_line_delimiters(&self, text: &str) -> Vec<usize> {
+        if self.editor_mode() != "sql" {
+            return Vec::new();
+        }
+
+        scan_sql_segments(text, true, true)
+            .into_iter()
+            .filter(|range| {
+                text.as_bytes().get(range.end) == Some(&b'\n')
+                    && text
+                        .get(range.clone())
+                        .is_some_and(|segment| !segment.trim().is_empty())
+            })
+            .map(|range| range.end)
+            .collect()
+    }
+
+    /// `text` with every [`QueryLanguage::blank_line_delimiters`] line break
+    /// replaced by `;`, byte for byte, so every offset stays where it is.
+    /// For feeding a parser; never for display or execution.
+    pub fn with_blank_line_delimiters<'a>(&self, text: &'a str) -> std::borrow::Cow<'a, str> {
+        let delimiters = self.blank_line_delimiters(text);
+        if delimiters.is_empty() {
+            return std::borrow::Cow::Borrowed(text);
+        }
+
+        let mut bytes = text.as_bytes().to_vec();
+        for offset in delimiters {
+            if let Some(byte) = bytes.get_mut(offset) {
+                *byte = b';';
+            }
+        }
+
+        match String::from_utf8(bytes) {
+            Ok(patched) => std::borrow::Cow::Owned(patched),
+            Err(_) => std::borrow::Cow::Borrowed(text),
+        }
+    }
+
     /// Byte ranges of the blank-line-separated blocks of `text`, each trimmed
     /// of surrounding whitespace; `;` does not split a block. `None` for a
     /// language without a statement splitter.
@@ -2727,6 +2772,20 @@ mod tests {
         assert_eq!(
             QueryLanguage::Sql.statement_bounds_at(text, 20, false),
             0..text.len()
+        );
+    }
+
+    #[test]
+    fn a_parser_reads_a_blank_line_as_a_semicolon_only_after_an_unfinished_statement() {
+        let text = "select * from\n\nselect 1;\n\nselect 2";
+        let patched = QueryLanguage::Sql.with_blank_line_delimiters(text);
+
+        assert_eq!(patched, "select * from;\nselect 1;\n\nselect 2");
+        assert_eq!(patched.len(), text.len());
+        assert!(
+            QueryLanguage::MongoQuery
+                .blank_line_delimiters(text)
+                .is_empty()
         );
     }
 

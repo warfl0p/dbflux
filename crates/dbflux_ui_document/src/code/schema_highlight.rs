@@ -25,6 +25,9 @@ use crate::completion_support::normalize_identifier;
 pub(crate) struct CatalogNames {
     pub(crate) schemas: HashSet<String>,
     pub(crate) relations: HashSet<String>,
+    /// Whether the highlighter parses a blank line as the end of a statement,
+    /// from the General settings.
+    pub(crate) blank_line_delimits: bool,
 }
 
 pub(crate) type SharedCatalogNames = Rc<RefCell<CatalogNames>>;
@@ -54,6 +57,24 @@ struct SchemaAwareHighlighter {
     names: SharedCatalogNames,
 }
 
+impl SchemaAwareHighlighter {
+    /// The text the grammar reads: with the blank-line delimiter on, each blank
+    /// line that ends an unfinished statement reads as a `;`, so the statement
+    /// below it is parsed on its own. Same length as `text`, so every offset
+    /// of the styles stays valid.
+    fn parse_source(&self, text: &Rope) -> Rope {
+        if !self.names.borrow().blank_line_delimits {
+            return text.clone();
+        }
+
+        let source = text.to_string();
+        match dbflux_core::QueryLanguage::Sql.with_blank_line_delimiters(&source) {
+            std::borrow::Cow::Borrowed(_) => text.clone(),
+            std::borrow::Cow::Owned(patched) => Rope::from(patched.as_str()),
+        }
+    }
+}
+
 impl InputHighlighter for SchemaAwareHighlighter {
     fn language(&self) -> SharedString {
         self.inner.language()
@@ -68,7 +89,25 @@ impl InputHighlighter for SchemaAwareHighlighter {
         cx: &mut Context<super::GpuiEditorState>,
     ) {
         self.text = text.clone();
-        self.inner.update(edit, text, folding, window, cx);
+        let parsed = self.parse_source(text);
+        self.inner.update(edit, &parsed, folding, window, cx);
+    }
+
+    fn update_batch(
+        &mut self,
+        edits: &[(InputEdit, Rope)],
+        folding: bool,
+        window: &mut Window,
+        cx: &mut Context<super::GpuiEditorState>,
+    ) {
+        if let Some((_, text)) = edits.last() {
+            self.text = text.clone();
+        }
+        let parsed: Vec<(InputEdit, Rope)> = edits
+            .iter()
+            .map(|(edit, text)| (*edit, self.parse_source(text)))
+            .collect();
+        self.inner.update_batch(&parsed, folding, window, cx);
     }
 
     fn styles(
@@ -134,6 +173,7 @@ mod tests {
         let names = CatalogNames {
             schemas: ["layer", "shared"].map(String::from).into(),
             relations: ["users", "shared"].map(String::from).into(),
+            ..Default::default()
         };
         let mut styles = vec![
             (0..6, HighlightStyle::default()),

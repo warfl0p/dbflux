@@ -38,6 +38,13 @@ impl CodeDocument {
 
     fn run_diagnostics(&mut self, cx: &mut Context<Self>) {
         let query_text = self.editor.input_state.read(cx).value().to_string();
+        let query_text = if self.blank_line_delimits(cx) {
+            self.effective_language()
+                .with_blank_line_delimiters(&query_text)
+                .into_owned()
+        } else {
+            query_text
+        };
 
         // Live diagnostics are driven by the connected driver's `LanguageService`
         // rather than the editor mode. Each driver's service validates its own

@@ -1824,6 +1824,32 @@ mod tests {
     }
 
     #[test]
+    fn an_unfinished_statement_does_not_flag_the_one_below_a_blank_line() {
+        let text = "select * from\n\nselect * from raw.mobility_provider mp where mp.contact_general_id is null;";
+
+        let swallowed = sql_editor_diagnostics(text);
+        assert!(
+            swallowed
+                .iter()
+                .any(|diagnostic| diagnostic.range.end.line >= 2),
+            "read as one statement, the error lands in the second query"
+        );
+
+        let patched = QueryLanguage::Sql.with_blank_line_delimiters(text);
+        let separate = sql_editor_diagnostics(&patched);
+        assert!(
+            !separate.is_empty(),
+            "the unfinished query is still flagged"
+        );
+        assert!(
+            separate
+                .iter()
+                .all(|diagnostic| diagnostic.range.end.line < 2),
+            "{separate:?} must stay within the first query"
+        );
+    }
+
+    #[test]
     fn valid_sql_has_no_diagnostics() {
         let diags = sql_editor_diagnostics("SELECT * FROM users WHERE id = 1");
         assert!(diags.is_empty());

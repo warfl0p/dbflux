@@ -184,6 +184,7 @@ impl CodeDocument {
     /// Re-splits the buffer into statements and reinstalls the gutter. Runs
     /// after every edit and whenever the effective language changes.
     pub(super) fn refresh_statements(&mut self, cx: &mut Context<Self>) {
+        self.sync_highlight_delimiter(cx);
         let text = self.editor.input_state.read(cx).value();
         let ranges = self
             .effective_language()
@@ -198,6 +199,24 @@ impl CodeDocument {
 
         self.editor.statement_ranges = ranges;
         self.install_statement_gutter(cx);
+    }
+
+    /// Hands the blank-line setting to the syntax highlighter and, when it
+    /// changed, parses the buffer again so the colours follow it.
+    fn sync_highlight_delimiter(&mut self, cx: &mut Context<Self>) {
+        let delimits = self.blank_line_delimits(cx);
+        let changed = {
+            let mut names = self.editor.catalog_names.borrow_mut();
+            std::mem::replace(&mut names.blank_line_delimits, delimits) != delimits
+        };
+        if !changed {
+            return;
+        }
+
+        let mode = self.effective_language().editor_mode();
+        self.editor
+            .input_state
+            .update(cx, |state, cx| state.set_highlighter(mode, cx));
     }
 
     /// Whether a blank line ends a statement, from the General settings.
