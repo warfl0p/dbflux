@@ -195,9 +195,13 @@ impl CodeDocument {
 
         // Without a selection, a buffer of several statements runs only the
         // one under the cursor; selecting everything runs the whole script.
-        let cursor_statement =
-            statements::cursor_statement(self.effective_language(), &query, cursor)
-                .and_then(|range| Some((range.start, query.get(range)?.to_string())));
+        let cursor_statement = statements::cursor_statement(
+            self.effective_language(),
+            &query,
+            cursor,
+            self.blank_line_delimits(cx),
+        )
+        .and_then(|range| Some((range.start, query.get(range)?.to_string())));
 
         if let Some((origin, statement)) = cursor_statement {
             self.execution.query_origin = Some(origin);

@@ -182,6 +182,10 @@ pub(crate) const SETTINGS: SurfaceRegistry = SurfaceRegistry {
         ("vim-mode", KeyboardPath::Command(Command::Execute)),
         ("table-alias", KeyboardPath::Command(Command::Execute)),
         ("table-alias-as", KeyboardPath::Command(Command::Execute)),
+        (
+            "blank-line-delimiter",
+            KeyboardPath::Command(Command::Execute),
+        ),
         ("audit-enabled", KeyboardPath::Command(Command::Execute)),
         (
             "capture-query-text",

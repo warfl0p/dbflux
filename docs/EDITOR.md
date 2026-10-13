@@ -47,6 +47,12 @@ whole. So does a buffer with a compound block, such as the `BEGIN ... END` body
 of a procedure or trigger, since the `;` inside it does not end a statement;
 `BEGIN` that opens a transaction is not a block.
 
+With **A blank line ends a statement** on (Settings > General > Editor), a
+blank line ends a statement as `;` does, so an unfinished statement above the
+cursor does not run with the one under it, and completion ignores it too. A
+compound block then runs as the blank-line block it sits in. Selecting the
+whole buffer still runs it as a script split at `;` only.
+
 When execution actually omits rows, the editor reports one warning for the query and the grid marks the affected result set, even if no rows were retained. A result that exactly fills a limit without omitting rows does not trigger the warning. A retained-row cap limits stored rows only; byte and time limits are separate execution controls. This does not imply a default editor row cap.
 
 ## Multi-statement scripts

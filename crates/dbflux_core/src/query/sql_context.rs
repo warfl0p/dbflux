@@ -113,7 +113,7 @@ impl SqlContextEngine {
         // Scope to the statement under the cursor: the parse stays
         // O(statement) not O(buffer) per keystroke, and the cursor never
         // anchors to a neighboring statement's tokens.
-        let range = crate::QueryLanguage::Sql.statement_bounds_at(source, offset);
+        let range = crate::QueryLanguage::Sql.statement_bounds_at(source, offset, false);
         let statement = &source[range.clone()];
         let local_offset = offset - range.start;
 

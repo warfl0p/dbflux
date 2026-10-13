@@ -3948,6 +3948,9 @@ settings:
         space: "Espacio"
         comma: "Coma (,)"
         backslash: "Barra invertida (\\)"
+    blank_line_delimiter:
+      label: "Una línea en blanco termina una sentencia"
+      hint: "Divide las sentencias SQL en las líneas en blanco además de en los puntos y coma, así que ejecutar o completar la sentencia bajo el cursor ignora una sentencia sin terminar más arriba. Ejecutar un script entero seleccionado sigue dividiendo solo en los puntos y coma."
     restore_session:
       label: "Restaurar las pestañas abiertas al iniciar"
     reopen_connections:

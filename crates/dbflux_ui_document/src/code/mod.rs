@@ -1144,6 +1144,8 @@ impl CodeDocument {
             this.sync_context_dropdowns(cx);
             this.try_fetch_pending_routine_definition(cx);
             this.sync_vim_setting(cx);
+            // The blank-line delimiter setting changes where statements end.
+            this.refresh_statements(cx);
         });
 
         let refresh_policy = default_refresh;

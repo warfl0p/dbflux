@@ -125,6 +125,7 @@ pub fn save_general_settings(
         syntax_colors_json,
         accent_color_dark: settings.accent_colors.dark.clone(),
         accent_color_light: settings.accent_colors.light.clone(),
+        blank_line_delimits_statements: i32::from(settings.blank_line_delimits_statements),
         updated_at: String::new(),
     };
     repo.upsert(&dto)?;
@@ -1143,6 +1144,7 @@ fn load_general_settings(
             dark: dto.accent_color_dark.clone(),
             light: dto.accent_color_light.clone(),
         },
+        blank_line_delimits_statements: dto.blank_line_delimits_statements != 0,
     }
 }
 
@@ -2594,6 +2596,7 @@ mod tests {
             accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
+            blank_line_delimits_statements: 0,
             updated_at: String::new(),
         };
 
@@ -2694,6 +2697,7 @@ mod tests {
             accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
+            blank_line_delimits_statements: 0,
             updated_at: String::new(),
         };
         runtime
@@ -2871,6 +2875,30 @@ mod tests {
         super::save_general_settings(&runtime, &settings).expect("save with vim mode off");
         let loaded = load_config(&runtime).expect("load configuration");
         assert!(!loaded.general_settings.vim_mode);
+    }
+
+    #[test]
+    fn blank_line_delimiter_is_off_by_default_and_round_trips_through_save_and_load() {
+        let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
+
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(
+            !loaded.general_settings.blank_line_delimits_statements,
+            "a fresh install keeps splitting statements on `;` only"
+        );
+
+        let mut settings = GeneralSettings {
+            blank_line_delimits_statements: true,
+            ..Default::default()
+        };
+        super::save_general_settings(&runtime, &settings).expect("save with the delimiter on");
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(loaded.general_settings.blank_line_delimits_statements);
+
+        settings.blank_line_delimits_statements = false;
+        super::save_general_settings(&runtime, &settings).expect("save with the delimiter off");
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(!loaded.general_settings.blank_line_delimits_statements);
     }
 
     #[test]
@@ -3102,6 +3130,7 @@ mod tests {
             accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
+            blank_line_delimits_statements: 0,
             updated_at: String::new(),
         };
         runtime

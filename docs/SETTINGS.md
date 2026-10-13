@@ -41,6 +41,7 @@ Integration](MCP_AI_INTEGRATION.md).
 | **Leader key** | Space | The key that starts Vim's leader sequences in Normal and Visual modes, such as the leader then `a` for the pane actions: Space, comma or backslash. Applies to open editors when you save, and leader bindings you changed in **Keybindings** follow it. |
 | **Add an alias to table completions** | On | Accepting a table, view or CTE from SQL completion after `FROM` or `JOIN` inserts it with an alias built from the initials of its name: `access_control` becomes `access_control ac`, `public.order_items` becomes `public.order_items oi`. An alias already used in the statement, a reserved word or the name of a known table gets a number (`ac2`). No alias is added when one already follows the cursor, or after `INSERT INTO`. The target of `UPDATE` and `DELETE FROM` is aliased only on databases that accept it there: PostgreSQL and DuckDB, and SQLite and Turso with `AS`. |
 | **Write the alias with AS** | Off | Inserts `access_control AS ac` instead of `access_control ac`. |
+| **A blank line ends a statement** | Off | A blank line ends a SQL statement as `;` does, so running or completing the statement under the cursor ignores an unfinished statement above it. Running a whole selected script still splits at `;` only. See [Running queries](EDITOR.md) in the editor guide. |
 
 ### Startup & session
 

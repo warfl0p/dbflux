@@ -190,6 +190,7 @@ impl MigrationRegistry {
         registry.register(mod_045_general_settings_syntax_colors::MigrationImpl);
         registry.register(mod_046_general_settings_accent_colors::MigrationImpl);
         registry.register(mod_047_general_settings_table_alias::MigrationImpl);
+        registry.register(mod_048_general_settings_blank_line_delimiter::MigrationImpl);
         registry
     }
 
@@ -427,6 +428,7 @@ mod mod_044_ssh_tunnel_config_host;
 mod mod_045_general_settings_syntax_colors;
 mod mod_046_general_settings_accent_colors;
 mod mod_047_general_settings_table_alias;
+mod mod_048_general_settings_blank_line_delimiter;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1252,6 +1254,7 @@ mod tests {
             "045_general_settings_syntax_colors",
             "046_general_settings_accent_colors",
             "047_general_settings_table_alias",
+            "048_general_settings_blank_line_delimiter",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();

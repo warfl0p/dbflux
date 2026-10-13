@@ -608,7 +608,7 @@ fn statement_content_end(statement: &str) -> usize {
 }
 
 fn sql_code_actions(query: &str, offset: usize, schema: &dyn SchemaColumns) -> Vec<CodeAction> {
-    let range = QueryLanguage::Sql.statement_bounds_at(query, offset);
+    let range = QueryLanguage::Sql.statement_bounds_at(query, offset, false);
     if range.is_empty() {
         return Vec::new();
     }

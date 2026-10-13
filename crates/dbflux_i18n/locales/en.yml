@@ -3948,6 +3948,9 @@ settings:
         space: "Space"
         comma: "Comma (,)"
         backslash: "Backslash (\\)"
+    blank_line_delimiter:
+      label: "A blank line ends a statement"
+      hint: "Splits SQL statements at blank lines as well as at semicolons, so running or completing the statement under the cursor ignores an unfinished statement above it. Running a whole selected script still splits at semicolons only."
     restore_session:
       label: "Restore open tabs on startup"
     reopen_connections:

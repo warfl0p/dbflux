@@ -420,6 +420,11 @@ pub struct GeneralSettings {
     /// variant. A variant without one uses the palette's accent.
     #[serde(default, skip_serializing_if = "AccentColorOverrides::is_empty")]
     pub accent_colors: AccentColorOverrides,
+    /// A blank line ends a SQL statement in the editor, as `;` does, so a
+    /// statement left without its `;` above the cursor does not run into the
+    /// one below. Off by default.
+    #[serde(default)]
+    pub blank_line_delimits_statements: bool,
 
     // -- Fonts --
     /// Interface font family. `None` uses the bundled interface font.
@@ -548,6 +553,7 @@ impl Default for GeneralSettings {
             vim_mode: false,
             table_alias_completion: true,
             table_alias_use_as: false,
+            blank_line_delimits_statements: false,
             vim_leader: default_vim_leader(),
             ui_font_family: None,
             ui_font_size: Self::DEFAULT_UI_FONT_SIZE,

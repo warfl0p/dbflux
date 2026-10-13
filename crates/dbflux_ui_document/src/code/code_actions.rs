@@ -259,9 +259,15 @@ impl CodeDocument {
         };
 
         let has_selection = !selection.is_empty();
-        let Some((range, formatted)) =
-            format_edit(self.effective_language(), &text, selection, cursor, format)
-        else {
+        let blank_line_delimits = self.blank_line_delimits(cx);
+        let Some((range, formatted)) = format_edit(
+            self.effective_language(),
+            &text,
+            selection,
+            cursor,
+            blank_line_delimits,
+            format,
+        ) else {
             return true;
         };
 
@@ -297,10 +303,12 @@ fn format_edit(
     text: &str,
     selection: StdRange<usize>,
     cursor: usize,
+    blank_line_delimits: bool,
     format: fn(&str) -> String,
 ) -> Option<(StdRange<usize>, String)> {
     let range = if selection.is_empty() {
-        super::statements::cursor_statement(language, text, cursor).unwrap_or(0..text.len())
+        super::statements::cursor_statement(language, text, cursor, blank_line_delimits)
+            .unwrap_or(0..text.len())
     } else {
         selection.start.min(selection.end)..selection.start.max(selection.end)
     };
@@ -413,9 +421,14 @@ mod tests {
 
     fn apply_format(text: &str, selection: std::ops::Range<usize>, cursor: usize) -> String {
         let mut result = text.to_string();
-        if let Some((range, formatted)) =
-            format_edit(&QueryLanguage::Sql, text, selection, cursor, format_sql)
-        {
+        if let Some((range, formatted)) = format_edit(
+            &QueryLanguage::Sql,
+            text,
+            selection,
+            cursor,
+            false,
+            format_sql,
+        ) {
             result.replace_range(range, &formatted);
         }
         result
@@ -455,7 +468,7 @@ mod tests {
     fn format_of_formatted_or_blank_text_makes_no_edit() {
         for text in ["SELECT\n  1", "  \n "] {
             assert_eq!(
-                format_edit(&QueryLanguage::Sql, text, 0..0, 0, format_sql),
+                format_edit(&QueryLanguage::Sql, text, 0..0, 0, false, format_sql),
                 None,
                 "{text:?}"
             );

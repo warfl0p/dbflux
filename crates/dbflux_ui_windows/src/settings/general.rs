@@ -55,6 +55,7 @@ impl GeneralSection {
             current.vim_leader != saved.vim_leader,
             current.table_alias_completion != saved.table_alias_completion,
             current.table_alias_use_as != saved.table_alias_use_as,
+            current.blank_line_delimits_statements != saved.blank_line_delimits_statements,
             current.toast_auto_dismiss_secs != saved.toast_auto_dismiss_secs,
         ];
 
@@ -159,6 +160,7 @@ impl GeneralSection {
             GeneralFormRow::VimLeader,
             GeneralFormRow::TableAlias,
             GeneralFormRow::TableAliasUseAs,
+            GeneralFormRow::BlankLineDelimiter,
             GeneralFormRow::RestoreSession,
             GeneralFormRow::ReopenConnections,
             GeneralFormRow::DefaultFocus,
@@ -312,6 +314,11 @@ impl GeneralSection {
             }
             Some(GeneralFormRow::TableAliasUseAs) => {
                 self.gen_settings.table_alias_use_as = !self.gen_settings.table_alias_use_as;
+                cx.notify();
+            }
+            Some(GeneralFormRow::BlankLineDelimiter) => {
+                self.gen_settings.blank_line_delimits_statements =
+                    !self.gen_settings.blank_line_delimits_statements;
                 cx.notify();
             }
             Some(GeneralFormRow::RestoreSession) => {
@@ -1163,6 +1170,17 @@ impl GeneralSection {
                 self.gen_settings.table_alias_use_as,
                 GeneralFormRow::TableAliasUseAs,
                 |this, value, _cx| this.gen_settings.table_alias_use_as = value,
+                cx,
+            ))
+            .child(self.render_gen_checkbox(
+                "blank-line-delimiter",
+                dbflux_i18n::t!("settings.general.blank_line_delimiter.label"),
+                Some(dbflux_i18n::t!(
+                    "settings.general.blank_line_delimiter.hint"
+                )),
+                self.gen_settings.blank_line_delimits_statements,
+                GeneralFormRow::BlankLineDelimiter,
+                |this, value, _cx| this.gen_settings.blank_line_delimits_statements = value,
                 cx,
             ));
 
