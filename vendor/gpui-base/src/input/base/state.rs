@@ -465,22 +465,26 @@ pub struct GutterStatements {
 }
 
 impl GutterStatements {
-    /// The statement containing `offset`: its range with the `;` that ends
-    /// it, so a cursor right after the separator still belongs to it.
-    pub fn statement_at(&self, text: &Rope, offset: usize) -> Option<Range<usize>> {
-        self.ranges
-            .iter()
-            .find(|range| {
-                let end = if text.char_at(range.end) == Some(';') {
-                    range.end + 1
-                } else {
-                    range.end
-                };
-
-                range.start <= offset && offset <= end
-            })
-            .cloned()
+    /// The statement the cursor at `offset` belongs to; see
+    /// [`statement_at_offset`].
+    pub fn statement_at(&self, offset: usize) -> Option<Range<usize>> {
+        statement_at_offset(&self.ranges, offset)
     }
+}
+
+/// The one rule for which of `ranges` (ordered, byte ranges) a cursor at
+/// `offset` belongs to: the last one starting at or before it, so a cursor
+/// after a statement's `;` or in the blank lines below it still belongs to
+/// that statement, and the first one when the cursor is above all of them.
+/// The gutter marks the range this returns and the owner runs it, so both
+/// read the same statement.
+pub fn statement_at_offset(ranges: &[Range<usize>], offset: usize) -> Option<Range<usize>> {
+    ranges
+        .iter()
+        .rev()
+        .find(|range| range.start <= offset)
+        .or(ranges.first())
+        .cloned()
 }
 
 pub struct InputBaseState<M: InputModeKind> {

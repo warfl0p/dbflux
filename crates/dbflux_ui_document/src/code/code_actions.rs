@@ -192,7 +192,17 @@ impl CodeActionProvider for SqlCodeActionProvider {
 
         let service = connected.connection.language_service();
         let schema = self.schema_columns(cx);
-        let actions = service.code_actions_with_schema(&source, offset, &schema);
+        let scoped = if self
+            .app_state
+            .read(cx)
+            .general_settings()
+            .blank_line_delimits_statements
+        {
+            super::completion::mask_outside_statement_block(&source, offset)
+        } else {
+            std::borrow::Cow::Borrowed(source.as_str())
+        };
+        let actions = service.code_actions_with_schema(&scoped, offset, &schema);
 
         Task::ready(Ok(actions
             .into_iter()

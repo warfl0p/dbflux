@@ -1589,7 +1589,7 @@ impl<M: InputModeKind> TextElement<M> {
             let text_len = state.text.len();
 
             let active_rows = statements
-                .statement_at(&state.text, state.cursor())
+                .statement_at(state.cursor())
                 .map(|range| {
                     let first = state.text.offset_to_point(range.start.min(text_len)).row;
                     let last = state.text.offset_to_point(range.end.min(text_len)).row;
@@ -3277,7 +3277,7 @@ impl<M: InputModeKind> Element for TextElement<M> {
             // colour; the cursor row among them in bold.
             let statement_rows = state.gutter_statements.as_ref().and_then(|statements| {
                 let text_len = state.text.len();
-                let range = statements.statement_at(&state.text, state.cursor())?;
+                let range = statements.statement_at(state.cursor())?;
                 let first = state.text.offset_to_point(range.start.min(text_len)).row;
                 let last = state.text.offset_to_point(range.end.min(text_len)).row;
                 Some((first..last + 1, statements.style.active_line_number))

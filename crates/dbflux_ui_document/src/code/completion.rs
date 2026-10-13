@@ -1497,7 +1497,10 @@ impl QueryCompletionProvider {
 /// then reads only that block, so an unfinished statement above it cannot
 /// change the context, while every offset and line of the buffer stays where
 /// it was for the replace ranges.
-fn mask_outside_statement_block(source: &str, cursor: usize) -> std::borrow::Cow<'_, str> {
+pub(super) fn mask_outside_statement_block(
+    source: &str,
+    cursor: usize,
+) -> std::borrow::Cow<'_, str> {
     let blocks = dbflux_core::QueryLanguage::Sql
         .blank_line_blocks(source)
         .unwrap_or_default();
@@ -1505,12 +1508,7 @@ fn mask_outside_statement_block(source: &str, cursor: usize) -> std::borrow::Cow
         return std::borrow::Cow::Borrowed(source);
     }
 
-    let Some(block) = blocks
-        .iter()
-        .rev()
-        .find(|block| block.start <= cursor)
-        .or(blocks.first())
-    else {
+    let Some(block) = gpui_base::input::statement_at_offset(&blocks, cursor) else {
         return std::borrow::Cow::Borrowed(source);
     };
 

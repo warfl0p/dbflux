@@ -71,22 +71,15 @@ pub(super) fn cursor_statement(
     statement_at_cursor(&ranges, cursor)
 }
 
-/// The statement a run without a selection executes: the last one starting
-/// at or before the cursor, so a cursor after its `;` or in the blank lines
-/// below it still runs it, and the first one when the cursor is above every
-/// statement. `None` for fewer than two statements, where the whole buffer
-/// runs.
+/// The statement a run without a selection executes, by the rule the gutter
+/// marks it with ([`gpui_base::input::statement_at_offset`]). `None` for fewer
+/// than two statements, where the whole buffer runs.
 pub(super) fn statement_at_cursor(ranges: &[Range<usize>], cursor: usize) -> Option<Range<usize>> {
     if ranges.len() < 2 {
         return None;
     }
 
-    ranges
-        .iter()
-        .rev()
-        .find(|range| range.start <= cursor)
-        .or(ranges.first())
-        .cloned()
+    gpui_base::input::statement_at_offset(ranges, cursor)
 }
 
 /// The statement count shown in the context bar: "3 statements".
@@ -552,26 +545,38 @@ mod gutter_tests {
         window.update(|_, cx| {
             let editor = document.read(cx).editor.input_state.read(cx);
             let gutter = editor.gutter_statements().expect("statement gutter");
-            let text = editor.text();
 
             let inside_second = SCRIPT.find("FROM").expect("second statement");
             let after_first_separator = SCRIPT.find(';').expect("first separator") + 1;
             let blank_line = after_first_separator + 1;
+            let above_everything = 0;
 
             assert_eq!(
                 gutter
-                    .statement_at(text, inside_second)
+                    .statement_at(inside_second)
                     .and_then(|range| SCRIPT.get(range)),
                 Some("SELECT name\nFROM people")
             );
             assert_eq!(
                 gutter
-                    .statement_at(text, after_first_separator)
+                    .statement_at(after_first_separator)
                     .and_then(|range| SCRIPT.get(range)),
                 Some("SELECT 1"),
                 "a cursor right after the `;` still belongs to its statement"
             );
-            assert_eq!(gutter.statement_at(text, blank_line), None);
+            assert_eq!(
+                gutter
+                    .statement_at(blank_line)
+                    .and_then(|range| SCRIPT.get(range)),
+                Some("SELECT 1"),
+                "a cursor in the blank lines below a statement marks the statement a run executes"
+            );
+            assert_eq!(
+                gutter
+                    .statement_at(above_everything)
+                    .and_then(|range| SCRIPT.get(range)),
+                Some("SELECT 1")
+            );
         });
     }
 
