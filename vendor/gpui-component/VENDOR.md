@@ -1,10 +1,10 @@
 # Vendored `gpui-component`
 
-This directory starts from the complete published `gpui-component` 0.6.1 crate. It is vendored so DBFlux can adapt the editor's find/replace panel and the component key bindings to its keyboard-first navigation.
+This directory starts from the complete published `gpui-component` 0.7.3 crate. It is vendored so DBFlux can adapt the editor's find/replace panel and the component key bindings to its keyboard-first navigation.
 
-- Upstream: [`gpui-component` 0.6.1 on crates.io](https://crates.io/crates/gpui-component/0.6.1), from the crates.io registry archive `gpui-component-0.6.1.crate`.
+- Upstream: [`gpui-component` 0.7.3 on crates.io](https://crates.io/crates/gpui-component/0.7.3), from the crates.io registry archive `gpui-component-0.7.3.crate`.
 - License: Apache-2.0; see `LICENSE-APACHE` and the published `Cargo.toml`.
-- Archive SHA-256: `52b7ab4921dc9d2624648fb40580067bfe0f47dd14f5f8f6e070d40c6d4246d4` (the registry checksum recorded in the root `Cargo.lock` before vendoring).
+- Archive SHA-256: `465a363235cd4062ef5f0953fc096fc764ed6f53dfbd9f409f669f93ea3b1ff9` (the checksum the crates.io index records for 0.7.3).
 
 ## Local patch list
 
@@ -18,6 +18,7 @@ Every local change is listed here with the file it touches and the behaviour it 
 - `src/input/popovers/completion_menu.rs` and `Cargo.toml`: the completion menu highlights the characters of each label that fuzzy-match the item's `filter_text` (fzf-style, through `fuzzy-matcher`'s skim matcher, case-insensitive), instead of the first `filter_text.len()` characters. DBFlux's SQL completion offers fuzzy matches such as `alarm_message` for `messa`, where a leading-prefix highlight marks the wrong letters. Prefix matches highlight exactly as before. The manifest adds the `fuzzy-matcher` 0.3 dependency the workspace already uses.
 - `src/input/popovers/completion_menu.rs`: each completion label takes the syntax highlight style of its `CompletionItemKind` from the active highlight theme (keyword, function, type for structs and classes, namespace for modules, field, `variable.alias` for variables, operator, constant), so a suggestion looks like the token it inserts. Fuzzy-matched letters are bold and keep that color (labels without a kind color take the theme's blue), and the selected row is marked by a background tint alone, so it keeps its colors. An item's `label_details.description` is drawn right-aligned in the muted color, the label truncates with an ellipsis before it, and the description counts toward the longest-row measurement that sizes the menu.
 - `src/highlighter/mod.rs` and `src/highlighter/input_adapter.rs`: `input_highlighter_factory` is `pub` instead of `pub(crate)`. DBFlux wraps the tree-sitter factory for SQL editors so a bare schema name (`FROM layer`), which the grammar reads as a table, gets the schema color from the connection's catalog. Behaviour is unchanged for editors that do not install a factory. Covered by `a_table_colored_schema_name_takes_the_schema_color` in `crates/dbflux_ui_document/src/code/schema_highlight.rs`.
+- `src/select.rs`: the trigger shows the committed selection's title rather than the item under the list cursor, so moving the cursor through a filtered search does not change the shown value until Enter. While the list is open and has rows but no highlighted row, the first match is highlighted (`highlight_first_match_if_unset`), so Enter picks a match right after a query that went from no matches to some; the list decides the highlight from the rows it last drew, which are none after an empty result. 0.7.3 itself now clears the query and resolves the committed value in the full list on every close, which the 0.6.1 copy patched locally.
 
 ## Refresh
 
