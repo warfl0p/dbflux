@@ -1590,6 +1590,11 @@ impl Workspace {
                     TabManagerEvent::OpenEditorWithContent { sql, .. } => {
                         this.new_query_tab_with_content(sql.clone(), window, cx);
                     }
+                    TabManagerEvent::RequestConnect { profile_id } => {
+                        this.sidebar.update(cx, |sidebar, cx| {
+                            sidebar.connect_to_profile(*profile_id, cx);
+                        });
+                    }
                     TabManagerEvent::SaveFinished { id, succeeded } => {
                         this.leave_quit_wait(*id, *succeeded, window, cx);
 

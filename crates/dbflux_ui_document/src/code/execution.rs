@@ -181,6 +181,10 @@ impl CodeDocument {
     }
 
     fn run_query_impl(&mut self, in_new_tab: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if self.connect_before_run(in_new_tab, cx) {
+            return;
+        }
+
         self.execution.load_all_rows = None;
 
         // A selection always runs as-is, without the script confirmation.
@@ -230,6 +234,82 @@ impl CodeDocument {
         }
 
         self.run_query_text(query, in_new_tab, window, cx);
+    }
+
+    /// Asks the workspace to connect the document's profile when it is not
+    /// connected, and parks the run until the connection is up. Returns
+    /// whether the run was parked.
+    fn connect_before_run(&mut self, in_new_tab: bool, cx: &mut Context<Self>) -> bool {
+        let Some(profile_id) = self.connection_id else {
+            return false;
+        };
+
+        let state = self.app_state.read(cx);
+        if state.connections().contains_key(&profile_id) {
+            return false;
+        }
+
+        // A connect the user already started is joined, not started twice.
+        let connecting = state.is_operation_pending(profile_id, None);
+
+        self.pending.run_after_connect = Some(PendingConnectRun {
+            profile_id,
+            in_new_tab,
+            connecting,
+            ready: false,
+        });
+
+        if !connecting {
+            cx.emit(DocumentEvent::RequestConnect { profile_id });
+        }
+
+        true
+    }
+
+    /// Advances a run parked by [`Self::connect_before_run`] on every app
+    /// state change: it becomes ready once the profile is connected, and is
+    /// dropped when the connect ends without a connection or the document
+    /// moved to another profile.
+    pub(super) fn track_run_after_connect(&mut self, cx: &mut Context<Self>) {
+        let Some(pending) = self.pending.run_after_connect.as_mut() else {
+            return;
+        };
+
+        if self.connection_id != Some(pending.profile_id) {
+            self.pending.run_after_connect = None;
+            return;
+        }
+
+        let state = self.app_state.read(cx);
+        if state.connections().contains_key(&pending.profile_id) {
+            pending.ready = true;
+            cx.notify();
+        } else if state.is_operation_pending(pending.profile_id, None) {
+            pending.connecting = true;
+        } else if pending.connecting {
+            self.pending.run_after_connect = None;
+        }
+    }
+
+    /// Runs the query parked by [`Self::connect_before_run`] once its profile
+    /// is connected.
+    pub(super) fn process_pending_run_after_connect(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self
+            .pending
+            .run_after_connect
+            .as_ref()
+            .is_some_and(|pending| pending.ready)
+        {
+            return;
+        }
+
+        if let Some(pending) = self.pending.run_after_connect.take() {
+            self.run_query_impl(pending.in_new_tab, window, cx);
+        }
     }
 
     /// Shows the script confirmation and moves focus into it, off the editor
@@ -4053,6 +4133,7 @@ mod auto_refresh_tests {
     // with `#[gpui::test]` sends the gpui_macros expansion into unbounded
     // recursion.
     use crate::code::CodeDocument;
+    use crate::handle::DocumentEvent;
     use dbflux_components::theme;
     use dbflux_core::{
         ConnectionProfile, DbConfig, DbKind, QueryLanguage, ReadOnlyEnforcement, RefreshPolicy,
@@ -4060,11 +4141,14 @@ mod auto_refresh_tests {
     };
     use dbflux_storage::bootstrap::StorageRuntime;
     use dbflux_test_support::FakeDriver;
+    use dbflux_ui_base::AppStateChanged;
     use dbflux_ui_base::AppStateEntity;
     use dbflux_ui_base::modals::test_host::host_modal;
     use dbflux_ui_base::toast::{ToastGlobal, ToastHost};
     use gpui::{AppContext as _, Entity, TestAppContext, VisualTestContext};
+    use std::cell::RefCell;
     use std::ops::Range;
+    use std::rc::Rc;
 
     /// Opens a code document connected through `driver` and holding `content`.
     fn open_connected<'a>(
@@ -4281,6 +4365,172 @@ mod auto_refresh_tests {
             .iter()
             .map(|request| (request.sql.clone(), request.read_only))
             .collect()
+    }
+
+    struct DisconnectedDocument {
+        document: Entity<CodeDocument>,
+        app_state: Entity<AppStateEntity>,
+        profile: ConnectionProfile,
+        /// The profiles the document asked to have connected.
+        requested: Rc<RefCell<Vec<uuid::Uuid>>>,
+    }
+
+    /// Opens a code document whose profile is not connected yet.
+    fn open_disconnected(
+        cx: &mut TestAppContext,
+    ) -> (DisconnectedDocument, &mut VisualTestContext) {
+        cx.update(theme::init);
+        cx.update(dbflux_ui_base::keymap::init_keymap);
+        cx.update(|cx| {
+            let host = cx.new(|_| ToastHost::new());
+            cx.set_global(ToastGlobal { host });
+        });
+        let app_state = cx.new(|_| {
+            AppStateEntity::new_with_storage_runtime(
+                StorageRuntime::in_memory().expect("in-memory storage"),
+            )
+            .expect("app state")
+        });
+
+        let profile = ConnectionProfile::new(
+            "later",
+            DbConfig::SQLite {
+                path: ":memory:".into(),
+                connection_id: None,
+            },
+        );
+        let profile_id = profile.id;
+        let document_state = app_state.clone();
+        let (document, _outside, window) = host_modal(cx, move |window, cx| {
+            let mut document = CodeDocument::new_with_language(
+                document_state,
+                None,
+                QueryLanguage::Sql,
+                window,
+                cx,
+            );
+            document.connection_id = Some(profile_id);
+            document.set_content("SELECT 1", window, cx);
+            document
+        });
+
+        let requested: Rc<RefCell<Vec<uuid::Uuid>>> = Rc::default();
+        let sink = requested.clone();
+        window.update(|_, cx| {
+            cx.subscribe(&document, move |_, event: &DocumentEvent, _| {
+                if let DocumentEvent::RequestConnect { profile_id } = event {
+                    sink.borrow_mut().push(*profile_id);
+                }
+            })
+            .detach();
+        });
+        window.run_until_parked();
+
+        (
+            DisconnectedDocument {
+                document,
+                app_state,
+                profile,
+                requested,
+            },
+            window,
+        )
+    }
+
+    fn connect(
+        window: &mut VisualTestContext,
+        app_state: &Entity<AppStateEntity>,
+        driver: &FakeDriver,
+        profile: ConnectionProfile,
+    ) {
+        let connection = driver.connect_arc(&profile).expect("fake connection");
+        window.update(|_, cx| {
+            app_state.update(cx, |app, cx| {
+                app.apply_connect_profile(
+                    profile,
+                    connection,
+                    None,
+                    None,
+                    false,
+                    WritePrivilege::Unknown,
+                );
+                cx.emit(AppStateChanged);
+            });
+        });
+        settle(window);
+    }
+
+    fn run(window: &mut VisualTestContext, document: &Entity<CodeDocument>) {
+        window.update(|window, cx| {
+            document.update(cx, |document, cx| document.run_query(window, cx));
+        });
+        settle(window);
+    }
+
+    #[gpui::test]
+    fn a_run_on_a_disconnected_profile_connects_it_then_runs(cx: &mut TestAppContext) {
+        let driver = FakeDriver::new(DbKind::SQLite);
+        let (
+            DisconnectedDocument {
+                document,
+                app_state,
+                profile,
+                requested,
+            },
+            window,
+        ) = open_disconnected(cx);
+        let profile_id = profile.id;
+
+        run(window, &document);
+
+        assert_eq!(*requested.borrow(), vec![profile_id]);
+        assert!(
+            executed(&driver).is_empty(),
+            "nothing runs before the connect"
+        );
+
+        connect(window, &app_state, &driver, profile);
+
+        assert_eq!(
+            executed(&driver),
+            vec![("SELECT 1".to_string(), ReadOnlyEnforcement::None)]
+        );
+    }
+
+    #[gpui::test]
+    fn a_failed_connect_drops_the_parked_run(cx: &mut TestAppContext) {
+        let driver = FakeDriver::new(DbKind::SQLite);
+        let (
+            DisconnectedDocument {
+                document,
+                app_state,
+                profile,
+                ..
+            },
+            window,
+        ) = open_disconnected(cx);
+        let profile_id = profile.id;
+
+        run(window, &document);
+
+        for started in [true, false] {
+            window.update(|_, cx| {
+                app_state.update(cx, |app, cx| {
+                    if started {
+                        app.start_pending_operation(profile_id, None);
+                    } else {
+                        app.finish_pending_operation(profile_id, None);
+                    }
+                    cx.emit(AppStateChanged);
+                });
+            });
+            settle(window);
+        }
+
+        // A later connect the user makes elsewhere runs nothing.
+        connect(window, &app_state, &driver, profile);
+
+        assert!(executed(&driver).is_empty());
     }
 
     #[gpui::test]

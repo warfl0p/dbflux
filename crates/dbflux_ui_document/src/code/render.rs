@@ -1147,6 +1147,8 @@ impl Render for CodeDocument {
 
         self.process_pending_auto_refresh(window, cx);
 
+        self.process_pending_run_after_connect(window, cx);
+
         self.process_pending_load_all_rows(window, cx);
 
         if std::mem::take(&mut self.pending.history_focus_restore) {

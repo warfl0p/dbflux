@@ -85,4 +85,9 @@ pub enum DocumentEvent {
         profile_id: uuid::Uuid,
         sql: String,
     },
+    /// The document needs `profile_id` connected, for a query the user ran
+    /// against a profile that is not connected yet.
+    RequestConnect {
+        profile_id: uuid::Uuid,
+    },
 }

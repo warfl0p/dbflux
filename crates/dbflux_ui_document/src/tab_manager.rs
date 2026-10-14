@@ -413,6 +413,11 @@ impl TabManager {
                         sql: sql.clone(),
                     });
                 }
+                DocumentEvent::RequestConnect { profile_id } => {
+                    cx.emit(TabManagerEvent::RequestConnect {
+                        profile_id: *profile_id,
+                    });
+                }
                 _ => {}
             });
         });
@@ -909,6 +914,10 @@ pub enum TabManagerEvent {
     OpenEditorWithContent {
         profile_id: uuid::Uuid,
         sql: String,
+    },
+    /// A document asked for a profile to be connected.
+    RequestConnect {
+        profile_id: uuid::Uuid,
     },
 }
 
