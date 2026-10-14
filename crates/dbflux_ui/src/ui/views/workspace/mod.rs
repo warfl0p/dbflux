@@ -2327,7 +2327,7 @@ impl Workspace {
                 Self::flatten_script_entries(
                     external.entries(),
                     external.path(),
-                    Some(external.label()),
+                    Some(&external.label()),
                     &mut items,
                 );
             }
