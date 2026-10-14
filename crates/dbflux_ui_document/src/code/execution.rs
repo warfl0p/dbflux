@@ -1397,6 +1397,10 @@ impl CodeDocument {
                 record.error = Some(error_msg.clone());
                 self.state = DocumentState::Error;
 
+                if self.layout == SqlQueryLayout::EditorOnly {
+                    self.layout = SqlQueryLayout::Split;
+                }
+
                 // A failed query already shows its error in the results panel,
                 // so only scripts get a toast. A read-only refusal on an
                 // unattended run is expected: the fallback to Manual below
