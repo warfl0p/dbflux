@@ -76,25 +76,7 @@ fn clickhouse_query_safety_rejects_explicit_controls_before_effects() -> Result<
             table: "dbflux_live_query_safety",
         };
 
-        let first =
-            QueryRequest::new("INSERT INTO dbflux_live_query_safety VALUES (1)").with_limit(0);
-        let first_result = connection.execute(&first);
-        let count = connection.execute(&QueryRequest::new(
-            "SELECT count() FROM dbflux_live_query_safety",
-        ))?;
-        assert_eq!(
-            count.rows,
-            vec![vec![Value::Int(0)]],
-            "first protected INSERT returned {first_result:?}, persisted count: {:?}",
-            count.rows
-        );
-        assert!(
-            matches!(first_result, Err(DbError::NotSupported(_))),
-            "first protected INSERT returned {first_result:?}"
-        );
-
         for request in [
-            QueryRequest::new("INSERT INTO dbflux_live_query_safety VALUES (2)").with_limit(2),
             {
                 let mut request =
                     QueryRequest::new("INSERT INTO dbflux_live_query_safety VALUES (3)");
@@ -123,13 +105,17 @@ fn clickhouse_query_safety_rejects_explicit_controls_before_effects() -> Result<
             "SELECT count() FROM dbflux_live_query_safety",
         ))?;
         assert_eq!(count.rows, vec![vec![Value::Int(0)]]);
-        connection.execute(&QueryRequest::new(
-            "INSERT INTO dbflux_live_query_safety VALUES (6)",
-        ))?;
+
+        let insert = connection.execute(
+            &QueryRequest::new("INSERT INTO dbflux_live_query_safety VALUES (1), (2)")
+                .with_limit(0),
+        )?;
+        assert!(insert.rows.is_empty());
+        assert!(!insert.rows_truncated());
         let count = connection.execute(&QueryRequest::new(
             "SELECT count() FROM dbflux_live_query_safety",
         ))?;
-        assert_eq!(count.rows, vec![vec![Value::Int(1)]]);
+        assert_eq!(count.rows, vec![vec![Value::Int(2)]]);
         Ok(())
     })
 }
@@ -163,13 +149,41 @@ fn clickhouse_connects_and_decodes_types() -> Result<(), DbError> {
         );
         assert_eq!(result.rows[0][3], Value::Null);
 
-        let bounded = QueryRequest::new("SELECT number FROM numbers(6) ORDER BY number")
-            .with_limit(2)
-            .with_offset(2);
-        assert!(matches!(
-            connection.execute(&bounded),
-            Err(DbError::NotSupported(_))
-        ));
+        let bounded =
+            QueryRequest::new("SELECT number FROM numbers(6) ORDER BY number").with_limit(2);
+        let bounded = connection.execute(&bounded)?;
+        assert_eq!(bounded.rows, vec![vec![Value::Int(0)], vec![Value::Int(1)]]);
+        assert!(bounded.rows_truncated());
+
+        let within_budget =
+            QueryRequest::new("SELECT number FROM numbers(6) ORDER BY number LIMIT 3")
+                .with_limit(5);
+        let within_budget = connection.execute(&within_budget)?;
+        assert_eq!(within_budget.rows.len(), 3);
+        assert!(!within_budget.rows_truncated());
+
+        let zero = connection
+            .execute(&QueryRequest::new("SELECT number FROM numbers(6)").with_limit(0))?;
+        assert!(zero.rows.is_empty());
+        assert_eq!(zero.columns.len(), 1);
+        assert!(zero.rows_truncated());
+
+        // Far larger than the 128 MiB response cap that applies to unlimited
+        // requests; a row-limited request reads only past the limit.
+        let oversized = connection.execute(
+            &QueryRequest::new("SELECT number, repeat('x', 1000) FROM numbers(2000000)")
+                .with_limit(5),
+        )?;
+        assert_eq!(oversized.rows.len(), 5);
+        assert!(oversized.rows_truncated());
+
+        let read_only_oversized = connection.execute(
+            &QueryRequest::new("SELECT number, repeat('x', 1000) FROM numbers(2000000)")
+                .with_limit(5)
+                .with_read_only(ReadOnlyEnforcement::Required),
+        )?;
+        assert_eq!(read_only_oversized.rows.len(), 5);
+        assert!(read_only_oversized.rows_truncated());
 
         Ok(())
     })
@@ -187,12 +201,10 @@ fn clickhouse_paginates_ordered_views() -> Result<(), DbError> {
         let bounded = QueryRequest::new(
             "SELECT * FROM dbflux_live_pagination_view ORDER BY tens ASC LIMIT 100",
         )
-        .with_limit(6)
-        .with_offset(5);
-        assert!(matches!(
-            connection.execute(&bounded),
-            Err(DbError::NotSupported(_))
-        ));
+        .with_limit(6);
+        let bounded = connection.execute(&bounded)?;
+        assert_eq!(bounded.rows.len(), 6);
+        assert!(bounded.rows_truncated());
         connection.execute(&QueryRequest::new("DROP VIEW dbflux_live_pagination_view"))?;
         Ok(())
     })

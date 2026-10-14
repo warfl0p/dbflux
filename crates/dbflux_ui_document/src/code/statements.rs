@@ -82,12 +82,26 @@ pub(super) fn statement_at_cursor(ranges: &[Range<usize>], cursor: usize) -> Opt
     gpui_base::input::statement_at_offset(ranges, cursor)
 }
 
-/// The statement count shown in the context bar: "3 statements".
-pub(super) fn statement_count_label(count: usize) -> String {
-    if count == 1 {
-        dbflux_i18n::t!("document.code.toolbar.statements.one", count = count)
-    } else {
-        dbflux_i18n::t!("document.code.toolbar.statements.many", count = count)
+/// The context bar's run summary (IslEditor): "3 statements · last run
+/// 0.32 s", either part alone when the other is unknown, `None` when both
+/// are.
+pub(super) fn run_summary_label(
+    statement_count: Option<usize>,
+    last_run_seconds: Option<f64>,
+) -> Option<String> {
+    let statements = statement_count.map(|count| {
+        if count == 1 {
+            dbflux_i18n::t!("document.code.toolbar.statements.one", count = count)
+        } else {
+            dbflux_i18n::t!("document.code.toolbar.statements.many", count = count)
+        }
+    });
+    let last_run = last_run_seconds.map(crate::labels::code_toolbar_last_run_label);
+
+    match (statements, last_run) {
+        (Some(statements), Some(last_run)) => Some(format!("{statements} · {last_run}")),
+        (Some(part), None) | (None, Some(part)) => Some(part),
+        (None, None) => None,
     }
 }
 
@@ -304,9 +318,7 @@ impl CodeDocument {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        cursor_statement, result_statement_captions, statement_at_cursor, statement_count_label,
-    };
+    use super::{cursor_statement, result_statement_captions, statement_at_cursor};
     use dbflux_core::QueryLanguage;
 
     const BUFFER: &str = "SELECT count(*) FROM orders;\n\nSELECT c.country,\n       o.total\nFROM orders o\nJOIN customers c ON c.id = o.customer_id;\n";
@@ -413,12 +425,6 @@ mod tests {
     fn statement_at_cursor_leaves_a_single_statement_to_the_whole_buffer_run() {
         assert_eq!(statement_under("SELECT 1;", 2), None);
         assert_eq!(statement_under("", 0), None);
-    }
-
-    #[test]
-    fn statement_count_label_names_one_or_many_statements() {
-        assert_eq!(statement_count_label(3), "3 statements");
-        assert_eq!(statement_count_label(1), "1 statement");
     }
 
     #[test]

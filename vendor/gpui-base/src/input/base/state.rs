@@ -8564,7 +8564,7 @@ mod tests {
     /// default `update_batch` replays through `update` one edit at a time.
     #[gpui::test]
     fn test_replace_text_in_ranges_drives_the_highlighter_once(cx: &mut TestAppContext) {
-        use crate::input::{FoldRange, HighlightStyleResolver, InputEdit, InputHighlighter};
+        use crate::input::{FoldRange, InputEdit, InputHighlighter};
         use gpui::HighlightStyle;
         use std::cell::RefCell;
 
@@ -8600,7 +8600,7 @@ mod tests {
             fn styles(
                 &self,
                 range: &Range<usize>,
-                _: &dyn HighlightStyleResolver,
+                _: &crate::input::SharedHighlightStyleResolver,
             ) -> Vec<(Range<usize>, HighlightStyle)> {
                 vec![(range.clone(), HighlightStyle::default())]
             }

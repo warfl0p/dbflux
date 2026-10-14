@@ -30,8 +30,9 @@ así que el endpoint es una URL y no un par host/port.
   de una base de datos en la barra lateral abre una en su propia pestaña, que
   ejecuta una línea SQL a la vez mediante `Connection::execute` con la
   validación del editor, la confirmación de queries peligrosas, las filas de
-  auditoría y el historial de consultas. El driver rechaza los límites de filas
-  por request, así que los comandos de la consola se ejecutan sin límite.
+  auditoría y el historial de consultas. El driver aplica
+  `QueryRequest::limit` (`REQUEST_ROW_LIMIT`), así que los comandos de la
+  consola llevan el límite de filas del editor.
 - SQL arbitrario de un solo statement, con respuestas forzadas a `JSONCompact`
   para que los nombres y tipos de columna lleguen junto con las filas.
 - El ancho de fila se verifica contra el número de columnas declaradas en cada
@@ -42,6 +43,12 @@ así que el endpoint es una URL y no un par host/port.
   partition keys, tamaño en disco y compresión.
 - La carga de schema es perezosa por database, así que un servidor con muchas
   databases no paga el costo de todas ellas al conectar.
+- Las queries con límite de filas leen su resultado en streaming y dejan de
+  leer una fila después del límite, así que un resultado grande vuelve
+  truncado en lugar de fallar por el límite de bytes de la respuesta. El
+  request activa `cancel_http_readonly_queries_on_client_close`, así que el
+  servidor detiene una query de solo lectura cuando el cliente cierra la
+  conexión.
 - El SQL se envía sin modificaciones por HTTP. El valor `offset` existente se
   envía como parámetro de la URL HTTP; aquí no se certifica su comportamiento
   en el servidor.
@@ -98,9 +105,11 @@ texto crudo:
 ## Limitaciones
 
 - Sin túneles SSH.
-- Sin transacciones, prepared statements ni cancelación de query. Los límites
-  de filas explícitos de `QueryRequest` (incluido cero) y los timeouts de
-  statement explícitos se rechazan antes del despacho. El timeout HTTP de
+- Sin transacciones, prepared statements ni cancelación de query. Los timeouts
+  de statement explícitos, y los límites de filas en queries de métricas o
+  inspectores de instancia, se rechazan antes del despacho. Un error que el
+  servidor reporta después del corte del límite de filas no se ve, porque la
+  lectura se detiene en el corte: el resultado se muestra como truncado. El timeout HTTP de
   transporte configurado sigue vigente, pero no garantiza detener el trabajo
   ni las mutaciones en el servidor. Una query sin límite puede alojar todo el
   resultado en memoria (dentro del límite del cuerpo HTTP). El driver no
@@ -111,7 +120,9 @@ texto crudo:
   destino de transferencia.
 - Un statement SQL por request; los scripts multi-statement no se procesan por
   lotes.
-- Los cuerpos de respuesta HTTP están limitados a 128 MiB.
+- Los cuerpos de respuesta HTTP están limitados a 128 MiB. El límite se aplica
+  a las queries sin límite de filas, y a las que lo tienen solo cuando las filas
+  conservadas por sí solas lo superan.
 - Las zonas horarias con nombre de ClickHouse no se interpretan del lado del
   cliente. Los timestamps ISO con un offset se manejan correctamente; los
   timestamps sin uno se tratan como UTC.

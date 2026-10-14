@@ -3699,6 +3699,15 @@ pub(crate) fn delimited_record_count_status(
     }
 }
 
+/// Summary of the last run at the end of the editor toolbar
+/// ("last run 0.32 s").
+pub(crate) fn code_toolbar_last_run_label(seconds: f64) -> String {
+    dbflux_i18n::t!(
+        "document.code.toolbar.last_run",
+        seconds = format!("{seconds:.2}")
+    )
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "mcp")]
@@ -4251,7 +4260,8 @@ mod tests {
             "document.code.toolbar.refresh",
             "document.code.toolbar.cancel",
             "document.code.toolbar.run",
-            "document.code.toolbar.new_tab",
+            "document.code.toolbar.last_run",
+            "document.code.toolbar.run_in_new_tab",
             "document.code.toolbar.read_only",
             "document.code.toolbar.saved",
             "document.code.toolbar.save",

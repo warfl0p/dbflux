@@ -1,5 +1,5 @@
 use crate::audit::AuditEventEmitDto;
-use crate::envelope::ProtocolVersion;
+use crate::envelope::{DRIVER_RPC_V1_6, ProtocolVersion};
 use dbflux_core::{
     CodeGenCapabilities, CodeGeneratorInfo, CollectionBrowseRequest, CollectionCountRequest,
     ColumnMeta, CrudResult, CustomTypeInfo, DatabaseInfo, DbSchemaInfo, DescribeRequest,
@@ -183,6 +183,18 @@ impl From<QueryResultDto> for QueryResult {
             additional_results: Vec::new(),
         }
     }
+}
+
+/// Whether `Execute` and `ExecuteWithHandle` may carry `QueryRequestDto::limit`
+/// on a session that negotiated `version`.
+///
+/// From v1.6 a host whose driver declares `DriverCapabilities::REQUEST_ROW_LIMIT`
+/// accepts the limit and answers with `ExecuteResultWithTruncation` /
+/// `ExecuteWithHandleResultWithTruncation`. Older peers cannot report that a
+/// result set dropped rows, so neither side sends nor accepts a limit with them.
+pub fn protocol_carries_request_row_limit(version: ProtocolVersion) -> bool {
+    version.major > DRIVER_RPC_V1_6.major
+        || (version.major == DRIVER_RPC_V1_6.major && version.minor >= DRIVER_RPC_V1_6.minor)
 }
 
 /// Payload for optional chunked query responses.
@@ -550,6 +562,18 @@ pub enum DriverResponseBody {
     KvKeyCountResult {
         count: u64,
     },
+    // v1.6: `QueryResultDto` cannot change shape, so the truncation flag rides
+    // on new variants appended after the last v1.5 variant. A host sends them
+    // only on sessions that negotiated v1.6 or newer.
+    ExecuteResultWithTruncation {
+        result: QueryResultDto,
+        rows_truncated: bool,
+    },
+    ExecuteWithHandleResultWithTruncation {
+        handle_id: Uuid,
+        result: QueryResultDto,
+        rows_truncated: bool,
+    },
 }
 
 /// Response envelope for driver RPC operations.
@@ -619,7 +643,8 @@ impl DriverResponseEnvelope {
 mod tests {
     use super::{
         DriverRequestBody, DriverRequestEnvelope, DriverResponseBody, DriverResponseEnvelope,
-        DriverRpcError, DriverRpcErrorCode, QueryRequestDto,
+        DriverRpcError, DriverRpcErrorCode, QueryRequestDto, QueryResultDto, QueryResultShapeDto,
+        protocol_carries_request_row_limit,
     };
     use crate::ProtocolVersion;
     use dbflux_core::{
@@ -627,6 +652,125 @@ mod tests {
     };
     use std::time::Duration;
     use uuid::Uuid;
+
+    /// `TableBrowseRequest` and `TableCountRequest` cross the driver RPC wire,
+    /// and `framing.rs` encodes every frame with postcard, which is positional.
+    /// A field that is skipped is absent from the bytes while the decoder still
+    /// consumes the next field's bytes as that field, shifting everything after
+    /// it, so a field that is only read in-process has to be skipped on both
+    /// sides of the encoding. Then a request carrying it encodes exactly like
+    /// one that does not and every other field keeps its place.
+    #[test]
+    fn browse_and_count_database_never_shifts_the_wire_layout() {
+        use dbflux_core::{
+            Pagination, SemanticFilter, TableBrowseRequest, TableCountRequest, TableRef, Value,
+            WhereOperator,
+        };
+
+        let filter = SemanticFilter::compare("id", WhereOperator::Eq, Value::Int(1));
+
+        // The shape an external driver RPC actually sends for a browse: no
+        // projection at all. Only the encoded bytes are compared here, because
+        // an empty projection has a pre-existing trailing-skip hazard of its
+        // own that the last assertion in this test does not touch.
+        let bare = TableBrowseRequest::new(TableRef::with_schema("dbo", "events"));
+        let bare_scoped = bare.clone().with_database(Some("reporting".to_string()));
+        assert_eq!(
+            postcard::to_allocvec(&DriverRequestBody::BrowseTable { request: bare })
+                .expect("serialize bare browse"),
+            postcard::to_allocvec(&DriverRequestBody::BrowseTable {
+                request: bare_scoped,
+            })
+            .expect("serialize scoped bare browse"),
+            "the database must be zero-width even with no projection"
+        );
+
+        // A count with a string filter and no semantic filter, which is also a
+        // pre-existing undecodable shape, so again bytes only.
+        let plain_count =
+            TableCountRequest::new(TableRef::with_schema("dbo", "events")).with_filter("id = 1");
+        let plain_count_scoped = plain_count
+            .clone()
+            .with_database(Some("reporting".to_string()));
+        assert_eq!(
+            postcard::to_allocvec(&DriverRequestBody::CountTable {
+                request: plain_count,
+            })
+            .expect("serialize plain count"),
+            postcard::to_allocvec(&DriverRequestBody::CountTable {
+                request: plain_count_scoped,
+            })
+            .expect("serialize scoped plain count"),
+            "the database must be zero-width with no semantic filter"
+        );
+
+        // A projection is part of the fixture because an empty one carries a
+        // postcard hazard of its own, independent of this field: `columns` has
+        // `skip_serializing_if`, so an empty vector shifts whatever follows it.
+        let browse = TableBrowseRequest::new(TableRef::with_schema("dbo", "events"))
+            .with_pagination(Pagination::Offset {
+                limit: 10,
+                offset: 20,
+            })
+            .with_columns(vec!["id".to_string()])
+            .with_semantic_filter(filter.clone());
+        let browse_scoped = browse.clone().with_database(Some("reporting".to_string()));
+
+        assert_eq!(
+            postcard::to_allocvec(&DriverRequestBody::BrowseTable {
+                request: browse.clone(),
+            })
+            .expect("serialize browse"),
+            postcard::to_allocvec(&DriverRequestBody::BrowseTable {
+                request: browse_scoped,
+            })
+            .expect("serialize scoped browse"),
+            "a database on the request must not change the encoded bytes"
+        );
+
+        let bytes = postcard::to_allocvec(&DriverRequestBody::BrowseTable {
+            request: browse.clone(),
+        })
+        .expect("serialize browse");
+        let decoded: DriverRequestBody = postcard::from_bytes(&bytes).expect("decode browse");
+        let DriverRequestBody::BrowseTable { request } = decoded else {
+            panic!("expected BrowseTable");
+        };
+        assert_eq!(request.table, browse.table);
+        assert_eq!(request.pagination, browse.pagination);
+        assert_eq!(request.semantic_filter, browse.semantic_filter);
+
+        let count = TableCountRequest::new(TableRef::with_schema("dbo", "events"))
+            .with_filter("id = 1")
+            .with_semantic_filter(filter.clone());
+        let count_scoped = count.clone().with_database(Some("reporting".to_string()));
+
+        assert_eq!(
+            postcard::to_allocvec(&DriverRequestBody::CountTable {
+                request: count.clone(),
+            })
+            .expect("serialize count"),
+            postcard::to_allocvec(&DriverRequestBody::CountTable {
+                request: count_scoped,
+            })
+            .expect("serialize scoped count"),
+            "a database on the count must not change the encoded bytes"
+        );
+
+        let bytes = postcard::to_allocvec(&DriverRequestBody::CountTable {
+            request: count.clone(),
+        })
+        .expect("serialize count");
+        let decoded: DriverRequestBody = postcard::from_bytes(&bytes).expect("decode count");
+        let DriverRequestBody::CountTable { request } = decoded else {
+            panic!("expected CountTable");
+        };
+        assert_eq!(request.filter, count.filter);
+        assert_eq!(
+            request.semantic_filter, count.semantic_filter,
+            "the count's filter must survive the wire"
+        );
+    }
 
     #[test]
     fn request_envelope_uses_explicit_protocol_version() {
@@ -986,6 +1130,126 @@ mod tests {
             DriverResponseBody::KvKeyCountResult { count } => assert_eq!(count, 1_234_567),
             other => panic!("unexpected response body: {other:?}"),
         }
+    }
+
+    fn limited_result_dto() -> QueryResultDto {
+        QueryResultDto {
+            shape: QueryResultShapeDto::Table,
+            columns: Vec::new(),
+            rows: vec![
+                vec![dbflux_core::Value::Int(1)],
+                vec![dbflux_core::Value::Int(2)],
+            ],
+            affected_rows: None,
+            execution_time_ms: 7,
+            text_body: None,
+            raw_bytes: None,
+            next_page_token: None,
+        }
+    }
+
+    #[test]
+    fn truncation_results_are_appended_after_the_last_v1_5_response_variant() {
+        assert_eq!(
+            wire_variant_index(&DriverResponseBody::ExecuteResultWithTruncation {
+                result: limited_result_dto(),
+                rows_truncated: true,
+            }),
+            35
+        );
+        assert_eq!(
+            wire_variant_index(&DriverResponseBody::ExecuteWithHandleResultWithTruncation {
+                handle_id: Uuid::nil(),
+                result: limited_result_dto(),
+                rows_truncated: true,
+            }),
+            36
+        );
+    }
+
+    #[test]
+    fn execute_result_with_truncation_round_trips_through_postcard() {
+        for truncated in [true, false] {
+            let response = DriverResponseBody::ExecuteResultWithTruncation {
+                result: limited_result_dto(),
+                rows_truncated: truncated,
+            };
+            let bytes = postcard::to_allocvec(&response).expect("serialize");
+            let restored: DriverResponseBody = postcard::from_bytes(&bytes).expect("deserialize");
+
+            match restored {
+                DriverResponseBody::ExecuteResultWithTruncation {
+                    result,
+                    rows_truncated,
+                } => {
+                    assert_eq!(rows_truncated, truncated);
+                    assert_eq!(result.rows.len(), 2);
+                    assert_eq!(result.execution_time_ms, 7);
+                }
+                other => panic!("unexpected response body: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn execute_with_handle_result_with_truncation_round_trips_through_postcard() {
+        let handle = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").expect("uuid");
+        let response = DriverResponseBody::ExecuteWithHandleResultWithTruncation {
+            handle_id: handle,
+            result: limited_result_dto(),
+            rows_truncated: true,
+        };
+        let bytes = postcard::to_allocvec(&response).expect("serialize");
+        let restored: DriverResponseBody = postcard::from_bytes(&bytes).expect("deserialize");
+
+        match restored {
+            DriverResponseBody::ExecuteWithHandleResultWithTruncation {
+                handle_id,
+                result,
+                rows_truncated,
+            } => {
+                assert_eq!(handle_id, handle);
+                assert!(rows_truncated);
+                assert_eq!(result.rows.len(), 2);
+            }
+            other => panic!("unexpected response body: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn legacy_execute_results_keep_their_wire_indices() {
+        assert_eq!(
+            wire_variant_index(&DriverResponseBody::ExecuteResult {
+                result: limited_result_dto(),
+            }),
+            4
+        );
+        assert_eq!(
+            wire_variant_index(&DriverResponseBody::ExecuteWithHandleResult {
+                handle_id: Uuid::nil(),
+                result: limited_result_dto(),
+            }),
+            5
+        );
+    }
+
+    #[test]
+    fn request_row_limit_travels_only_from_v1_6() {
+        assert!(!protocol_carries_request_row_limit(ProtocolVersion::new(
+            1, 0
+        )));
+        assert!(!protocol_carries_request_row_limit(ProtocolVersion::new(
+            1, 5
+        )));
+        assert!(protocol_carries_request_row_limit(ProtocolVersion::new(
+            1, 6
+        )));
+        assert!(protocol_carries_request_row_limit(ProtocolVersion::new(
+            1, 7
+        )));
+        assert!(protocol_carries_request_row_limit(ProtocolVersion::new(
+            2, 0
+        )));
     }
 
     #[test]

@@ -1265,7 +1265,7 @@ document:
       refresh: Atualizar
       cancel: Cancelar
       run: Executar
-      new_tab: Nova aba
+      last_run: "última execução %{seconds} s"
       read_only: Somente leitura
       saved: Salvo
       save: Salvar
@@ -4018,6 +4018,7 @@ settings:
       error: Falha ao atualizar a configuração de banco de dados compartilhado
       hint: "Aplicado na próxima inicialização. Compartilha o banco de dados estável (dbflux.db) em vez do dbflux-nightly.db desta versão nightly."
     override_value_header: Valor de substituição
+    override_field: "Substituir %{field}"
     placeholder:
       refresh_policy: Política de atualização
     save:

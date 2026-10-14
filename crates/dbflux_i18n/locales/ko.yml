@@ -1265,7 +1265,7 @@ document:
       refresh: 새로고침
       cancel: 취소
       run: 실행
-      new_tab: 새 탭
+      last_run: "마지막 실행 %{seconds}초"
       read_only: 읽기 전용
       saved: 저장됨
       save: 저장
@@ -4018,6 +4018,7 @@ settings:
       error: 공유 데이터베이스 설정을 업데이트하지 못했습니다
       hint: "다음 실행 시 적용됩니다. 이 나이틀리 빌드의 dbflux-nightly.db 대신 안정 데이터베이스(dbflux.db)를 공유합니다."
     override_value_header: 값 재정의
+    override_field: "%{field} 재정의"
     placeholder:
       refresh_policy: 새로고침 정책
     save:
