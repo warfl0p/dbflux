@@ -1,6 +1,6 @@
 //! Statement awareness of the code editor (AppByzEditor, IslEditor): the
-//! statement gutter with a run marker per statement, the statement count in
-//! the toolbar, and the statement caption above each result.
+//! statement gutter (line numbers and a statement bar, no run markers), the
+//! statement count in the toolbar, and the statement caption above each result.
 //!
 //! Statements always come from the effective language's statement splitter
 //! (`QueryLanguage::statement_ranges`), the same one that counts the
@@ -12,15 +12,15 @@ use dbflux_components::tokens::{ChromeColors, EditorMetrics};
 use gpui_base::input::{GutterStatementStyle, GutterStatements};
 use std::ops::Range;
 
-/// Gutter colours and sizes from the active theme: line-2 markers, the tint
+/// Gutter colours and sizes from the active theme: the tint
 /// for the statement under the cursor, the byzantine bar.
 fn gutter_style(theme: &gpui_component::theme::Theme) -> GutterStatementStyle {
     let tint = ChromeColors::tint(theme);
 
     GutterStatementStyle {
-        marker_slot_width: EditorMetrics::GUTTER_MARKER_SLOT,
-        marker_size: EditorMetrics::GUTTER_MARKER_SIZE,
-        marker_icon_size: EditorMetrics::GUTTER_MARKER_ICON,
+        marker_slot_width: px(0.0),
+        marker_size: px(0.0),
+        marker_icon_size: px(0.0),
         bar_gap: EditorMetrics::GUTTER_BAR_GAP,
         bar_width: EditorMetrics::GUTTER_BAR_WIDTH,
         marker: theme.input,
@@ -293,8 +293,8 @@ impl CodeDocument {
             .update(cx, |state, cx| state.set_gutter_statements(gutter, cx));
     }
 
-    /// Runs the statement at `range` of the buffer, as its gutter marker
-    /// does.
+    /// Runs the statement at `range` of the buffer, as the editor action
+    /// strip does.
     pub(super) fn run_statement(
         &mut self,
         range: Range<usize>,
@@ -532,13 +532,8 @@ mod gutter_tests {
         (document, toasts, window)
     }
 
-    fn ran_a_query(window: &mut VisualTestContext, toasts: &Entity<ToastHost>) -> bool {
-        let expected = dbflux_i18n::t!("document.code.execution.toast.no_active_connection");
-        window.update(|_, cx| toasts.read(cx).last_toast_title()) == Some(expected)
-    }
-
     #[gpui::test]
-    fn every_statement_gets_a_run_marker(cx: &mut TestAppContext) {
+    fn every_statement_gets_a_gutter_range(cx: &mut TestAppContext) {
         let (document, _toasts, window) = open_editor(cx);
 
         window.update(|_, cx| {
@@ -603,41 +598,6 @@ mod gutter_tests {
                 Some("SELECT 1")
             );
         });
-    }
-
-    #[gpui::test]
-    fn clicking_a_run_marker_runs_its_statement(cx: &mut TestAppContext) {
-        let (document, toasts, window) = open_editor(cx);
-
-        let (second_start, marker) = window.update(|_, cx| {
-            let editor = document.read(cx).editor.input_state.read(cx);
-            let gutter = editor.gutter_statements().expect("statement gutter");
-            let second = gutter.ranges.get(1).cloned().expect("second statement");
-
-            let line = editor
-                .range_to_bounds(&(second.start..second.start))
-                .expect("the second statement is laid out");
-            let line_height = editor.line_height().expect("the editor is laid out");
-            let gutter_left = editor.input_bounds().origin.x;
-
-            (
-                second.start,
-                point(
-                    gutter_left + EditorMetrics::GUTTER_MARKER_SLOT / 2.0,
-                    line.origin.y + line_height / 2.0,
-                ),
-            )
-        });
-
-        window.simulate_click(marker, Modifiers::default());
-        window.run_until_parked();
-
-        assert!(ran_a_query(window, &toasts), "the marker ran a query");
-        assert_eq!(
-            window.update(|_, cx| document.read(cx).execution.query_origin),
-            Some(second_start),
-            "the marker ran the statement it stands beside"
-        );
     }
 
     #[gpui::test]

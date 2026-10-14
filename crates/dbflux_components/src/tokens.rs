@@ -1298,14 +1298,10 @@ impl EditorMetrics {
     pub const FILE_ICON: Rems = ui(13.0);
     pub const FILE_GAP: Pixels = px(8.0);
     pub const FILE_STATE_GAP: Pixels = px(5.0);
-    /// Statement gutter: a 24 px run-marker slot with an 18 px hit target
-    /// and a 12 px play glyph, 14 px between the line numbers and a 3 px
-    /// statement bar, the statement fill at 6 % of the tint and the cursor
-    /// line at 11 %.
-    pub const GUTTER_MARKER_SLOT: Pixels = px(24.0);
-    pub const GUTTER_MARKER_SIZE: Pixels = px(18.0);
-    pub const GUTTER_MARKER_ICON: Pixels = px(12.0);
-    pub const GUTTER_BAR_GAP: Pixels = px(14.0);
+    /// Statement gutter: no run markers (the editor action strip runs the
+    /// statement), a 6 px gap between the line numbers and a 3 px statement
+    /// bar, the statement fill at 6 % of the tint and the cursor line at 11 %.
+    pub const GUTTER_BAR_GAP: Pixels = px(6.0);
     pub const GUTTER_BAR_WIDTH: Pixels = px(3.0);
     pub const STATEMENT_FILL_ALPHA: f32 = 0.06;
     pub const CURSOR_LINE_FILL_ALPHA: f32 = 0.11;
