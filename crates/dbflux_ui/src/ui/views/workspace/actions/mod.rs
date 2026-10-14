@@ -155,36 +155,6 @@ impl Workspace {
 
         self.dispatch(command, window, cx);
     }
-
-    /// Strip leading annotation comments from file content.
-    fn strip_annotation_header<'a>(content: &'a str, language: &QueryLanguage) -> &'a str {
-        let prefix = language.comment_prefix();
-        let mut end = 0;
-
-        for line in content.lines() {
-            let trimmed = line.trim();
-
-            if trimmed.is_empty() {
-                end += line.len() + 1;
-                continue;
-            }
-
-            if let Some(after_prefix) = trimmed.strip_prefix(prefix)
-                && after_prefix.trim().starts_with('@')
-            {
-                end += line.len() + 1;
-                continue;
-            }
-
-            break;
-        }
-
-        if end >= content.len() {
-            ""
-        } else {
-            &content[end..]
-        }
-    }
 }
 
 #[cfg(test)]
@@ -194,6 +164,7 @@ mod tests {
         decide_open_document_with_placement,
     };
     use crate::ui::document::DocumentId;
+    use crate::ui::views::workspace::Workspace;
     use uuid::Uuid;
 
     #[test]
@@ -231,60 +202,6 @@ mod tests {
     fn decide_open_document_opens_new_when_connected_and_no_existing_tab() {
         let decision = decide_open_document(true, None);
         assert_eq!(decision, OpenDocumentDecision::OpenNew);
-    }
-
-    // --- strip_annotation_header ---
-
-    use crate::ui::views::workspace::Workspace;
-
-    #[test]
-    fn strip_annotation_header_removes_sql_annotations() {
-        let content = "-- @connection: my-db\n-- @database: main\nSELECT 1;";
-        let result = Workspace::strip_annotation_header(content, &dbflux_core::QueryLanguage::Sql);
-        assert_eq!(result, "SELECT 1;");
-    }
-
-    #[test]
-    fn strip_annotation_header_preserves_non_annotation_comments() {
-        let content = "-- This is a regular comment\nSELECT 1;";
-        let result = Workspace::strip_annotation_header(content, &dbflux_core::QueryLanguage::Sql);
-        assert_eq!(result, "-- This is a regular comment\nSELECT 1;");
-    }
-
-    #[test]
-    fn strip_annotation_header_skips_blank_lines_before_annotations() {
-        let content = "\n\n-- @connection: db\nSELECT 1;";
-        let result = Workspace::strip_annotation_header(content, &dbflux_core::QueryLanguage::Sql);
-        assert_eq!(result, "SELECT 1;");
-    }
-
-    #[test]
-    fn strip_annotation_header_all_annotations_returns_empty() {
-        let content = "-- @connection: db\n-- @database: main\n";
-        let result = Workspace::strip_annotation_header(content, &dbflux_core::QueryLanguage::Sql);
-        assert_eq!(result, "");
-    }
-
-    #[test]
-    fn strip_annotation_header_empty_content() {
-        let result = Workspace::strip_annotation_header("", &dbflux_core::QueryLanguage::Sql);
-        assert_eq!(result, "");
-    }
-
-    #[test]
-    fn strip_annotation_header_mongo_comment_prefix() {
-        let content = "// @connection: my-db\ndb.collection.find()";
-        let result =
-            Workspace::strip_annotation_header(content, &dbflux_core::QueryLanguage::MongoQuery);
-        assert_eq!(result, "db.collection.find()");
-    }
-
-    #[test]
-    fn strip_annotation_header_redis_comment_prefix() {
-        let content = "# @connection: my-db\nGET key";
-        let result =
-            Workspace::strip_annotation_header(content, &dbflux_core::QueryLanguage::RedisCommands);
-        assert_eq!(result, "GET key");
     }
 
     // --- PaletteItem model tests ---

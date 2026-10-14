@@ -667,16 +667,19 @@ impl CodeDocument {
                     did_change = true;
                 }
 
-                if self
-                    .source
-                    .exec_ctx
-                    .database
-                    .as_ref()
-                    .is_some_and(|database| {
-                        !database_items
-                            .iter()
-                            .any(|item| item.value.as_ref() == database)
-                    })
+                // An empty list means the schema is not loaded yet (a fresh
+                // reconnect), not that the saved database is gone.
+                if !database_items.is_empty()
+                    && self
+                        .source
+                        .exec_ctx
+                        .database
+                        .as_ref()
+                        .is_some_and(|database| {
+                            !database_items
+                                .iter()
+                                .any(|item| item.value.as_ref() == database)
+                        })
                 {
                     self.source.exec_ctx.database =
                         Self::default_database_for_connection(&self.app_state, connection_id, cx);
@@ -704,7 +707,7 @@ impl CodeDocument {
                             .position(|item| item.value.as_ref() == schema)
                     });
 
-                let next_schema = if selected_schema_index.is_some() {
+                let next_schema = if selected_schema_index.is_some() || schema_items.is_empty() {
                     self.source.exec_ctx.schema.clone()
                 } else if schema_items
                     .iter()
@@ -750,6 +753,7 @@ impl CodeDocument {
 
         if did_change {
             self.invalidate_execution_session_if_context_changed(cx);
+            self.persist_script_context(cx);
             cx.emit(DocumentEvent::MetaChanged);
         }
 
@@ -848,6 +852,7 @@ impl CodeDocument {
         self.source.exec_ctx.container = None;
 
         self.sync_context_dropdowns(cx);
+        self.persist_script_context(cx);
 
         // Re-validate context bar index since dropdown visibility may have changed
         if self.focus_mode == SqlQueryFocus::ContextBar {
@@ -896,6 +901,7 @@ impl CodeDocument {
         // database at construction.
         self.sync_editor_language(cx);
 
+        self.persist_script_context(cx);
         cx.emit(DocumentEvent::MetaChanged);
         cx.notify();
     }
@@ -905,6 +911,7 @@ impl CodeDocument {
         // Reattach the completion provider, which captures the selected
         // schema at construction.
         self.sync_editor_language(cx);
+        self.persist_script_context(cx);
         cx.emit(DocumentEvent::MetaChanged);
         cx.notify();
     }

@@ -22,6 +22,7 @@ pub mod saved_chart_manager;
 pub mod saved_document_query_manager;
 pub mod saved_query_manager;
 pub mod schema_snapshot_manager;
+pub mod script_context;
 pub mod sql_preview_modal;
 pub mod sso_wizard;
 pub mod toast;
