@@ -6,33 +6,6 @@ use crate::pane::{CloseDisposition, EmptyScriptCleanup};
 use dbflux_ui_base::user_error::{ErrorKind, UserFacingError, report_error_async};
 use dbflux_ui_base::{AsyncUpdateResultExt, SaveTargetOutcome};
 
-/// Build the file content, prepending the execution-context annotation header
-/// when the editor surface is connection-backed.
-///
-/// `supports_connection_context` and `comment_prefix` are resolved from the
-/// editor's profile (not the raw `QueryLanguage`) so a driver with a bespoke
-/// surface — e.g. a connection-backed DynamoDB editor whose `QueryLanguage` is
-/// `Custom("DynamoDB")` but whose profile reports connection support and a `--`
-/// prefix — emits the header with the correct prefix.
-fn build_file_content_for_language(
-    editor_content: &str,
-    exec_ctx: &ExecutionContext,
-    supports_connection_context: bool,
-    comment_prefix: &str,
-) -> String {
-    if !supports_connection_context {
-        return editor_content.to_string();
-    }
-
-    let header = exec_ctx.to_comment_header_with_prefix(comment_prefix);
-    if header.is_empty() {
-        return editor_content.to_string();
-    }
-
-    let body = CodeDocument::strip_existing_annotations(editor_content, comment_prefix);
-    format!("{}\n{}", header, body)
-}
-
 /// Reports a save that did not reach the filesystem: the Save As picker was
 /// dismissed, could not be opened, or the write failed. The buffer stays dirty,
 /// so a tab close waiting on that save must not proceed.
@@ -157,6 +130,7 @@ async fn finish_physical_write(
                             }
 
                             doc.editor.path = Some(path.clone());
+                            doc.persist_script_context(cx);
                             let landed = doc.mark_clean_against(&saved_input, cx);
                             doc.report_save_outcome(landed, cx);
 
@@ -812,53 +786,16 @@ impl CodeDocument {
 
     // === Explicit save (Ctrl+S) ===
 
-    /// Build the full file content, prepending execution context metadata.
+    /// The text the file holds: exactly what the editor shows. The execution
+    /// context lives in the app database, not in the file.
     pub fn build_file_content(&self, cx: &App) -> String {
-        let editor_content = self.editor.input_state.read(cx).value().to_string();
-
-        build_file_content_for_language(
-            &editor_content,
-            &self.source.exec_ctx,
-            self.supports_connection_context(),
-            self.comment_prefix(),
-        )
-    }
-
-    /// Strip existing annotation comments from the beginning of content.
-    fn strip_existing_annotations<'a>(content: &'a str, prefix: &str) -> &'a str {
-        let mut last_annotation_end = 0;
-
-        for line in content.lines() {
-            let trimmed = line.trim();
-
-            if trimmed.is_empty() {
-                last_annotation_end += line.len() + 1; // +1 for newline
-                continue;
-            }
-
-            if let Some(after_prefix) = trimmed.strip_prefix(prefix)
-                && after_prefix.trim().starts_with('@')
-            {
-                last_annotation_end += line.len() + 1;
-                continue;
-            }
-
-            break;
-        }
-
-        if last_annotation_end >= content.len() {
-            ""
-        } else {
-            &content[last_annotation_end..]
-        }
+        self.editor.input_state.read(cx).value().to_string()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        CodeDocument, PhysicalWrite, WriteKind, build_file_content_for_language, refusal_error,
-    };
+    use super::{CodeDocument, PhysicalWrite, WriteKind, refusal_error};
     use crate::handle::DocumentEvent;
     use crate::pane::CloseDisposition;
     use dbflux_components::theme;
@@ -875,55 +812,6 @@ mod tests {
     use std::rc::Rc;
     use std::sync::Arc;
     use uuid::Uuid;
-
-    fn collection_window_exec_ctx() -> ExecutionContext {
-        ExecutionContext {
-            connection_id: Some(Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()),
-            database: Some("logs".into()),
-            schema: None,
-            container: None,
-            source: Some(ExecutionSourceContext::CollectionWindow {
-                targets: vec!["/aws/lambda/app".into()],
-                start_ms: 10,
-                end_ms: 20,
-                query_mode: Some("cwli".into()),
-            }),
-        }
-    }
-
-    #[test]
-    fn file_headers_remain_relational_only_when_source_window_exists() {
-        let exec_ctx = collection_window_exec_ctx();
-
-        let content = build_file_content_for_language("SELECT 1;", &exec_ctx, true, "--");
-
-        assert!(content.contains("-- @connection:"));
-        assert!(content.contains("-- @database: logs"));
-        assert!(!content.contains("log_groups"));
-        assert!(!content.contains("start_ms"));
-        assert!(!content.contains("end_ms"));
-    }
-
-    #[test]
-    fn connection_backed_custom_surface_emits_header_with_profile_prefix() {
-        // A connection-backed DynamoDB editor: profile reports connection support
-        // and a `--` prefix even though its raw `QueryLanguage` is `Custom`.
-        let exec_ctx = collection_window_exec_ctx();
-
-        let content = build_file_content_for_language("SELECT * FROM \"t\"", &exec_ctx, true, "--");
-
-        assert!(content.contains("-- @connection:"));
-        assert!(content.contains("-- @database: logs"));
-    }
-
-    #[test]
-    fn no_header_when_surface_is_not_connection_backed() {
-        let exec_ctx = collection_window_exec_ctx();
-
-        let content = build_file_content_for_language("print('hi')", &exec_ctx, false, "#");
-
-        assert_eq!(content, "print('hi')");
-    }
 
     #[test]
     fn file_ops_keys_resolve_in_both_locales() {

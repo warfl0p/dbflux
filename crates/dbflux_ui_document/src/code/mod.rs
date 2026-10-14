@@ -1402,6 +1402,24 @@ impl CodeDocument {
         self
     }
 
+    /// Stores the connection, database and schema this document runs against
+    /// under its file's path, so the script file itself stays plain text.
+    pub fn persist_script_context(&self, cx: &App) {
+        let Some(path) = self.editor.path.as_deref() else {
+            return;
+        };
+
+        if !self.supports_connection_context() {
+            return;
+        }
+
+        dbflux_ui_base::script_context::save(
+            self.app_state.read(cx).storage_runtime(),
+            path,
+            &self.source.exec_ctx,
+        );
+    }
+
     /// Attach a file path (used after opening or "Save As").
     ///
     /// This pins the language: the file's extension chose it, so retargeting the

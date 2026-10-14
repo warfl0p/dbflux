@@ -96,6 +96,7 @@ impl Workspace {
                     .map(str::to_string)
                     .unwrap_or_else(documents_new_query_name);
                 doc = doc.with_title(title).with_path(path.clone());
+                doc.persist_script_context(cx);
                 // `create_file` just wrote an empty file: those bytes are the
                 // document's first trustworthy baseline, so an ordinary autosave
                 // may land on the file this tab created.
@@ -152,6 +153,7 @@ impl Workspace {
                     .map(str::to_string)
                     .unwrap_or_else(documents_new_query_name);
                 doc = doc.with_title(title).with_path(path.clone());
+                doc.persist_script_context(cx);
             }
             doc.set_content(&sql, window, cx);
             doc
@@ -161,7 +163,7 @@ impl Workspace {
             doc.read(cx).initial_auto_save(cx);
         }
 
-        // Write initial content to the script file (with annotation headers)
+        // Write initial content to the script file
         if let Some(path) = script_path {
             let content = doc.read(cx).build_file_content(cx);
             match std::fs::write(&path, &content) {
@@ -459,14 +461,27 @@ impl Workspace {
             };
 
             let exec_ctx_json = tab.exec_ctx_json.as_str();
-            let exec_ctx: dbflux_core::ExecutionContext = serde_json::from_str(exec_ctx_json)
-                .unwrap_or_else(|_| dbflux_core::ExecutionContext::default());
+            let session_exec_ctx: dbflux_core::ExecutionContext =
+                serde_json::from_str(exec_ctx_json)
+                    .unwrap_or_else(|_| dbflux_core::ExecutionContext::default());
+
+            // A file's own stored context is the one its last edit saved; the
+            // session copy is the fallback for scratch tabs and older sessions.
+            let exec_ctx = path
+                .as_deref()
+                .and_then(|path| {
+                    dbflux_ui_base::script_context::load(
+                        self.app_state.read(cx).storage_runtime(),
+                        path,
+                    )
+                })
+                .unwrap_or(session_exec_ctx);
 
             let connection_id = exec_ctx
                 .connection_id
                 .filter(|id| self.app_state.read(cx).connections().contains_key(id));
 
-            let body = Self::strip_annotation_header(&content, &language);
+            let body = content.as_str();
 
             let title = if tab.tab_kind == "Scratch" {
                 tab.title.clone()

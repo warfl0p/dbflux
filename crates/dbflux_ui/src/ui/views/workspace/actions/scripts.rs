@@ -263,8 +263,13 @@ impl Workspace {
         let language = QueryLanguage::from_path(&path).unwrap_or(QueryLanguage::Sql);
         let uses_connection_context = language.supports_connection_context();
 
+        // The file is shown as it is. Its context comes from the app database;
+        // a header an older version wrote into the file seeds it once.
         let exec_ctx = if uses_connection_context {
-            ExecutionContext::parse_from_content(&content, language.clone())
+            let storage = self.app_state.read(cx).storage_runtime();
+
+            dbflux_ui_base::script_context::load(storage, &path)
+                .unwrap_or_else(|| ExecutionContext::parse_from_content(&content, language.clone()))
         } else {
             ExecutionContext::default()
         };
@@ -278,11 +283,7 @@ impl Workspace {
             None
         };
 
-        let body = if uses_connection_context {
-            Self::strip_annotation_header(&content, &language).to_string()
-        } else {
-            content.clone()
-        };
+        let body = content.clone();
 
         // Track in recent files
         self.app_state.update(cx, |state, cx| {
@@ -336,9 +337,9 @@ impl Workspace {
 
             if let Some(path) = path {
                 doc = doc.with_path(path.clone());
-                // The editor shows the stripped body, but the file's raw bytes —
-                // annotation header included — are the physical baseline, so the
-                // first autosave compares against exactly what is on disk.
+                doc.persist_script_context(cx);
+                // The file's raw bytes are the physical baseline, so the first
+                // autosave compares against exactly what is on disk.
                 doc.seed_file_baseline(path, raw);
             }
 
