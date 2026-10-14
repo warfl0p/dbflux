@@ -650,7 +650,7 @@ struct KnownTableListing {
 /// Flattens a connection's relational schema listings into [`KnownTableListing`]s.
 ///
 /// Mirrors the sources of [`build_sql_completion_metadata`]: the selected
-/// database's snapshot (top-level tables plus per-schema tables) and the lazily cached
+/// database's snapshot (top-level and per-schema tables and views) and the lazily cached
 /// per-database schemas. Snapshot tables are tagged with `snapshot_database`
 /// as their fetch key; without one they are skipped, since there is no valid
 /// key to fetch them under.
@@ -681,6 +681,25 @@ fn known_relational_tables<'a>(
                 has_columns: table.columns.is_some(),
             });
         }
+
+        // A view listing never carries columns; its details come from the
+        // same fetch as a table's, and the cache check then stops a refetch.
+        let top_level_views = relational.views.iter().map(|view| (None, view));
+        let per_schema_views = relational.schemas.iter().flat_map(|schema| {
+            schema
+                .views
+                .iter()
+                .map(|view| (Some(schema.name.as_str()), view))
+        });
+        for (enclosing_schema, view) in top_level_views.chain(per_schema_views) {
+            tables.push(KnownTableListing {
+                database: database.to_string(),
+                schema: view.schema.clone(),
+                enclosing_schema: enclosing_schema.map(String::from),
+                name: view.name.clone(),
+                has_columns: false,
+            });
+        }
     }
 
     for (database, schema_info) in database_schemas {
@@ -691,6 +710,16 @@ fn known_relational_tables<'a>(
                 enclosing_schema: None,
                 name: table.name.clone(),
                 has_columns: table.columns.is_some(),
+            });
+        }
+
+        for view in &schema_info.views {
+            tables.push(KnownTableListing {
+                database: database.clone(),
+                schema: view.schema.clone(),
+                enclosing_schema: None,
+                name: view.name.clone(),
+                has_columns: false,
             });
         }
     }
@@ -3283,6 +3312,37 @@ mod tests {
 
         let keys = tables_needing_details(&known, &[table_ref(Some("db3"), "t2")]);
         assert!(keys.is_empty());
+    }
+
+    #[test]
+    fn a_referenced_view_needs_its_columns_fetched() {
+        let snapshot = SchemaSnapshot::relational(RelationalSchema {
+            databases: vec![],
+            current_database: Some("db".to_string()),
+            schemas: vec![DbSchemaInfo {
+                name: "raw".to_string(),
+                tables: vec![],
+                views: vec![dbflux_core::ViewInfo {
+                    name: "subscriptions_count".to_string(),
+                    schema: Some("raw".to_string()),
+                }],
+                custom_types: None,
+            }],
+            tables: vec![],
+            views: vec![],
+        });
+
+        let known = known_relational_tables(Some(&snapshot), std::iter::empty(), Some("db"));
+        let keys = tables_needing_details(&known, &[table_ref(Some("raw"), "subscriptions_count")]);
+
+        assert_eq!(
+            keys,
+            vec![(
+                "db".to_string(),
+                Some("raw".to_string()),
+                "subscriptions_count".to_string()
+            )]
+        );
     }
 
     #[test]
