@@ -2333,7 +2333,7 @@ fn format_sqlite_query_error(e: &rusqlite::Error) -> DbError {
 
 fn sqlite_quote_ident(ident: &str) -> String {
     debug_assert!(!ident.is_empty(), "identifier cannot be empty");
-    format!("\"{}\"", ident.replace('"', "\"\""))
+    dbflux_core::quote_double_quoted_identifier(ident)
 }
 
 /// Convert a Value to a safe SQLite literal string.
