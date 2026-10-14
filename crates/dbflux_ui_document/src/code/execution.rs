@@ -1,5 +1,6 @@
 use super::*;
 use crate::data_grid_panel::{LimitedRowActions, LimitedRowTotal};
+use dbflux_components::result_panel::{SegmentPosition, ToolbarSegment};
 use dbflux_core::observability::actions as audit_actions;
 
 /// Resolve the `ExecutionSourceContext` for the next query, giving precedence
@@ -1854,7 +1855,20 @@ impl CodeDocument {
             });
 
         let view_handle = DataGridPanel::into_view_handle(grid.clone(), cx);
-        let result_panel = cx.new(|cx| ResultPanel::new(view_handle, cx));
+        let document = cx.entity().downgrade();
+        let chrome = ToolbarSegment {
+            position: SegmentPosition::Right,
+            index: 0,
+            builder: Box::new(move |window, cx| {
+                document
+                    .update(cx, |document, cx| {
+                        document.render_results_chrome(window, cx)
+                    })
+                    .unwrap_or_else(|_| div().into_any_element())
+            }),
+        };
+        let result_panel =
+            cx.new(|cx| ResultPanel::new(view_handle, cx).with_segments(vec![chrome]));
 
         let tab = ResultTab {
             id: tab_id,
