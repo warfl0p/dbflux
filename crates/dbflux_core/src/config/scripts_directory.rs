@@ -125,8 +125,20 @@ impl MountedScriptRoot {
         &self.root.path
     }
 
-    pub fn label(&self) -> &str {
-        &self.root.label
+    /// The folder's full path, shortened to `~/...` under the home directory,
+    /// so two folders with the same last component stay distinguishable.
+    pub fn label(&self) -> String {
+        match dirs::home_dir().and_then(|home| {
+            self.root
+                .path
+                .strip_prefix(home)
+                .ok()
+                .map(Path::to_path_buf)
+        }) {
+            Some(relative) if relative.as_os_str().is_empty() => "~".to_string(),
+            Some(relative) => format!("~/{}", relative.display()),
+            None => self.root.path.display().to_string(),
+        }
     }
 
     pub fn entries(&self) -> &[ScriptEntry] {
