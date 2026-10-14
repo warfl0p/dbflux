@@ -539,6 +539,7 @@ pub(super) struct PendingActions {
     window_override: Option<(i64, i64)>,
     dangerous_query: Option<PendingDangerousQuery>,
     script_confirm: Option<PendingScriptConfirm>,
+    run_after_connect: Option<PendingConnectRun>,
     routine_definition: Option<String>,
     error: Option<String>,
 }
@@ -666,6 +667,18 @@ struct PendingScriptConfirm {
     query: String,
     in_new_tab: bool,
     statement_count: usize,
+}
+
+/// A run started while the document's profile was disconnected. The document
+/// asked the workspace to connect it and runs once the connection is up.
+struct PendingConnectRun {
+    profile_id: Uuid,
+    in_new_tab: bool,
+    /// The connect was seen in flight, so its end without a connection means
+    /// it failed and the run is dropped.
+    connecting: bool,
+    /// The connection is up; the next render runs the query.
+    ready: bool,
 }
 
 /// Action resolved by the schema-drift modal.
@@ -1135,6 +1148,7 @@ impl CodeDocument {
         let app_state_sub = cx.subscribe(&app_state, |this, _, _: &AppStateChanged, cx| {
             this.invalidate_execution_session_if_context_changed(cx);
             this.sync_context_dropdowns(cx);
+            this.track_run_after_connect(cx);
             this.try_fetch_pending_routine_definition(cx);
             this.sync_vim_setting(cx);
         });

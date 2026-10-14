@@ -171,13 +171,21 @@ impl CodeDocument {
     }
 
     fn connection_items(app_state: &Entity<AppStateEntity>, cx: &App) -> Vec<DropdownItem> {
-        let mut items: Vec<_> = app_state
-            .read(cx)
+        let state = app_state.read(cx);
+
+        // Every saved profile, not only the connected ones: a run against a
+        // disconnected profile connects it first. A live connection without a
+        // saved profile is listed too.
+        let saved = state.profiles().iter();
+        let unsaved = state
             .connections()
             .values()
-            .map(|connected| {
-                DropdownItem::with_value(&connected.profile.name, connected.profile.id.to_string())
-            })
+            .map(|connected| &connected.profile)
+            .filter(|profile| !state.profiles().iter().any(|saved| saved.id == profile.id));
+
+        let mut items: Vec<_> = saved
+            .chain(unsaved)
+            .map(|profile| DropdownItem::with_value(&profile.name, profile.id.to_string()))
             .collect();
 
         items.sort_by(|left, right| left.label.as_ref().cmp(right.label.as_ref()));
