@@ -1632,6 +1632,10 @@ impl<M: InputModeKind> TextElement<M> {
             let row_offset_y = offset_y;
             offset_y += line.wrapped_lines.len() * line_height;
 
+            if style.marker_size <= px(0.) {
+                continue;
+            }
+
             let Some((_, range)) = start_rows.iter().find(|(row, _)| *row == buffer_line) else {
                 continue;
             };
