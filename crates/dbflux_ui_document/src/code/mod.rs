@@ -1433,7 +1433,7 @@ impl CodeDocument {
             return;
         };
 
-        if !self.supports_connection_context() {
+        if !self.supports_connection_context() || self.source.exec_ctx.is_empty() {
             return;
         }
 

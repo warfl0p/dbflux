@@ -324,6 +324,18 @@ impl Workspace {
             exec_ctx,
         } = pending;
 
+        // A context read from an old file header becomes the stored one now; a
+        // file without one stays unstored until the user picks a connection.
+        if let Some(path) = path.as_deref()
+            && exec_ctx.has_connection()
+        {
+            dbflux_ui_base::script_context::save(
+                self.app_state.read(cx).storage_runtime(),
+                path,
+                &exec_ctx,
+            );
+        }
+
         let doc = cx.new(|cx| {
             let mut doc = CodeDocument::new_with_language(
                 self.app_state.clone(),
@@ -337,7 +349,6 @@ impl Workspace {
 
             if let Some(path) = path {
                 doc = doc.with_path(path.clone());
-                doc.persist_script_context(cx);
                 // The file's raw bytes are the physical baseline, so the first
                 // autosave compares against exactly what is on disk.
                 doc.seed_file_baseline(path, raw);
