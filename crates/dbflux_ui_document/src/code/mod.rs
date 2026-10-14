@@ -54,7 +54,7 @@ use lsp_types::{
 use std::cell::Cell;
 use std::cmp::min;
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Instant;
@@ -1400,6 +1400,30 @@ impl CodeDocument {
     pub fn with_title(mut self, title: String) -> Self {
         self.title = title;
         self
+    }
+
+    /// Follows the file when it, or a folder holding it, was renamed or moved:
+    /// the path, the tab title that derives from it, and the baseline autosave
+    /// compares against all move with it.
+    pub fn relocate_file(&mut self, from: &Path, to: &Path, cx: &mut Context<Self>) {
+        let Some(current) = self.editor.path.clone() else {
+            return;
+        };
+
+        let Ok(relative) = current.strip_prefix(from) else {
+            return;
+        };
+
+        let new_path = if relative.as_os_str().is_empty() {
+            to.to_path_buf()
+        } else {
+            to.join(relative)
+        };
+
+        self.physical_writes.relocate_baseline(&current, &new_path);
+        self.editor.path = Some(new_path);
+        cx.emit(DocumentEvent::MetaChanged);
+        cx.notify();
     }
 
     /// Attach a file path (used after opening or "Save As").
@@ -3824,6 +3848,55 @@ mod tests {
         assert!(dirty, "the unsaved edits must keep the buffer dirty");
 
         std::fs::remove_file(&path).expect("the temp save file must be removable");
+    }
+
+    /// A renamed file keeps its tab: the document follows the new path, its
+    /// title is the new name, and autosave writes there instead of refusing.
+    #[gpui::test]
+    fn a_renamed_file_keeps_its_tab_and_keeps_autosaving(cx: &mut TestAppContext) {
+        let path = temp_save_path();
+        let renamed = path.with_file_name(format!(
+            "renamed-{}",
+            path.file_name().and_then(|n| n.to_str()).unwrap_or("x.sql")
+        ));
+        let (old, new) = (path.clone(), renamed.clone());
+        std::fs::write(&path, "ORIGINAL;").expect("seed the original file");
+
+        let title = Rc::new(RefCell::new(String::new()));
+        let title_out = title.clone();
+
+        with_dirty_document(cx, path.clone(), move |doc, window| {
+            std::fs::rename(&old, &new).expect("rename the file on disk");
+
+            window.update(|window, cx| {
+                doc.update(cx, |document, cx| {
+                    document.relocate_file(&old, &new, cx);
+                    *title_out.borrow_mut() = document.title();
+                    document.editor.input_state.update(cx, |state, cx| {
+                        state.replace_all("SELECT 4;", window, cx);
+                    });
+                });
+            });
+            window
+                .executor()
+                .advance_clock(std::time::Duration::from_secs(3));
+            window.run_until_parked();
+        });
+
+        assert_eq!(
+            Some(title.borrow().trim_end_matches('*').to_string()),
+            renamed
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(str::to_string)
+        );
+        assert_eq!(
+            std::fs::read_to_string(&renamed).expect("the renamed file must exist"),
+            "SELECT 4;",
+            "autosave follows the file to its new name"
+        );
+
+        std::fs::remove_file(&renamed).expect("the renamed file must be removable");
     }
 
     /// A file deleted after its baseline was seeded but before the first autosave

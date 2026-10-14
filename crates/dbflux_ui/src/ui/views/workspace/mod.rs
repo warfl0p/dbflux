@@ -1020,6 +1020,11 @@ impl Workspace {
                     this.pending_focus = Some(FocusTarget::Sidebar);
                     cx.notify();
                 }
+                SidebarEvent::ScriptMoved { from, to } => {
+                    this.tab_manager
+                        .update(cx, |manager, cx| manager.relocate_file(from, to, cx));
+                    cx.notify();
+                }
                 SidebarEvent::OpenTable {
                     profile_id,
                     table,

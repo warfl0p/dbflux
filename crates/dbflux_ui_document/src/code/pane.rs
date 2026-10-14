@@ -159,6 +159,10 @@ impl CodeDocument {
             })
         });
 
+        handle.relocate_file = Some({
+            let e = entity.clone();
+            Box::new(move |from, to, cx| e.update(cx, |d, cx| d.relocate_file(from, to, cx)))
+        });
         handle.on_close = Some({
             let entity = entity.clone();
             Box::new(move |cx| {

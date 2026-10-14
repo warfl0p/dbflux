@@ -2650,3 +2650,17 @@ fn run_command_for_returns_the_bound_action(cx: &mut gpui::TestAppContext) {
         "the rebound chord comes from the user's binding"
     );
 }
+
+#[test]
+fn sidebar_renames_with_f2() {
+    let keymap = default_keymap();
+
+    assert_eq!(
+        keymap.resolve(ContextId::Sidebar, &KeyChord::new("f2", Modifiers::none())),
+        Some(Command::Rename)
+    );
+    assert_ne!(
+        keymap.resolve(ContextId::Sidebar, &KeyChord::new("r", Modifiers::shift())),
+        Some(Command::Rename)
+    );
+}
