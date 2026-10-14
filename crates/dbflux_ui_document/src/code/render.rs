@@ -760,7 +760,7 @@ impl CodeDocument {
     }
 
     /// Refresh, the position, maximize and hide buttons: injected into the
-    /// result toolbar, left of the search field.
+    /// result toolbar, right of the search field.
     pub(super) fn render_results_chrome(
         &self,
         window: &Window,
@@ -774,7 +774,6 @@ impl CodeDocument {
             .flex_shrink_0()
             .items_center()
             .gap(Spacing::SM)
-            .ml_auto()
             .children(refresh)
             .child(self.render_results_controls(cx))
             .into_any_element()

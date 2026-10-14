@@ -1858,7 +1858,7 @@ impl CodeDocument {
         let document = cx.entity().downgrade();
         let chrome = ToolbarSegment {
             position: SegmentPosition::Right,
-            index: 0,
+            index: 1,
             builder: Box::new(move |window, cx| {
                 document
                     .update(cx, |document, cx| {
