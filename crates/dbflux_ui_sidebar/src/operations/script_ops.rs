@@ -103,6 +103,21 @@ impl Sidebar {
     /// then rescans that change's root in the background for anything the edit
     /// cannot know. The UI thread never walks the folder.
     pub(crate) fn after_script_change(&mut self, path: &std::path::Path, cx: &mut Context<Self>) {
+        // Folders start collapsed, so open the ones holding the changed entry
+        // or a new script or folder would land out of sight.
+        for ancestor in path.ancestors().skip(1) {
+            let ancestor = ancestor.to_string_lossy().to_string();
+
+            for id in [
+                SchemaNodeId::ScriptsFolder {
+                    path: Some(ancestor.clone()),
+                },
+                SchemaNodeId::ScriptsRoot { path: ancestor },
+            ] {
+                self.expansion_overrides.insert(id.to_string(), true);
+            }
+        }
+
         self.refresh_scripts_tree(cx);
         rescan_script_root_in_background(&self.app_state, path, cx);
     }
