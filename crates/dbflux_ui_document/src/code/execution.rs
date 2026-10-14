@@ -4309,6 +4309,103 @@ mod auto_refresh_tests {
         (document, toasts, window)
     }
 
+    /// A script whose own connection is down keeps that connection and
+    /// database instead of adopting whichever other connection is up, and the
+    /// context it stores stays the one the user chose.
+    #[gpui::test]
+    fn a_script_keeps_its_saved_context_while_its_connection_is_down(cx: &mut TestAppContext) {
+        cx.update(theme::init);
+        cx.update(dbflux_ui_base::keymap::init_keymap);
+        let app_state = cx.new(|_| {
+            AppStateEntity::new_with_storage_runtime(
+                StorageRuntime::in_memory().expect("in-memory storage"),
+            )
+            .expect("app state")
+        });
+
+        let driver = FakeDriver::new(DbKind::SQLite);
+        let profile = ConnectionProfile::new(
+            "other",
+            DbConfig::SQLite {
+                path: ":memory:".into(),
+                connection_id: None,
+            },
+        );
+        let connection = driver.connect_arc(&profile).expect("fake connection");
+        cx.update(|cx| {
+            app_state.update(cx, |app, _| {
+                app.apply_connect_profile(
+                    profile,
+                    connection,
+                    None,
+                    None,
+                    false,
+                    WritePrivilege::Unknown,
+                );
+            });
+        });
+
+        let saved = dbflux_core::ExecutionContext {
+            connection_id: Some(uuid::Uuid::new_v4()),
+            database: Some("mobilityplus".into()),
+            ..dbflux_core::ExecutionContext::default()
+        };
+        let expected = saved.clone();
+        let path = std::path::PathBuf::from("/scripts/keeps.sql");
+        let stored_path = path.clone();
+        let storage_state = app_state.clone();
+
+        let (document, _outside, window) = host_modal(cx, move |window, cx| {
+            CodeDocument::new_with_language(app_state, None, QueryLanguage::Sql, window, cx)
+                .with_path(path)
+                .with_exec_ctx(saved, cx)
+        });
+        window.run_until_parked();
+
+        window.update(|_, cx| {
+            assert_eq!(document.read(cx).exec_ctx(), &expected);
+            assert_eq!(
+                dbflux_ui_base::script_context::load(
+                    storage_state.read(cx).storage_runtime(),
+                    &stored_path
+                ),
+                None,
+                "opening a script stores nothing the user did not choose"
+            );
+        });
+    }
+
+    /// Filling a script's empty context from the active connection is a
+    /// default, not a choice, so it is shown but never stored.
+    #[gpui::test]
+    fn a_defaulted_context_is_not_stored(cx: &mut TestAppContext) {
+        let driver = FakeDriver::new(DbKind::SQLite);
+        let (document, _toasts, window) = open_connected(cx, &driver, "SELECT 1");
+        let path = std::path::PathBuf::from("/scripts/defaulted.sql");
+
+        let app_state = window.update(|_, cx| document.read(cx).app_state.clone());
+        window.update(|_, cx| {
+            document.update(cx, |document, cx| {
+                document.editor.path = Some(path.clone());
+                document.source.exec_ctx = dbflux_core::ExecutionContext::default();
+                document.connection_id = None;
+                document.sync_context_dropdowns(cx);
+            });
+        });
+        window.run_until_parked();
+
+        window.update(|_, cx| {
+            assert!(
+                document.read(cx).exec_ctx().connection_id.is_some(),
+                "the active connection is shown"
+            );
+            assert_eq!(
+                dbflux_ui_base::script_context::load(app_state.read(cx).storage_runtime(), &path),
+                None
+            );
+        });
+    }
+
     fn select(
         window: &mut VisualTestContext,
         document: &Entity<CodeDocument>,

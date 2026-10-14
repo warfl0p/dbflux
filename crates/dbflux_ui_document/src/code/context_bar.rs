@@ -746,8 +746,10 @@ impl CodeDocument {
         self.sync_editor_language(cx);
 
         if did_change {
+            // Not persisted: this sync fills gaps with defaults (the active
+            // connection, a default database), and only a choice the user made
+            // may become the script's stored context.
             self.invalidate_execution_session_if_context_changed(cx);
-            self.persist_script_context(cx);
             cx.emit(DocumentEvent::MetaChanged);
         }
 
