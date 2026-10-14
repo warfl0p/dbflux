@@ -280,7 +280,12 @@ impl Render for Workspace {
         let tab_context_menu = self.tab_bar.read(cx).context_menu_state().cloned();
         let child_picker_open = self.sidebar.read(cx).has_child_picker_open();
 
-        let title_bar = self.render_title_bar(window, cx).into_any_element();
+        let title_bar = self.render_title_bar(window, cx).map(IntoElement::into_any_element);
+        let title_bar_height = if title_bar.is_some() {
+            ShellMetrics::TITLE_BAR_HEIGHT.to_pixels(window.rem_size())
+        } else {
+            px(0.0)
+        };
         let rail = self.render_rail(cx).into_any_element();
 
         let document_area = if has_tabs {
@@ -357,12 +362,30 @@ impl Render for Workspace {
 
         // The document island: the tab row (only while a tab is open) over
         // the documents and, when expanded, the background tasks panel.
+        let notification_bell = self.render_notification_bell(cx);
         let document_island = Island::new()
             .flex_1()
             .min_w_0()
             .h_full()
             .ml(IslandMetrics::GAP)
-            .when(has_tabs, |island| island.child(self.tab_bar.clone()))
+            .child(
+                div()
+                    .flex()
+                    .flex_shrink_0()
+                    .items_center()
+                    .w_full()
+                    .h(TabMetrics::DOCUMENT_BAR_HEIGHT)
+                    .when(has_tabs, |row| {
+                        row.child(div().flex_1().min_w_0().child(self.tab_bar.clone()))
+                    })
+                    .when(!has_tabs, |row| row.child(div().flex_1()))
+                    .child(
+                        div()
+                            .flex_shrink_0()
+                            .pr(TabMetrics::DOCUMENT_BAR_PADDING_X)
+                            .child(notification_bell),
+                    ),
+            )
             .child(div().flex_1().min_h_0().child(document_panes));
 
         let toast_actions_menu = matches!(menu_owner, Some(PaneActionsOwner::Toast(_)))
@@ -611,7 +634,7 @@ impl Render for Workspace {
                     .flex()
                     .flex_col()
                     .size_full()
-                    .child(title_bar)
+                    .children(title_bar)
                     .child(
                         div()
                             .id("workspace-body")
@@ -884,8 +907,7 @@ impl Render for Workspace {
             // The toast menu opens where the toasts stack, under the title
             // bar at the right edge.
             .when_some(toast_actions_menu, |this, menu| {
-                let top = ShellMetrics::TITLE_BAR_HEIGHT.to_pixels(window.rem_size())
-                    + Feedback::TOAST_STACK_INSET;
+                let top = title_bar_height + Feedback::TOAST_STACK_INSET;
 
                 this.child(
                     deferred(
@@ -919,7 +941,7 @@ impl Render for Workspace {
                 let tab_bar_entity = self.tab_bar.clone();
 
                 let menu_x = menu.position_x;
-                let menu_y = ShellMetrics::TITLE_BAR_HEIGHT + TabMetrics::DOCUMENT_BAR_HEIGHT;
+                let menu_y = title_bar_height + TabMetrics::DOCUMENT_BAR_HEIGHT.to_pixels(window.rem_size());
                 let items = TabBar::build_tab_menu_items();
                 let selected = menu.selected_index;
 
