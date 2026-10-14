@@ -16,181 +16,19 @@
 //! keyboard (Ctrl+Shift+1 to the sidebar, then Ctrl+L into the document, or
 //! the tab's own chord) and that their menu key opens their menu.
 
+use super::keyboard_coverage::{
+    NOTIFICATIONS, PANE_ACTIONS_MENU, SHELL, SIDEBAR_HEADER, TASKS_PANEL, TOASTS,
+};
 use crate::keymap::{Command, ContextId};
 use crate::ui::views::workspace::Workspace;
 use dbflux_core::TaskKind;
-use dbflux_ui_base::keyboard_coverage::{Coverage, FrameCapture, KeyboardPath, SurfaceRegistry};
+use dbflux_ui_base::keyboard_coverage::{Coverage, FrameCapture};
 use dbflux_ui_base::user_error::{ErrorKind, UserFacingError, report_error};
 use dbflux_ui_base::{AppStateChanged, AppStateEntity};
 use gpui::{AppContext as _, Entity, TestAppContext, VisualTestContext};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-
-const SHELL: SurfaceRegistry = SurfaceRegistry {
-    name: "workspace shell (rail, title bar, status bar, tab bar, empty state)",
-    contexts: &[ContextId::Global],
-    entries: &[
-        (
-            "title-bar-drag-area*",
-            KeyboardPath::MouseOnly("window chrome: drags the window"),
-        ),
-        (
-            "title-bar-command-search",
-            KeyboardPath::Command(Command::ToggleCommandPalette),
-        ),
-        (
-            "notifications-bell",
-            KeyboardPath::Command(Command::ToggleNotifications),
-        ),
-        (
-            "rail-connections",
-            KeyboardPath::Command(Command::ShowConnectionsView),
-        ),
-        (
-            "rail-scripts",
-            KeyboardPath::Command(Command::ShowScriptsView),
-        ),
-        (
-            "rail-dashboards",
-            KeyboardPath::Command(Command::ShowDashboardsView),
-        ),
-        (
-            "rail-approvals",
-            KeyboardPath::Command(Command::OpenMcpApprovals),
-        ),
-        (
-            "rail-audit",
-            KeyboardPath::Command(Command::OpenAuditViewer),
-        ),
-        (
-            "rail-settings",
-            KeyboardPath::Command(Command::OpenSettings),
-        ),
-        ("tasks-toggle", KeyboardPath::Command(Command::ToggleTasks)),
-        ("tasks-failed", KeyboardPath::Command(Command::ToggleTasks)),
-        (
-            "error-badge",
-            KeyboardPath::Command(Command::OpenLastErrorInAudit),
-        ),
-        (
-            "status-bar-approvals",
-            KeyboardPath::Command(Command::OpenMcpApprovals),
-        ),
-        ("new-tab-btn", KeyboardPath::Command(Command::NewQueryTab)),
-        (
-            "tab-close-*",
-            KeyboardPath::Command(Command::CloseCurrentTab),
-        ),
-        ("tab-*", KeyboardPath::Command(Command::NextTab)),
-        (
-            "empty-start-new_query_tab",
-            KeyboardPath::Command(Command::NewQueryTab),
-        ),
-        (
-            "empty-start-toggle_command_palette",
-            KeyboardPath::Command(Command::ToggleCommandPalette),
-        ),
-        (
-            "empty-start-open_script_file",
-            KeyboardPath::Command(Command::OpenScriptFile),
-        ),
-        (
-            "empty-start-open_connection_manager",
-            KeyboardPath::Command(Command::OpenConnectionManager),
-        ),
-        (
-            "empty-recent-*",
-            KeyboardPath::Command(Command::OpenScriptFile),
-        ),
-    ],
-};
-
-const SIDEBAR_HEADER: SurfaceRegistry = SurfaceRegistry {
-    name: "sidebar header",
-    contexts: &[ContextId::Sidebar],
-    entries: &[
-        (
-            "sidebar-filter",
-            KeyboardPath::Command(Command::FocusSearch),
-        ),
-        // The add menu offers new folders, connections and scripts; the item
-        // menu (`m`) lists the same entries for the selected folder.
-        ("sidebar-add", KeyboardPath::Command(Command::OpenItemMenu)),
-    ],
-};
-
-const TASKS_PANEL: SurfaceRegistry = SurfaceRegistry {
-    name: "tasks panel",
-    contexts: &[ContextId::BackgroundTasks],
-    entries: &[
-        (
-            "tasks-panel-header",
-            KeyboardPath::Command(Command::TogglePanel),
-        ),
-        (
-            "tasks-clear-finished",
-            KeyboardPath::Command(Command::ClearFinishedTasks),
-        ),
-        ("task-row-*", KeyboardPath::Command(Command::ExpandCollapse)),
-        (
-            "cancel-task-button-*",
-            KeyboardPath::Command(Command::CancelTask),
-        ),
-        (
-            "dismiss-task-button-*",
-            KeyboardPath::Command(Command::Delete),
-        ),
-    ],
-};
-
-const NOTIFICATIONS: SurfaceRegistry = SurfaceRegistry {
-    name: "notifications popover",
-    contexts: &[ContextId::Notifications],
-    entries: &[
-        (
-            "notifications-close",
-            KeyboardPath::Command(Command::ToggleNotifications),
-        ),
-        (
-            "notifications-mark-all-read",
-            KeyboardPath::Command(Command::MarkAllNotificationsRead),
-        ),
-        (
-            "notifications-clear-read",
-            KeyboardPath::Command(Command::ClearReadNotifications),
-        ),
-        (
-            "notifications-filter-*",
-            KeyboardPath::Command(Command::NextPanelTab),
-        ),
-        (
-            "notification-install-*",
-            KeyboardPath::Command(Command::InstallUpdate),
-        ),
-        (
-            "notification-later-*",
-            KeyboardPath::Command(Command::Delete),
-        ),
-        ("notification-*", KeyboardPath::Command(Command::Execute)),
-    ],
-};
-
-const TOASTS: SurfaceRegistry = SurfaceRegistry {
-    name: "toasts",
-    contexts: &[ContextId::Global],
-    entries: &[
-        ("toast-action-*", KeyboardPath::Menu("toast-action-*")),
-        ("toast-toggle-*", KeyboardPath::Menu("toast-details")),
-        ("toast-close-*", KeyboardPath::Menu("toast-dismiss")),
-    ],
-};
-
-const PANE_ACTIONS_MENU: SurfaceRegistry = SurfaceRegistry {
-    name: "pane actions menu",
-    contexts: &[ContextId::ContextMenu],
-    entries: &[("pane-action-*", KeyboardPath::Command(Command::MenuSelect))],
-};
 
 struct Harness<'a> {
     workspace: Entity<Workspace>,

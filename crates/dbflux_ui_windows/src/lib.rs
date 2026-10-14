@@ -11,8 +11,7 @@ pub mod settings;
 pub mod ssh_host_picker;
 pub mod ssh_shared;
 
-#[cfg(test)]
-mod keyboard_coverage;
+pub mod keyboard_coverage;
 mod labels;
 mod style_guardrails;
 mod tokens;

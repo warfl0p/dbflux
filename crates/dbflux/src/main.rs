@@ -416,6 +416,7 @@ fn run_gui() {
         );
         dbflux_ui_base::keymap::apply_keymap_overrides(keymap_overrides, cx);
         dbflux_ui_base::keymap::init_keymap(cx);
+        dbflux_ui::ui::views::workspace::install_shortcut_tooltips(cx);
 
         // Wire the bridge into the audit service before cloning it out.
         // `attach_tracing_bridge` must be called on the owned `AppState`

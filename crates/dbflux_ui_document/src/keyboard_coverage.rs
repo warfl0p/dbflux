@@ -1071,3 +1071,28 @@ pub(crate) const MIGRATE_WIZARD: SurfaceRegistry = SurfaceRegistry {
         ),
     ],
 };
+
+/// Every document surface's registry, for the tooltip shortcuts.
+pub fn registries() -> Vec<SurfaceRegistry> {
+    vec![
+        CODE_EDITOR_CHROME,
+        DATA_GRID,
+        QUERY_BUILDER,
+        DOCUMENT_BUILDER,
+        CHART,
+        DASHBOARD,
+        KEY_VALUE,
+        NATIVE_CONSOLE,
+        OBJECT_BROWSER,
+        BUCKETS,
+        OBJECT_EDITOR,
+        DELIMITED,
+        PARQUET,
+        SPREADSHEET,
+        AUDIT,
+        #[cfg(feature = "mcp")]
+        MCP_APPROVALS,
+        SCHEMA_DIFF,
+        MIGRATE_WIZARD,
+    ]
+}
