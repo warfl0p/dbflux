@@ -1113,7 +1113,11 @@ fn sql_completion_items_with_context(
             .rsplit_once('.')
             .map_or(resolved_qualifier.as_str(), |(_, bare)| bare);
 
-        let qualifier_columns = metadata.columns_for_table_or_bare(&resolved_qualifier, bare);
+        let derived = analysis.and_then(|analysis| {
+            derived_columns_for_qualifier(metadata, &analysis.scope, qualifier)
+        });
+        let qualifier_columns = derived
+            .unwrap_or_else(|| metadata.columns_for_table_or_bare(&resolved_qualifier, bare));
         sink.push_all(qualifier_columns, CompletionItemKind::FIELD, None);
         sink.push_all(
             metadata.relations_in_schema(&normalize_identifier(qualifier)),
@@ -2034,11 +2038,18 @@ fn resolve_qualifier(
 /// The columns of every relation in scope, innermost query level first.
 fn scoped_columns<'a>(
     metadata: &'a SqlCompletionMetadata,
-    scope: &dbflux_core::StatementScope,
+    scope: &'a dbflux_core::StatementScope,
 ) -> Vec<&'a str> {
     let mut columns = Vec::new();
 
     for relation in &scope.relations {
+        if relation.schema.is_none()
+            && let Some(derived) = derived_columns(metadata, scope, &relation.table, 0)
+        {
+            columns.extend(derived);
+            continue;
+        }
+
         columns.extend(metadata.columns_for_table_or_bare(
             &relation_metadata_key(relation),
             &normalize_identifier(&relation.table),
@@ -2046,6 +2057,69 @@ fn scoped_columns<'a>(
     }
 
     columns
+}
+
+const MAX_DERIVED_DEPTH: usize = 8;
+
+/// Columns of the CTE or derived table `name`, with `*` expanded from schema
+/// metadata or from other derived relations. `None` when `name` is not
+/// derived. The depth cap stops self-referencing (recursive) CTEs.
+fn derived_columns<'a>(
+    metadata: &'a SqlCompletionMetadata,
+    scope: &'a dbflux_core::StatementScope,
+    name: &str,
+    depth: usize,
+) -> Option<Vec<&'a str>> {
+    let normalized = normalize_identifier(name);
+    let derived = scope
+        .derived_relations
+        .iter()
+        .find(|derived| normalize_identifier(&derived.name) == normalized)?;
+
+    let mut columns: Vec<&str> = derived.columns.iter().map(String::as_str).collect();
+
+    if depth < MAX_DERIVED_DEPTH {
+        for source in &derived.star_sources {
+            let nested = if source.schema.is_none() {
+                derived_columns(metadata, scope, &source.table, depth + 1)
+            } else {
+                None
+            };
+
+            columns.extend(nested.unwrap_or_else(|| {
+                metadata.columns_for_table_or_bare(
+                    &relation_metadata_key(source),
+                    &normalize_identifier(&source.table),
+                )
+            }));
+        }
+    }
+
+    let mut seen = HashSet::new();
+    columns.retain(|column| seen.insert(normalize_identifier(column)));
+    Some(columns)
+}
+
+/// Resolves `qualifier` (an alias or bare name in scope) to a CTE or derived
+/// table and returns its columns.
+fn derived_columns_for_qualifier<'a>(
+    metadata: &'a SqlCompletionMetadata,
+    scope: &'a dbflux_core::StatementScope,
+    qualifier: &str,
+) -> Option<Vec<&'a str>> {
+    let normalized = normalize_identifier(qualifier);
+
+    let target = scope
+        .relations
+        .iter()
+        .find(|relation| {
+            relation.schema.is_none()
+                && normalize_identifier(relation.alias.as_deref().unwrap_or(&relation.table))
+                    == normalized
+        })
+        .map_or(qualifier, |relation| relation.table.as_str());
+
+    derived_columns(metadata, scope, target, 0)
 }
 
 /// The normalized `columns_by_table` key for a scope relation:
@@ -3054,6 +3128,40 @@ mod tests {
             !labels.contains(&"c2".to_string()),
             "outer relation must be shadowed by the inner alias"
         );
+    }
+
+    #[test]
+    fn dot_qualifier_on_cte_alias_offers_cte_columns() {
+        let metadata = context_metadata();
+        let source = "WITH base AS (SELECT a.c1, a.c2 AS renamed, COUNT(*) AS total FROM t1 a), \
+                      wide AS (SELECT b.*, x.total FROM base b, t2 x) \
+                      SELECT * FROM wide uc WHERE uc.";
+        let labels = labels(&analyzed_items(&metadata, source));
+
+        for expected in ["c1", "renamed", "total"] {
+            assert!(
+                labels.contains(&expected.to_string()),
+                "missing {expected}: {labels:?}"
+            );
+        }
+        assert!(
+            !labels.contains(&"c2".to_string()),
+            "c2 is renamed in the CTE"
+        );
+        assert!(
+            !labels.contains(&"c4".to_string()),
+            "t2 is not star-expanded"
+        );
+    }
+
+    #[test]
+    fn dot_qualifier_on_subquery_alias_offers_its_columns() {
+        let metadata = context_metadata();
+        let source = "SELECT * FROM (SELECT t.*, 1 AS extra FROM t2 t) sq WHERE sq.";
+        let labels = labels(&analyzed_items(&metadata, source));
+
+        assert!(labels.contains(&"c4".to_string()), "{labels:?}");
+        assert!(labels.contains(&"extra".to_string()), "{labels:?}");
     }
 
     #[test]
