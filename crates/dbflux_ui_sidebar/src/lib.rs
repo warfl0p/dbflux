@@ -1527,7 +1527,7 @@ impl Sidebar {
 
     fn build_initial_scripts_tree(state: &AppState) -> Vec<TreeItem> {
         match state.scripts_directory() {
-            Some(dir) => Self::build_scripts_tree_items(dir.entries()),
+            Some(dir) => Self::build_scripts_tree_items(dir.entries(), false),
             None => Vec::new(),
         }
     }

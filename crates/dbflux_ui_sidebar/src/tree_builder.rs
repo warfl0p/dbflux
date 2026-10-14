@@ -541,8 +541,14 @@ impl Sidebar {
             return Vec::new();
         };
 
-        let mut items =
-            Self::build_scripts_tree_items(&dbflux_core::filter_entries(dir.entries(), query));
+        // Folders start collapsed, except while filtering, where a collapsed
+        // folder would hide the matches it was kept for.
+        let expanded = !query.is_empty();
+
+        let mut items = Self::build_scripts_tree_items(
+            &dbflux_core::filter_entries(dir.entries(), query),
+            expanded,
+        );
 
         items.extend(
             dir.external_roots()
@@ -589,20 +595,23 @@ impl Sidebar {
 
         Some(
             TreeItem::new(id, label)
-                .expanded(true)
-                .children(Self::build_scripts_tree_items(&children)),
+                .expanded(!query.is_empty())
+                .children(Self::build_scripts_tree_items(&children, !query.is_empty())),
         )
     }
 
     /// Build tree items for the Scripts tab from ScriptsDirectory entries.
-    pub(super) fn build_scripts_tree_items(entries: &[dbflux_core::ScriptEntry]) -> Vec<TreeItem> {
+    pub(super) fn build_scripts_tree_items(
+        entries: &[dbflux_core::ScriptEntry],
+        expanded: bool,
+    ) -> Vec<TreeItem> {
         entries
             .iter()
-            .map(Self::script_entry_to_tree_item)
+            .map(|entry| Self::script_entry_to_tree_item(entry, expanded))
             .collect()
     }
 
-    fn script_entry_to_tree_item(entry: &dbflux_core::ScriptEntry) -> TreeItem {
+    fn script_entry_to_tree_item(entry: &dbflux_core::ScriptEntry, expanded: bool) -> TreeItem {
         match entry {
             dbflux_core::ScriptEntry::Folder {
                 path,
@@ -614,14 +623,9 @@ impl Sidebar {
                 }
                 .to_string();
 
-                let child_items: Vec<TreeItem> = children
-                    .iter()
-                    .map(Self::script_entry_to_tree_item)
-                    .collect();
-
                 TreeItem::new(id, name.clone())
-                    .expanded(true)
-                    .children(child_items)
+                    .expanded(expanded)
+                    .children(Self::build_scripts_tree_items(children, expanded))
             }
             dbflux_core::ScriptEntry::File { path, name, .. } => {
                 let id = SchemaNodeId::ScriptFile {
@@ -1280,8 +1284,7 @@ impl Sidebar {
                 Self::find_item_index_in_tree(&items, item_id, &mut 0)
             }
             SidebarTab::Scripts => {
-                let items =
-                    Self::scripts_tree_items(self.app_state.read(cx), &self.scripts_search_query);
+                let items = self.build_scripts_tree_items_with_overrides(cx);
                 Self::find_item_index_in_tree(&items, item_id, &mut 0)
             }
             SidebarTab::Dashboards => {
@@ -3648,6 +3651,30 @@ mod tests {
     use gpui_component::tree::TreeItem;
     use std::collections::{HashMap, HashSet};
     use uuid::Uuid;
+
+    #[test]
+    fn script_folders_follow_the_requested_expansion_at_every_depth() {
+        use dbflux_core::ScriptEntry;
+        use std::path::PathBuf;
+
+        let entries = vec![ScriptEntry::Folder {
+            path: PathBuf::from("/scripts/outer"),
+            name: "outer".to_string(),
+            children: vec![ScriptEntry::Folder {
+                path: PathBuf::from("/scripts/outer/inner"),
+                name: "inner".to_string(),
+                children: Vec::new(),
+            }],
+        }];
+
+        for expanded in [false, true] {
+            let items = Sidebar::build_scripts_tree_items(&entries, expanded);
+            let outer = &items[0];
+
+            assert_eq!(outer.is_expanded(), expanded);
+            assert_eq!(outer.children[0].is_expanded(), expanded);
+        }
+    }
 
     #[test]
     fn metric_namespaces_render_from_cache() {

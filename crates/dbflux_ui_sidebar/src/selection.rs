@@ -415,14 +415,7 @@ impl Sidebar {
                 Self::collect_visible_item_ids(&items)
             }
             SidebarTab::Scripts => {
-                let state = self.app_state.read(cx);
-                let entries = match state.scripts_directory() {
-                    Some(dir) => {
-                        dbflux_core::filter_entries(dir.entries(), &self.scripts_search_query)
-                    }
-                    None => Vec::new(),
-                };
-                let items = Self::build_scripts_tree_items(&entries);
+                let items = self.build_scripts_tree_items_with_overrides(cx);
                 Self::collect_visible_item_ids(&items)
             }
             SidebarTab::Dashboards => {
