@@ -614,7 +614,7 @@ impl CodeDocument {
         self.has_results_header() && self.layout != SqlQueryLayout::EditorOnly
     }
 
-    fn render_results(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_results(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let bg = cx.theme().background;
         let is_executing = self.state == DocumentState::Executing;
 
@@ -628,7 +628,8 @@ impl CodeDocument {
         let has_live_output = self.execution.live_output.is_some() && !has_error;
         let active_panel = self.active_result_panel();
         let has_panel = active_panel.is_some();
-        let has_tabs = self.has_results_header();
+        // A single result needs no tab row: its toolbar carries the controls.
+        let has_tabs = self.has_results_header() && self.result_tabs.result_tabs.len() > 1;
 
         // The results show focus through their own grid cursor and tabs.
         div()
@@ -637,9 +638,7 @@ impl CodeDocument {
             .flex_col()
             .min_h_0()
             .bg(bg)
-            .when(has_tabs, |el| {
-                el.child(self.render_results_header(window, cx))
-            })
+            .when(has_tabs, |el| el.child(self.render_results_header(cx)))
             .child(
                 div()
                     .flex_1()
@@ -720,13 +719,10 @@ impl CodeDocument {
     }
 
     /// Result tabs strip (IslEditor): one tab per result with its row count
-    /// and a close button, then Refresh and the maximize and hide controls.
-    fn render_results_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
+    /// and a close button. Drawn only while there are several results.
+    fn render_results_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let active_index = self.result_tabs.active_result_index;
         let muted = cx.theme().muted_foreground;
-        let refresh = (!self.read_only && self.supports_connection_context())
-            .then(|| self.render_results_refresh(window, cx));
-
         let tabs: Vec<AnyElement> = self
             .result_tabs
             .result_tabs
@@ -769,26 +765,36 @@ impl CodeDocument {
             })
             .collect();
 
-        result_tab_bar(cx)
-            .id("results-header")
-            .child(
-                div()
-                    .flex()
-                    .items_end()
-                    .h_full()
-                    .overflow_x_hidden()
-                    .flex_1()
-                    .children(tabs),
-            )
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(Spacing::SM)
-                    .h_full()
-                    .children(refresh)
-                    .child(self.render_results_controls(cx)),
-            )
+        result_tab_bar(cx).id("results-header").child(
+            div()
+                .flex()
+                .items_end()
+                .h_full()
+                .overflow_x_hidden()
+                .flex_1()
+                .children(tabs),
+        )
+    }
+
+    /// Refresh, the position, maximize and hide buttons: injected into the
+    /// result toolbar, left of the search field.
+    pub(super) fn render_results_chrome(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let refresh = (!self.read_only && self.supports_connection_context())
+            .then(|| self.render_results_refresh(window, cx));
+
+        div()
+            .flex()
+            .flex_shrink_0()
+            .items_center()
+            .gap(Spacing::SM)
+            .ml_auto()
+            .children(refresh)
+            .child(self.render_results_controls(cx))
+            .into_any_element()
     }
 
     fn render_results_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {

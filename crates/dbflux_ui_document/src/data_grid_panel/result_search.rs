@@ -162,10 +162,9 @@ impl DataGridPanel {
         if let Some(input) = panel.result_search.input.clone() {
             segments.push(ToolbarSegment {
                 position: SegmentPosition::Right,
-                index: 0,
+                index: 1,
                 builder: Box::new(move |_window, cx| {
                     div()
-                        .ml_auto()
                         .flex_shrink_0()
                         .w(EditorMetrics::RESULT_SEARCH_WIDTH)
                         .child(
