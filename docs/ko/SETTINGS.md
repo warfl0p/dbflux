@@ -36,7 +36,7 @@ MCP 관련 섹션(Clients, Roles, Policies)은 바이너리가 `mcp` 기능과 �
 | 설정 | 기본값 | 설명 |
 |---------|---------|--------------|
 | **Vim mode in code editors** | Off | 코드 편집기의 모드 편집: `h`, `j`, `k`, `l`, `i`, `Escape`, `x`, `u`를 쓰는 노멀 모드와 삽입 모드. 저장하면 열려 있는 편집기에 적용됩니다. 키보드 참조의 [Vim 모드](KEYBOARD.md#vim-모드선택-사항) 섹션을 참고하세요. |
-| **Add an alias to table completions** | On | `FROM` 또는 `JOIN` 뒤에서 SQL 자동 완성의 테이블, 뷰 또는 CTE를 선택하면 이름의 머리글자로 만든 별칭과 함께 삽입합니다. `access_control`은 `access_control ac`가 되고 `public.order_items`는 `public.order_items oi`가 됩니다. 문에서 이미 쓰인 별칭, 예약어 또는 알려진 테이블 이름에는 숫자를 붙입니다(`ac2`). 커서 뒤에 별칭이 이미 있거나 `INSERT INTO` 뒤에서는 별칭을 추가하지 않습니다. `UPDATE`와 `DELETE FROM`의 대상 테이블은 그 위치에서 별칭을 허용하는 데이터베이스에서만 별칭을 받습니다: PostgreSQL과 DuckDB, 그리고 `AS`를 붙인 SQLite와 Turso입니다. |
+| **Add an alias to table completions** | On | `FROM` 또는 `JOIN` 뒤에서 SQL 자동 완성의 테이블, 뷰 또는 CTE를 선택하면 이름의 머리글자로 만든 별칭과 함께 삽입합니다. `access_control`은 `access_control ac`가 되고 `public.order_items`는 `public.order_items oi`가 됩니다. 문에서 이미 쓰인 별칭, 예약어 또는 알려진 테이블 이름에는 숫자를 붙입니다(`ac2`). 커서 뒤에 별칭이 이미 있거나 `INSERT INTO` 뒤에서는 별칭을 추가하지 않습니다. `UPDATE`와 `DELETE FROM`의 대상 테이블은 그 위치에서 별칭을 허용하는 데이터베이스에서만 별칭을 받습니다: PostgreSQL과 DuckDB, 그리고 `AS`를 붙인 SQLite와 Turso입니다. 계속 입력할 수 있도록 별칭 뒤에 공백을 붙이지만, 닫는 괄호, 따옴표 또는 이미 있는 공백 앞에서는 붙이지 않습니다. |
 | **Write the alias with AS** | Off | `access_control ac` 대신 `access_control AS ac`를 삽입합니다. |
 | **A blank line ends a statement** | Off | 세미콜론과 마찬가지로 빈 줄에서도 SQL 문장이 끝나므로, 커서 아래 문장을 실행하거나 자동 완성할 때 그 위의 끝나지 않은 문장을 무시합니다. 선택한 스크립트 전체를 실행할 때는 여전히 `;`에서만 나눕니다. [편집기](EDITOR.md) 안내를 참고하세요. |
 

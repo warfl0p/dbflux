@@ -2396,6 +2396,7 @@ fn append_table_aliases(
     }
 
     let separator = if use_as { " AS " } else { " " };
+    let trailing = trailing_space(&source[cursor..]);
 
     for item in items
         .iter_mut()
@@ -2405,7 +2406,18 @@ fn append_table_aliases(
             continue;
         };
         let alias = table_alias(&item.label, &taken);
-        edit.new_text = format!("{}{separator}{alias}", edit.new_text);
+        edit.new_text = format!("{}{separator}{alias}{trailing}", edit.new_text);
+    }
+}
+
+/// The space that follows an inserted alias so typing continues the query,
+/// with DBeaver's rule: none before a closing bracket or a quote, or where
+/// whitespace already follows on the same line.
+fn trailing_space(after_cursor: &str) -> &'static str {
+    match after_cursor.chars().next() {
+        Some(')' | '}' | ']' | '\'' | '"') => "",
+        Some(ch) if ch.is_whitespace() && ch != '\r' && ch != '\n' => "",
+        _ => " ",
     }
 }
 
@@ -3524,17 +3536,41 @@ mod tests {
         let unsupported = MutationTargetAlias::Unsupported;
         assert_eq!(
             aliased_insert_text("SELECT * FROM ", "t1", false, unsupported),
-            "t1 t"
+            "t1 t "
         );
         assert_eq!(
             aliased_insert_text("SELECT * FROM t", "t1", true, unsupported),
-            "t1 AS t"
+            "t1 AS t "
         );
         assert_eq!(
             aliased_insert_text("SELECT * FROM t1 t JOIN ", "t2", false, unsupported),
-            "t2 t3",
+            "t2 t3 ",
             "an alias used in the statement or naming a known table is numbered"
         );
+    }
+
+    #[test]
+    fn an_alias_is_followed_by_a_space_unless_one_is_not_needed() {
+        for (after_cursor, expected) in [
+            ("", " "),
+            ("\n", " "),
+            ("\r\n", " "),
+            (";", " "),
+            (",", " "),
+            (" ", ""),
+            ("\t", ""),
+            (")", ""),
+            ("]", ""),
+            ("}", ""),
+            ("'", ""),
+            ("\"", ""),
+        ] {
+            assert_eq!(
+                super::trailing_space(after_cursor),
+                expected,
+                "before {after_cursor:?}"
+            );
+        }
     }
 
     #[test]
@@ -3560,15 +3596,15 @@ mod tests {
             assert_no_alias(source, &settings, MutationTargetAlias::Unsupported);
             assert_eq!(
                 aliased_insert_text(source, "t1", false, MutationTargetAlias::Accepted),
-                "t1 t"
+                "t1 t "
             );
             assert_eq!(
                 aliased_insert_text(source, "t1", true, MutationTargetAlias::Accepted),
-                "t1 AS t"
+                "t1 AS t "
             );
             assert_eq!(
                 aliased_insert_text(source, "t1", false, MutationTargetAlias::RequiresAs),
-                "t1 AS t",
+                "t1 AS t ",
                 "a dialect that needs AS gets it whatever the setting"
             );
         }
@@ -3607,7 +3643,7 @@ mod tests {
             &settings,
             MutationTargetAlias::Unsupported,
         );
-        assert_eq!(insert_text_of(&items, "order_items"), "order_items oi");
+        assert_eq!(insert_text_of(&items, "order_items"), "order_items oi ");
 
         let source = "SELECT * FROM raword";
         let items = aliased_items(
@@ -3618,7 +3654,7 @@ mod tests {
         );
         assert_eq!(
             insert_text_of(&items, "raw.order_items"),
-            "raw.order_items oi"
+            "raw.order_items oi "
         );
     }
 
