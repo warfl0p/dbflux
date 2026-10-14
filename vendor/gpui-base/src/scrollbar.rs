@@ -18,17 +18,17 @@ use gpui::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// The width of the scrollbar (THUMB_ACTIVE_INSET * 2 + THUMB_ACTIVE_WIDTH)
-const WIDTH: Pixels = px(4. * 2. + 8.);
+/// The width of the scrollbar track, the hit area around the flush thumb
+const WIDTH: Pixels = px(16.);
 const MIN_THUMB_SIZE: Pixels = px(48.);
 
 const THUMB_WIDTH: Pixels = px(6.);
 const THUMB_RADIUS: Pixels = Pixels::ZERO;
-const THUMB_INSET: Pixels = px(4.);
+const THUMB_INSET: Pixels = Pixels::ZERO;
 
 const THUMB_ACTIVE_WIDTH: Pixels = px(8.);
 const THUMB_ACTIVE_RADIUS: Pixels = Pixels::ZERO;
-const THUMB_ACTIVE_INSET: Pixels = px(4.);
+const THUMB_ACTIVE_INSET: Pixels = Pixels::ZERO;
 
 /// How long visibility is held after the last activity, when the styled layer
 /// projects no [`ScrollbarMotion`] of its own.
