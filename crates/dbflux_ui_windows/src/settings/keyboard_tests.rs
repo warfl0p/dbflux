@@ -96,11 +96,11 @@ fn ctrl_h_and_ctrl_l_move_between_navigation_and_section(cx: &mut TestAppContext
     );
 }
 
-/// The theme row is a segmented field: Left and Right pick the choice next
-/// to the current one and stop at either end.
+/// The theme row of Appearance is a segmented field: Left and Right pick the
+/// choice next to the current one and stop at either end.
 #[gpui::test]
 fn arrows_move_the_choice_of_a_segmented_general_row(cx: &mut TestAppContext) {
-    let (settings, window) = open_settings(cx, SettingsSectionId::General);
+    let (settings, window) = open_settings(cx, SettingsSectionId::Appearance);
     focus_content(&settings, window);
     assert_eq!(
         general_cursor(&settings, window),
