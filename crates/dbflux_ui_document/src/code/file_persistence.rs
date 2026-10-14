@@ -634,6 +634,19 @@ impl PhysicalWriteQueue {
         self.discard_waiting_autosaves_for_other_paths();
     }
 
+    /// Moves the baseline to `to` when it describes the file at `from`, so a
+    /// renamed file keeps the bytes autosave compares against. Autosaves still
+    /// queued for the old path are dropped.
+    pub(super) fn relocate_baseline(&mut self, from: &Path, to: &Path) {
+        if let Some(baseline) = self.baseline.as_mut()
+            && baseline.path == from
+        {
+            baseline.path = to.to_path_buf();
+        }
+
+        self.discard_waiting_autosaves_for_other_paths();
+    }
+
     /// Drops queued autosaves that target a path other than the current
     /// baseline's.
     ///

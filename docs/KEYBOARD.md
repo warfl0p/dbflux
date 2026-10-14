@@ -79,7 +79,7 @@ The shell's clickable items all have a key, and none of them joins the `Tab` cyc
 | `Shift+j` / `Shift+k` | Extend selection down / up |
 | `Space` (with Shift) | Toggle selection |
 | `Ctrl+j` / `Ctrl+k` | Move selected item down / up |
-| `Shift+r` | Rename |
+| `F2` | Rename |
 | `x` | Delete |
 | `Shift+n` | Create folder |
 | `Ctrl+l` | Focus panel to the right |

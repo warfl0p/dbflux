@@ -532,7 +532,7 @@ impl Sidebar {
             return false;
         }
 
-        let mut moved_any = false;
+        let mut moves = Vec::new();
         let mut first_error = None;
         self.app_state.update(cx, |state, _cx| {
             let Some(dir) = state.scripts_directory_mut() else {
@@ -549,7 +549,7 @@ impl Sidebar {
                 }
 
                 match dir.move_entry(source, target_dir) {
-                    Ok(_) => moved_any = true,
+                    Ok(new_path) => moves.push((source.clone(), new_path)),
                     Err(error) => {
                         first_error.get_or_insert(error);
                     }
@@ -561,8 +561,14 @@ impl Sidebar {
             report_script_operation_failure(error, cx);
         }
 
+        let moved_any = !moves.is_empty();
+
         if moved_any {
             self.after_script_change(target_dir, cx);
+        }
+
+        for (from, to) in moves {
+            cx.emit(SidebarEvent::ScriptMoved { from, to });
         }
 
         moved_any

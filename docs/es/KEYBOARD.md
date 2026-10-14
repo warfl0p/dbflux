@@ -80,7 +80,7 @@ Todo lo que se puede clicar en la estructura de la ventana tiene una tecla, y na
 | `Shift+j` / `Shift+k`                         | Extender la selección abajo / arriba                   |
 | `Space` (con Shift)                           | Alternar selección                                     |
 | `Ctrl+j` / `Ctrl+k`                           | Mover el elemento seleccionado abajo / arriba          |
-| `Shift+r`                                     | Renombrar                                              |
+| `F2`                                          | Renombrar                                              |
 | `x`                                           | Eliminar                                               |
 | `Shift+n`                                     | Crear carpeta                                          |
 | `Ctrl+l`                                      | Enfocar el panel de la derecha                         |

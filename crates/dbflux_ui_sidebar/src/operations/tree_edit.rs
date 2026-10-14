@@ -293,7 +293,13 @@ impl Sidebar {
             });
 
             match result {
-                Some(Ok(new_path)) => self.after_script_change(&new_path, cx),
+                Some(Ok(new_path)) => {
+                    self.after_script_change(&new_path, cx);
+                    cx.emit(SidebarEvent::ScriptMoved {
+                        from: old_path,
+                        to: new_path,
+                    });
+                }
                 Some(Err(error)) => {
                     crate::operations::script_ops::report_script_operation_failure(error, cx)
                 }

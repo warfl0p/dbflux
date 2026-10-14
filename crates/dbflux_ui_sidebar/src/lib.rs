@@ -111,6 +111,12 @@ pub enum SidebarEvent {
     OpenScript {
         path: std::path::PathBuf,
     },
+    /// A script or script folder was renamed or moved, so documents open on
+    /// it must follow.
+    ScriptMoved {
+        from: std::path::PathBuf,
+        to: std::path::PathBuf,
+    },
     /// Open schema visualization for a table.
     OpenSchemaViz {
         profile_id: Uuid,

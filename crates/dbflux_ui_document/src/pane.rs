@@ -409,6 +409,11 @@ pub struct PaneHandle {
     /// Drops the document's pending edits for a quit the user confirmed
     /// without saving them, so the shutdown flush does not write them.
     pub discard_for_quit: Option<Box<dyn Fn(&mut App)>>,
+
+    /// Follows a file or folder that moved on disk: `(from, to)`. A document
+    /// backed by `from`, or by a file inside it, retargets to the new path.
+    /// `None` for documents without a file.
+    pub relocate_file: Option<Box<dyn Fn(&std::path::Path, &std::path::Path, &mut App)>>,
 }
 
 impl PaneHandle {
@@ -483,6 +488,7 @@ impl PaneHandle {
             quit_disposition: None,
             save_for_quit: None,
             discard_for_quit: None,
+            relocate_file: None,
         }
     }
 
@@ -690,6 +696,13 @@ impl PaneHandle {
         self.save_for_quit
             .as_ref()
             .is_some_and(|save| save(window, cx))
+    }
+
+    /// Retargets the document when its file, or a folder holding it, moved.
+    pub fn relocate_file(&self, from: &std::path::Path, to: &std::path::Path, cx: &mut App) {
+        if let Some(relocate) = self.relocate_file.as_ref() {
+            relocate(from, to, cx);
+        }
     }
 
     /// Drops the pending edits for a quit the user confirmed without saving.

@@ -402,7 +402,7 @@ fn sidebar_layer() -> KeymapLayer {
     );
 
     // Rename and delete
-    layer.bind(KeyChord::new("r", Modifiers::shift()), Command::Rename);
+    layer.bind(KeyChord::new("f2", Modifiers::none()), Command::Rename);
     layer.bind(KeyChord::new("x", Modifiers::none()), Command::Delete);
 
     // Create folder

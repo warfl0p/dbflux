@@ -280,7 +280,9 @@ impl Render for Workspace {
         let tab_context_menu = self.tab_bar.read(cx).context_menu_state().cloned();
         let child_picker_open = self.sidebar.read(cx).has_child_picker_open();
 
-        let title_bar = self.render_title_bar(window, cx).map(IntoElement::into_any_element);
+        let title_bar = self
+            .render_title_bar(window, cx)
+            .map(IntoElement::into_any_element);
         let title_bar_height = if title_bar.is_some() {
             ShellMetrics::TITLE_BAR_HEIGHT.to_pixels(window.rem_size())
         } else {
@@ -941,7 +943,8 @@ impl Render for Workspace {
                 let tab_bar_entity = self.tab_bar.clone();
 
                 let menu_x = menu.position_x;
-                let menu_y = title_bar_height + TabMetrics::DOCUMENT_BAR_HEIGHT.to_pixels(window.rem_size());
+                let menu_y =
+                    title_bar_height + TabMetrics::DOCUMENT_BAR_HEIGHT.to_pixels(window.rem_size());
                 let items = TabBar::build_tab_menu_items();
                 let selected = menu.selected_index;
 

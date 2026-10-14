@@ -136,6 +136,12 @@ impl Tab {
         }
     }
 
+    pub fn relocate_file(&self, from: &std::path::Path, to: &std::path::Path, cx: &mut App) {
+        match self {
+            Tab::Pane(p) => p.relocate_file(from, to, cx),
+        }
+    }
+
     /// Starts a save for an interrupted close; `false` means the document has
     /// no save path and its tab must stay open.
     pub fn save_for_close(&self, window: &mut Window, cx: &mut App) -> bool {
@@ -715,6 +721,14 @@ impl TabManager {
         match self.active_tab() {
             Some(tab) => tab.dispatch_command(cmd, window, cx),
             None => false,
+        }
+    }
+
+    /// Points every open document backed by `from`, or by a file inside it,
+    /// at the same place under `to`.
+    pub fn relocate_file(&self, from: &std::path::Path, to: &std::path::Path, cx: &mut App) {
+        for tab in &self.documents {
+            tab.relocate_file(from, to, cx);
         }
     }
 
