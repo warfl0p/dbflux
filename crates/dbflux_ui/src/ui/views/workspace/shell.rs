@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::ui::document::DocumentIcon;
-use dbflux_components::composites::{ActivityRail, CommandSearch, ListRow, RailEntry};
+use dbflux_components::composites::{ActivityRail, ListRow, RailEntry};
 use dbflux_components::primitives::{Chamfer, Icon, Kbd, Text};
 use dbflux_components::tokens::{ChamferCut, ShellMetrics};
 use dbflux_ui_base::keymap::{chord_display_parts, effective_keymap};
@@ -308,98 +308,37 @@ impl Workspace {
         )
     }
 
-    fn open_command_palette_from_title_bar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.command_palette.read(cx).is_visible() {
-            self.toggle_command_palette(window, cx);
-        }
-    }
-
-    /// The 44 px row at the top of the window, on the desk: the command
-    /// search centered, the notifications bell at the right end and, on a
-    /// client-decorated Linux window, the window controls after it. Empty
-    /// space in the row moves the window there.
+    /// The row at the top of the window, only on a client-decorated Linux
+    /// window, where it carries the window controls and moves the window.
+    /// Other windows have no top bar.
     pub(super) fn render_title_bar(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> impl IntoElement {
-        let client_decorated = platform::prepare_client_decorations(window);
-        let window_controls = client_decorated.then(|| {
-            let close = self.title_bar_close_handler(cx);
-            platform::render_csd_window_controls(window, cx, Some(close))
-        });
+    ) -> Option<impl IntoElement> {
+        if !platform::prepare_client_decorations(window) {
+            return None;
+        }
 
-        let palette_keys = global_shortcut_keys(Command::ToggleCommandPalette).unwrap_or_default();
+        let close = self.title_bar_close_handler(cx);
+        let window_controls = platform::render_csd_window_controls(window, cx, Some(close));
 
-        let workspace = cx.entity().clone();
-        let command_search = CommandSearch::new(
-            "title-bar-command-search",
-            dbflux_i18n::t!("workspace.title_bar.command_search"),
+        Some(
+            div()
+                .id("title-bar")
+                .flex()
+                .flex_shrink_0()
+                .items_center()
+                .w_full()
+                .h(ShellMetrics::TITLE_BAR_HEIGHT)
+                .pl(ShellMetrics::TITLE_BAR_PADDING_X)
+                .child(
+                    platform::csd_drag_area("title-bar-drag-area")
+                        .flex_1()
+                        .h_full(),
+                )
+                .child(window_controls),
         )
-        .shortcut(palette_keys)
-        .focus_handle(&self.command_search_focus)
-        .on_open(move |window, cx| {
-            workspace.update(cx, |workspace, cx| {
-                workspace.open_command_palette_from_title_bar(window, cx);
-            });
-        });
-
-        let document_actions = self.tab_manager.update(cx, |manager, cx| {
-            manager.active_title_bar_actions(window, cx)
-        });
-        let bell = self.render_notification_bell(cx);
-
-        div()
-            .id("title-bar")
-            .flex()
-            .flex_shrink_0()
-            .items_center()
-            .w_full()
-            .h(ShellMetrics::TITLE_BAR_HEIGHT)
-            .pl(ShellMetrics::TITLE_BAR_PADDING_X)
-            .when(!client_decorated, |bar| {
-                bar.pr(ShellMetrics::TITLE_BAR_PADDING_X)
-            })
-            // The active document's toolbar sits at the left edge; the drag
-            // area fills the rest of the left half, so the search stays centered.
-            .child(
-                div()
-                    .flex()
-                    .flex_1()
-                    .flex_basis(px(0.0))
-                    .h_full()
-                    .items_center()
-                    .when_some(document_actions, |area, actions| {
-                        area.child(
-                            div()
-                                .flex_shrink_0()
-                                .pr(ShellMetrics::TITLE_BAR_PADDING_X)
-                                .child(actions),
-                        )
-                    })
-                    .child(
-                        platform::csd_drag_area("title-bar-drag-area")
-                            .flex_1()
-                            .h_full(),
-                    ),
-            )
-            .child(command_search)
-            .child(
-                div()
-                    .flex()
-                    .flex_1()
-                    .flex_basis(px(0.0))
-                    .h_full()
-                    .items_center()
-                    .justify_end()
-                    .child(
-                        platform::csd_drag_area("title-bar-drag-area-end")
-                            .flex_1()
-                            .h_full(),
-                    )
-                    .child(bell)
-                    .children(window_controls),
-            )
     }
 
     /// The empty workspace (P1Empty): the app glyph and title over a START
@@ -836,7 +775,6 @@ mod tests {
             "workspace.rail.approvals",
             "workspace.rail.audit",
             "workspace.rail.settings",
-            "workspace.title_bar.command_search",
             "workspace.empty.title",
             "workspace.empty.subtitle",
             "workspace.empty.start",

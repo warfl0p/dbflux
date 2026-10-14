@@ -391,8 +391,6 @@ pub struct Workspace {
 
     focus_target: FocusTarget,
     focus_handle: FocusHandle,
-    /// Tab stop of the title bar's command search, which opens the palette.
-    command_search_focus: FocusHandle,
     /// The notifications popover under the title-bar bell.
     notifications: notifications::NotificationsPopoverState,
     /// The active document's actions menu, open after `OpenPaneActions`.
@@ -1676,7 +1674,6 @@ impl Workspace {
             _pipeline_subscription: None,
             focus_target: FocusTarget::default(),
             focus_handle,
-            command_search_focus: cx.focus_handle(),
             notifications: notifications::NotificationsPopoverState::new(cx),
             pane_actions_menu: None,
             last_user_error: None,
