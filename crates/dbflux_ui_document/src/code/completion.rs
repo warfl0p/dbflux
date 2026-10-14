@@ -847,22 +847,20 @@ fn build_sql_completion_metadata<'a>(
 /// prefix match, so fuzzy hits never push an exact continuation down the
 /// menu.
 ///
-/// Fuzzy matching starts at [`FUZZY_MIN_PREFIX_CHARS`] typed characters, since
-/// a shorter prefix is a subsequence of nearly every name, and only the
-/// [`FUZZY_MAX_MATCHES`] best fuzzy hits are kept. Prefix matches stay
-/// unlimited.
+/// Fuzzy matching starts at the first typed character, so `id` finds
+/// `contact_id`. Only the [`FUZZY_MAX_MATCHES`] best fuzzy hits are kept, which
+/// bounds the menu for a short prefix. Prefix matches stay unlimited.
 struct SqlItemSink<'a> {
     items: Vec<CompletionItem>,
     seen: HashSet<String>,
     prefix: &'a str,
     prefix_upper: String,
     replace_range: lsp_types::Range,
-    /// `None` while the prefix is too short for fuzzy matching.
+    /// `None` while the prefix is empty.
     matcher: Option<SkimMatcherV2>,
     fuzzy_matches: Vec<FuzzyCandidate>,
 }
 
-const FUZZY_MIN_PREFIX_CHARS: usize = 3;
 const FUZZY_MAX_MATCHES: usize = 50;
 
 struct FuzzyCandidate {
@@ -880,8 +878,7 @@ impl SqlItemSink<'_> {
             prefix,
             prefix_upper: prefix.to_uppercase(),
             replace_range,
-            matcher: (prefix.chars().count() >= FUZZY_MIN_PREFIX_CHARS)
-                .then(|| SkimMatcherV2::default().ignore_case()),
+            matcher: (!prefix.is_empty()).then(|| SkimMatcherV2::default().ignore_case()),
             fuzzy_matches: Vec::new(),
         }
     }
@@ -3758,7 +3755,7 @@ mod tests {
     }
 
     #[test]
-    fn fuzzy_matching_waits_for_three_characters_and_keeps_the_best_fifty() {
+    fn fuzzy_matching_starts_at_one_character_and_keeps_the_best_fifty() {
         let mut metadata = SqlCompletionMetadata::default();
         for index in 0..80 {
             metadata.add_table(&TableInfo {
@@ -3769,15 +3766,13 @@ mod tests {
             });
         }
 
-        let source = "SELECT * FROM ms";
-        assert!(
-            sql_completion_items(&metadata, source, source.len()).is_empty(),
-            "two characters do not fuzzy-match"
-        );
-
-        let source = "SELECT * FROM msg";
+        let source = "SELECT * FROM m";
         let items = sql_completion_items(&metadata, source, source.len());
-        assert_eq!(items.len(), super::FUZZY_MAX_MATCHES);
+        let tables = items
+            .iter()
+            .filter(|item| item.label.starts_with("alarm_message_"))
+            .count();
+        assert_eq!(tables, super::FUZZY_MAX_MATCHES);
     }
 
     #[test]
