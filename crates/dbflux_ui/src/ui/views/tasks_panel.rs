@@ -496,7 +496,12 @@ impl TasksPanel {
                             .whitespace_nowrap()
                             .text_ellipsis()
                             .text_color(name_color)
-                            .child(task.description.clone()),
+                            .child(
+                                task.description
+                                    .split_whitespace()
+                                    .collect::<Vec<_>>()
+                                    .join(" "),
+                            ),
                     )
                     .child(
                         div()
