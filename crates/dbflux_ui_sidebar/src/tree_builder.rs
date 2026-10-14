@@ -575,10 +575,10 @@ impl Sidebar {
         let label = match mounted.availability() {
             dbflux_core::ScriptRootAvailability::Available => mounted.label().to_string(),
             dbflux_core::ScriptRootAvailability::Pending => {
-                crate::labels::scripts_root_scanning_label(mounted.label())
+                crate::labels::scripts_root_scanning_label(&mounted.label())
             }
             dbflux_core::ScriptRootAvailability::Unavailable { .. } => {
-                crate::labels::scripts_root_unavailable_label(mounted.label())
+                crate::labels::scripts_root_unavailable_label(&mounted.label())
             }
         };
 
