@@ -66,6 +66,22 @@ pub struct StatementScope {
     /// (`SELECT total * 2 AS doubled`). Valid completion targets in
     /// GROUP BY / ORDER BY / HAVING, not in WHERE.
     pub select_aliases: Vec<String>,
+    /// CTEs and derived tables (`FROM (SELECT …) x`) with the output columns
+    /// their SELECT list declares, so `alias.` can complete against them.
+    pub derived_relations: Vec<DerivedRelation>,
+}
+
+/// A query-defined relation: a CTE or an aliased subquery.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DerivedRelation {
+    pub name: String,
+    /// Columns with a name visible in the SELECT list (explicit alias or a
+    /// plain column reference). Computed expressions without an alias have
+    /// no name and are skipped.
+    pub columns: Vec<String>,
+    /// Relations a `*` / `t.*` in the SELECT list expands from. The consumer
+    /// resolves them against schema metadata or other derived relations.
+    pub star_sources: Vec<ScopeRelation>,
 }
 
 /// Result of one cursor analysis. `context` is `None` when the position could
@@ -377,6 +393,7 @@ fn collect_scope(anchor: Node, source: &str) -> StatementScope {
     scope.relations.dedup();
     scope.cte_names.dedup();
     scope.select_aliases.dedup();
+    scope.derived_relations.dedup();
     scope
 }
 
@@ -405,7 +422,14 @@ fn collect_level(
                     .find(|node| node.kind() == "identifier")
                     && let Some(text) = node_text(name, source)
                 {
-                    scope.cte_names.push(text);
+                    scope.cte_names.push(text.clone());
+                    let mut body_cursor = child.walk();
+                    if let Some(body) = child
+                        .named_children(&mut body_cursor)
+                        .find(|node| node.kind() == "statement")
+                    {
+                        push_derived(text, body, source, scope);
+                    }
                 }
             }
             "update" | "insert" => {
@@ -486,7 +510,18 @@ fn push_relation(relation: Node, source: &str, scope: &mut StatementScope) {
         .named_children(&mut cursor)
         .find(|node| node.kind() == "object_reference")
     else {
-        // Derived table (`FROM (SELECT …) x`): no base relation to resolve.
+        // Derived table (`FROM (SELECT …) x`): no base relation to resolve,
+        // but its output columns are completable under the alias.
+        let mut subquery_cursor = relation.walk();
+        if let Some(subquery) = relation
+            .named_children(&mut subquery_cursor)
+            .find(|node| node.kind() == "subquery")
+            && let Some(alias) = relation
+                .child_by_field_name("alias")
+                .and_then(|node| node_text(node, source))
+        {
+            push_derived(alias, subquery, source, scope);
+        }
         return;
     };
 
@@ -495,6 +530,95 @@ fn push_relation(relation: Node, source: &str, scope: &mut StatementScope) {
         .and_then(|node| node_text(node, source));
 
     push_object_reference(object_reference, alias, source, scope);
+}
+
+/// Records the output columns of `body` (a CTE statement or a subquery) under
+/// `name`. Relations nested inside `body` are kept out of the outer scope.
+fn push_derived(name: String, body: Node, source: &str, scope: &mut StatementScope) {
+    let mut inner = StatementScope::default();
+    let mut columns = Vec::new();
+    let mut star_qualifiers: Vec<Option<String>> = Vec::new();
+
+    let mut cursor = body.walk();
+    for child in body.named_children(&mut cursor) {
+        match child.kind() {
+            "from" => collect_from(child, source, &mut inner),
+            "select" => {
+                let mut select_cursor = child.walk();
+                let Some(expressions) = child
+                    .named_children(&mut select_cursor)
+                    .find(|node| node.kind() == "select_expression")
+                else {
+                    continue;
+                };
+
+                let mut term_cursor = expressions.walk();
+                for term in expressions.named_children(&mut term_cursor) {
+                    if term.kind() != "term" {
+                        continue;
+                    }
+
+                    if let Some(alias) = term
+                        .child_by_field_name("alias")
+                        .and_then(|node| node_text(node, source))
+                    {
+                        columns.push(alias);
+                        continue;
+                    }
+
+                    let Some(value) = term.child_by_field_name("value") else {
+                        continue;
+                    };
+
+                    match value.kind() {
+                        "field" => columns.extend(
+                            value
+                                .child_by_field_name("name")
+                                .and_then(|node| node_text(node, source)),
+                        ),
+                        "all_fields" => {
+                            let mut star_cursor = value.walk();
+                            let qualifier = value
+                                .named_children(&mut star_cursor)
+                                .find(|node| node.kind() == "object_reference")
+                                .and_then(|node| node.child_by_field_name("name"))
+                                .and_then(|node| node_text(node, source));
+                            star_qualifiers.push(qualifier);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut candidates = inner.relations.clone();
+    candidates.extend(inner.derived_relations.iter().map(|derived| ScopeRelation {
+        schema: None,
+        table: derived.name.clone(),
+        alias: None,
+    }));
+
+    let mut star_sources = Vec::new();
+    for qualifier in &star_qualifiers {
+        for relation in &candidates {
+            let matches = qualifier.as_ref().is_none_or(|qualifier| {
+                let visible = relation.alias.as_deref().unwrap_or(&relation.table);
+                visible.eq_ignore_ascii_case(qualifier)
+            });
+            if matches && !star_sources.contains(relation) {
+                star_sources.push(relation.clone());
+            }
+        }
+    }
+
+    scope.derived_relations.extend(inner.derived_relations);
+    scope.derived_relations.push(DerivedRelation {
+        name,
+        columns,
+        star_sources,
+    });
 }
 
 fn push_object_reference(
@@ -828,6 +952,65 @@ mod tests {
             Some(SqlCompletionContext::ColumnRef {
                 clause: SqlClause::GroupBy
             })
+        );
+    }
+}
+
+#[cfg(test)]
+mod derived_tests {
+    use super::*;
+
+    #[test]
+    fn cte_and_subquery_expose_output_columns() {
+        let engine = SqlContextEngine::new().expect("grammar");
+        let source = "WITH a AS (SELECT d.id, d.x AS y, CASE WHEN 1 THEN 2 END AS z, \
+                      CASE WHEN 1 THEN 2 END, t.*, * FROM raw.d d JOIN t ON 1=1) \
+                      SELECT * FROM a uc, (SELECT q FROM r) sq WHERE uc.";
+        let scope = engine
+            .analyze(source, source.len())
+            .expect("analysis")
+            .scope;
+
+        let cte = scope
+            .derived_relations
+            .iter()
+            .find(|r| r.name == "a")
+            .expect("cte");
+        assert_eq!(cte.columns, ["id", "y", "z"]);
+        let sources: Vec<_> = cte.star_sources.iter().map(|r| r.table.as_str()).collect();
+        assert_eq!(sources, ["t", "d"]);
+
+        let derived = scope
+            .derived_relations
+            .iter()
+            .find(|r| r.name == "sq")
+            .expect("subquery");
+        assert_eq!(derived.columns, ["q"]);
+    }
+
+    #[test]
+    fn cte_columns_visible_with_text_after_cursor() {
+        let engine = SqlContextEngine::new().expect("grammar");
+        let before = "WITH usecase AS (SELECT dg.group_id, d.driver_id, \
+                      CASE c.person WHEN 1 THEN 'person' END AS driver_type FROM raw.driver d) \
+                      SELECT * FROM usecase uc where uc.";
+        let source = format!("{before}\nORDER BY uc.group_id, uc.driver_id;");
+        let scope = engine
+            .analyze(&source, before.len())
+            .expect("analysis")
+            .scope;
+
+        let cte = scope
+            .derived_relations
+            .iter()
+            .find(|r| r.name == "usecase")
+            .expect("cte");
+        assert_eq!(cte.columns, ["group_id", "driver_id", "driver_type"]);
+        assert!(
+            scope
+                .relations
+                .iter()
+                .any(|r| r.alias.as_deref() == Some("uc"))
         );
     }
 }

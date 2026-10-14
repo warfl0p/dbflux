@@ -170,7 +170,7 @@ pub use query::{
     AssignmentValue, BoolOp, ClassifiedMutation, CodeAction, CodeActionEdit,
     CollectionBrowseRequest, CollectionCountEstimate, CollectionCountRequest, CollectionRef,
     CollectionTemplateRequest, ColumnKind, ColumnMeta, ColumnOrigin, ColumnRef, Comparator,
-    CountSpec, CreateTableSpec, DangerousQueryKind, DescribeRequest, Diagnostic,
+    CountSpec, CreateTableSpec, DangerousQueryKind, DerivedRelation, DescribeRequest, Diagnostic,
     DiagnosticSeverity, EditableBinding, EditorDiagnostic, ExplainRequest, FilterNode,
     GeneratedMutation, GeneratedQuery, GeneratorError, GroupByEntry, JoinFilterNode, JoinKind,
     JoinOn, JoinPredicate, JoinStep, LanguageService, LiteralValue, MutationCategory, MutationKind,

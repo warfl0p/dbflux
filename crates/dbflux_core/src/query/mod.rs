@@ -63,8 +63,8 @@ pub use semantic::{
     semantic_filter_to_filter_node,
 };
 pub use sql_context::{
-    ScopeRelation, SqlClause, SqlCompletionContext, SqlContextEngine, SqlCursorAnalysis,
-    StatementScope,
+    DerivedRelation, ScopeRelation, SqlClause, SqlCompletionContext, SqlContextEngine,
+    SqlCursorAnalysis, StatementScope,
 };
 pub use table_browser::{
     CollectionBrowseRequest, CollectionCountEstimate, CollectionCountRequest, CollectionRef,
