@@ -68,9 +68,9 @@ fn selection_occurrences(
 
 const BOTTOM_MARGIN_ROWS: usize = 3;
 pub(super) const RIGHT_MARGIN: Pixels = px(10.);
-pub(super) const LINE_NUMBER_RIGHT_MARGIN: Pixels = px(6.);
+pub(super) const LINE_NUMBER_RIGHT_MARGIN: Pixels = px(2.);
 const FOLD_ICON_WIDTH: Pixels = px(14.);
-const FOLD_ICON_HITBOX_WIDTH: Pixels = px(18.);
+const FOLD_ICON_HITBOX_WIDTH: Pixels = px(14.);
 const MAX_HIGHLIGHT_LINE_LENGTH: usize = 10_000;
 const MIN_LINE_NUMBER_DIGITS: usize = 3;
 const MAX_LINE_NUMBER_DIGITS: usize = 7;
@@ -4860,9 +4860,9 @@ mod tests {
 
         assert_eq!(
             layout.bounds,
-            Bounds::new(point(px(51.), px(18.)), size(px(262.), px(87.)))
+            Bounds::new(point(px(55.), px(18.)), size(px(258.), px(87.)))
         );
-        assert_eq!(layout.scroll_size, size(px(972.), px(200.)));
+        assert_eq!(layout.scroll_size, size(px(968.), px(200.)));
 
         let layout_without_gutter =
             EditorScrollbarLayout::new(input_bounds, px(0.), size(px(500.), px(120.)), paddings);
