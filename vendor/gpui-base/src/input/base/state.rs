@@ -1794,6 +1794,15 @@ impl<M: InputModeKind> InputBaseState<M> {
             .rfind(|(_, s)| !s.trim_start().is_empty())
             .map(|(i, _)| i)
             .unwrap_or(0);
+
+        // Unicode keeps `raw.driver` as one word; a dot inside it is a
+        // boundary here, so a word delete takes `driver` and leaves `raw.`.
+        let word = &left_part[target..];
+        let target = match word.rfind('.') {
+            Some(dot) if dot + 1 < word.len() => target + dot + 1,
+            _ => target,
+        };
+
         self.token_boundary(target, Bias::Left)
     }
 
@@ -7911,6 +7920,29 @@ mod tests {
                     cx.read_from_clipboard().and_then(|item| item.text()),
                     Some("hunter2".to_string())
                 );
+            });
+        });
+    }
+
+    #[gpui::test]
+    fn test_word_delete_stops_at_a_dot_inside_a_name(cx: &mut TestAppContext) {
+        let input_view = InputView::build(cx, |state| state);
+        let mut cx = VisualTestContext::from_window(input_view.window_handle.into(), cx);
+        let input = input_view.input;
+
+        cx.update(|window, cx| {
+            input.update(cx, |state, cx| {
+                state.set_value("FROM raw.driver", window, cx);
+                state.set_selected_range(15..15, cx);
+
+                state.delete_previous_word(&DeleteToPreviousWordStart, window, cx);
+                assert_eq!(state.value(), "FROM raw.");
+
+                state.delete_previous_word(&DeleteToPreviousWordStart, window, cx);
+                assert_eq!(state.value(), "FROM raw");
+
+                state.delete_previous_word(&DeleteToPreviousWordStart, window, cx);
+                assert_eq!(state.value(), "FROM ");
             });
         });
     }
