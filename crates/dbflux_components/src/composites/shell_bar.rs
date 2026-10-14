@@ -239,7 +239,7 @@ impl RenderOnce for NotificationBell {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let badge = Self::badge_text(self.count).zip(Self::badge_colors(self.urgency, theme));
-        let label = self.label.clone();
+        let label = crate::actions::tooltip_with_shortcut(cx, &self.id, self.label.clone());
 
         let tint = ChromeColors::tint(theme);
         let quiet = self.urgency == BellUrgency::None && !self.open;

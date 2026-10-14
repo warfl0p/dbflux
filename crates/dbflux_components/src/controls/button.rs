@@ -452,6 +452,18 @@ impl RenderOnce for Button {
             None if self.icon_only => tooltip.clone(),
             None => None,
         };
+        // A labelled button gets a tooltip only when its command has a
+        // shortcut to show; a button with a keycap already shows it.
+        let tooltip = match tooltip {
+            None if self.kbd.is_none() && !self.label.is_empty() => {
+                crate::actions::element_shortcut(cx, &self.id).map(|_| self.label.clone())
+            }
+            other => other,
+        };
+        let tooltip = match (tooltip, &self.kbd) {
+            (Some(text), None) => Some(crate::actions::tooltip_with_shortcut(cx, &self.id, text)),
+            (other, _) => other,
+        };
         let theme = cx.theme();
         let (fills, content) = button_colors(theme, self.variant, self.selected);
         let content = self.text_color.unwrap_or(content);

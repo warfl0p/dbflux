@@ -1,6 +1,8 @@
 mod actions;
 mod dispatch;
 pub mod inspector;
+pub(crate) mod keyboard_coverage;
+pub use keyboard_coverage::install_shortcut_tooltips;
 #[cfg(test)]
 mod keyboard_coverage_tests;
 mod notifications;

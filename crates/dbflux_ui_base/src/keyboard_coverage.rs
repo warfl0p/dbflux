@@ -28,7 +28,7 @@
 
 use dbflux_app::keymap::{Command, ContextId};
 use gpui::{AccessibilityFrame, AccessibleAction, FrameObserver, VisualTestContext};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 
 /// How the action of a clickable element is reached without the pointer.
@@ -116,6 +116,86 @@ pub const MODAL_CHROME: SurfaceRegistry = SurfaceRegistry {
     contexts: &[ContextId::Modal],
     entries: &[("modal-close", KeyboardPath::Command(Command::Cancel))],
 };
+
+/// Element ids that run a command, from the registries of every surface, so
+/// a tooltip can name the command's shortcut.
+#[derive(Default)]
+struct ElementCommands {
+    exact: HashMap<&'static str, (Command, &'static [ContextId])>,
+    patterns: Vec<(&'static str, Command, &'static [ContextId])>,
+    ambiguous: BTreeSet<&'static str>,
+}
+
+impl ElementCommands {
+    fn new(registries: &[SurfaceRegistry]) -> Self {
+        let mut commands = Self::default();
+
+        for registry in registries {
+            for (pattern, path) in registry.entries {
+                let KeyboardPath::Command(command) = path else {
+                    continue;
+                };
+
+                // A pattern matched by element path, not by id, cannot be
+                // looked up from an id alone.
+                if pattern.contains('.') {
+                    continue;
+                }
+
+                if pattern.contains('*') {
+                    commands
+                        .patterns
+                        .push((pattern, *command, registry.contexts));
+                    continue;
+                }
+
+                match commands.exact.get(pattern) {
+                    Some((existing, _)) if existing != command => {
+                        commands.ambiguous.insert(pattern);
+                    }
+                    Some(_) => {}
+                    None => {
+                        commands
+                            .exact
+                            .insert(pattern, (*command, registry.contexts));
+                    }
+                }
+            }
+        }
+
+        commands
+    }
+
+    fn lookup(&self, id: &str) -> Option<(Command, &'static [ContextId])> {
+        if self.ambiguous.contains(id) {
+            return None;
+        }
+
+        self.exact.get(id).copied().or_else(|| {
+            self.patterns
+                .iter()
+                .find(|(pattern, _, _)| glob_matches(pattern, id))
+                .map(|(_, command, contexts)| (*command, *contexts))
+        })
+    }
+}
+
+/// Installs the lookup behind tooltip shortcuts (see
+/// `dbflux_components::actions::tooltip_with_shortcut`): the element ids the
+/// registries bind to a command, resolved to the command's current keys.
+pub fn install_element_shortcuts(registries: &[SurfaceRegistry], cx: &mut gpui::App) {
+    let commands = ElementCommands::new(registries);
+
+    cx.set_global(dbflux_components::actions::ElementShortcuts(Box::new(
+        move |id| {
+            let (command, contexts) = commands.lookup(id)?;
+
+            contexts
+                .iter()
+                .find_map(|context| crate::keymap::shortcut_label(*context, command))
+        },
+    )));
+}
 
 /// The registries a rendered frame is checked against, with the menus the
 /// test built and the subtrees other surface tests own.
@@ -447,8 +527,8 @@ impl FrameCapture {
 #[cfg(test)]
 mod tests {
     use super::{
-        ClickableElement, Coverage, FrameCapture, KeyboardPath, SurfaceRegistry, matches_element,
-        matches_pattern,
+        ClickableElement, Coverage, ElementCommands, FrameCapture, KeyboardPath, SurfaceRegistry,
+        matches_element, matches_pattern,
     };
     use dbflux_app::keymap::{Command, ContextId};
     use gpui::prelude::FluentBuilder as _;
@@ -507,6 +587,39 @@ mod tests {
         Coverage::new(SURFACE)
             .delegate("embedded", "the embedded surface")
             .with_menu_entries(["open-row"])
+    }
+
+    #[test]
+    fn element_commands_resolve_exact_ids_and_patterns_and_skip_conflicts() {
+        const FIRST: SurfaceRegistry = SurfaceRegistry {
+            name: "first",
+            contexts: &[ContextId::Global],
+            entries: &[
+                ("bell", KeyboardPath::Command(Command::ToggleNotifications)),
+                ("row-*", KeyboardPath::Command(Command::Cancel)),
+                ("clash", KeyboardPath::Command(Command::Cancel)),
+                ("menu-only", KeyboardPath::Menu("menu-only")),
+            ],
+        };
+        const SECOND: SurfaceRegistry = SurfaceRegistry {
+            name: "second",
+            contexts: &[ContextId::Modal],
+            entries: &[("clash", KeyboardPath::Command(Command::ToggleNotifications))],
+        };
+
+        let commands = ElementCommands::new(&[FIRST, SECOND]);
+
+        assert_eq!(
+            commands.lookup("bell").map(|(command, _)| command),
+            Some(Command::ToggleNotifications)
+        );
+        assert_eq!(
+            commands.lookup("row-7").map(|(command, _)| command),
+            Some(Command::Cancel)
+        );
+        assert!(commands.lookup("clash").is_none());
+        assert!(commands.lookup("menu-only").is_none());
+        assert!(commands.lookup("unknown").is_none());
     }
 
     #[test]

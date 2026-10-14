@@ -448,3 +448,8 @@ pub(crate) const CONNECTION_MANAGER: SurfaceRegistry = SurfaceRegistry {
         ),
     ],
 };
+
+/// Every window surface's registry, for the tooltip shortcuts.
+pub fn registries() -> Vec<SurfaceRegistry> {
+    vec![SETTINGS, CONNECTION_MANAGER]
+}

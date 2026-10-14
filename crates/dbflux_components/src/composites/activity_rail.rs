@@ -139,6 +139,11 @@ impl ActivityRail {
         let element_id = entry.element_id();
         let entry_id = entry.id.clone();
         let label = entry.label.clone();
+        let tooltip = crate::actions::tooltip_with_shortcut(
+            cx,
+            &ElementId::Name(element_id.clone()),
+            label.clone(),
+        );
 
         div()
             .id(ElementId::Name(element_id))
@@ -162,7 +167,7 @@ impl ActivityRail {
                     .size(ShellMetrics::RAIL_ICON)
                     .color(colors.icon),
             )
-            .tooltip(move |window, cx| Tooltip::new(label.clone()).build(window, cx))
+            .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
             .when_some(on_select, |button, handler| {
                 button.on_click(move |_, window, cx| handler(&entry_id, window, cx))
             })

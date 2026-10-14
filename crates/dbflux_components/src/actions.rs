@@ -88,6 +88,39 @@ pub fn shortcut_label(
     }
 }
 
+/// Answers "which keys run the command of the element with this id?" for
+/// tooltips drawn by components. Installed at startup from the keyboard
+/// coverage registries (`dbflux_ui_base::keyboard_coverage::install_element_shortcuts`).
+pub struct ElementShortcuts(pub Box<dyn Fn(&str) -> Option<SharedString>>);
+
+impl gpui::Global for ElementShortcuts {}
+
+/// The keys that run the command of the element `id`, `None` when it has no
+/// registered command or the command has no shortcut.
+pub fn element_shortcut(cx: &gpui::App, id: &gpui::ElementId) -> Option<SharedString> {
+    let gpui::ElementId::Name(name) = id else {
+        return None;
+    };
+
+    (cx.try_global::<ElementShortcuts>()?.0)(name)
+}
+
+/// `text` with the shortcut of the element `id` after it ("Notifications
+/// (Ctrl Shift B)"). Returns `text` unchanged when the element has no
+/// shortcut or `text` already names it.
+pub fn tooltip_with_shortcut(
+    cx: &gpui::App,
+    id: &gpui::ElementId,
+    text: SharedString,
+) -> SharedString {
+    match element_shortcut(cx, id) {
+        Some(shortcut) if !text.contains(shortcut.as_ref()) => {
+            SharedString::from(format!("{text} ({shortcut})"))
+        }
+        _ => text,
+    }
+}
+
 /// The last key pressed in any window, and the interceptor that records it.
 #[derive(Default)]
 struct LastKeystroke(Option<Keystroke>, Option<gpui::Subscription>);
@@ -110,4 +143,37 @@ pub fn record_last_keystroke(cx: &mut App) {
 pub fn last_keystroke(cx: &App) -> Option<Keystroke> {
     cx.try_global::<LastKeystroke>()
         .and_then(|recorded| recorded.0.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ElementShortcuts, tooltip_with_shortcut};
+    use gpui::{ElementId, SharedString, TestAppContext};
+
+    #[gpui::test]
+    fn a_tooltip_names_the_shortcut_once(cx: &mut TestAppContext) {
+        let id = ElementId::Name("notifications-bell".into());
+
+        cx.update(|cx| {
+            let plain = SharedString::from("Notifications");
+            assert_eq!(tooltip_with_shortcut(cx, &id, plain.clone()), plain);
+
+            cx.set_global(ElementShortcuts(Box::new(|id| {
+                (id == "notifications-bell").then(|| SharedString::from("Ctrl Shift B"))
+            })));
+
+            assert_eq!(
+                tooltip_with_shortcut(cx, &id, plain.clone()),
+                "Notifications (Ctrl Shift B)"
+            );
+            assert_eq!(
+                tooltip_with_shortcut(cx, &id, "Notifications (Ctrl Shift B)".into()),
+                "Notifications (Ctrl Shift B)"
+            );
+            assert_eq!(
+                tooltip_with_shortcut(cx, &ElementId::Name("other".into()), plain.clone()),
+                plain
+            );
+        });
+    }
 }
