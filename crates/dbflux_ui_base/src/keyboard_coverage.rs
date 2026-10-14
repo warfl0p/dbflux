@@ -27,9 +27,13 @@
 //! (`python3 scripts/lint.py mouse-down`) covers those.
 
 use dbflux_app::keymap::{Command, ContextId};
-use gpui::{AccessibilityFrame, AccessibleAction, FrameObserver, VisualTestContext};
+#[cfg(any(test, feature = "test-support"))]
+use gpui::VisualTestContext;
+use gpui::{AccessibilityFrame, AccessibleAction, FrameObserver};
 use std::collections::{BTreeSet, HashMap};
-use std::sync::{Arc, Mutex};
+#[cfg(any(test, feature = "test-support"))]
+use std::sync::Arc;
+use std::sync::Mutex;
 
 /// How the action of a clickable element is reached without the pointer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -490,6 +494,7 @@ impl FrameObserver for FrameCapture {
 
 impl FrameCapture {
     /// Starts observing the frames of `window`.
+    #[cfg(any(test, feature = "test-support"))]
     pub fn observe(window: &mut VisualTestContext) -> Arc<Self> {
         let capture = Arc::new(Self::default());
 
@@ -503,6 +508,7 @@ impl FrameCapture {
     }
 
     /// Draws a new frame of `window` and returns it.
+    #[cfg(any(test, feature = "test-support"))]
     #[track_caller]
     pub fn frame(&self, window: &mut VisualTestContext) -> AccessibilityFrame {
         window.update(|window, _| window.refresh());
