@@ -2061,6 +2061,30 @@ impl<M: InputModeKind> InputBaseState<M> {
         None
     }
 
+    /// The closer to wrap the selected `range` with when `text` is the opener
+    /// of a bracket pair. Quotes are left out: their opener equals their
+    /// closer, and typing one over a selection is more often a replacement.
+    fn surround_closer(&self, range: &Range<usize>, text: &str) -> Option<SharedString> {
+        if self.silent_replace_text
+            || self.replaying_history
+            || self.ime_marked_range.is_some()
+            || !self.is_code_editor()
+            || !self.is_multi_line()
+            || !self.selections.is_single()
+            || range.is_empty()
+            || text.chars().count() != 1
+        {
+            return None;
+        }
+
+        self.mode
+            .language_config()?
+            .brackets
+            .iter()
+            .find(|pair| pair.open.as_ref() == text && !pair.close.is_empty() && pair.open != pair.close)
+            .map(|pair| pair.close.clone())
+    }
+
     fn text_before_matches(&self, offset: usize, text: &str) -> bool {
         offset >= text.len()
             && self.text.is_char_boundary(offset - text.len())
@@ -4568,6 +4592,26 @@ impl<M: InputModeKind> EntityInputHandler for InputBaseState<M> {
                 cx.notify();
                 return;
             }
+        }
+
+        // Typing an opening bracket over a selection wraps the selection in
+        // the pair instead of replacing it, and keeps the text selected.
+        if range_utf16.is_none()
+            && let Some(closer) = self.surround_closer(&range, new_text)
+        {
+            let selected = self.text.slice(range.clone()).to_string();
+            let replacement = format!("{new_text}{selected}{closer}");
+            if let Some(intent) = requested_intent {
+                self.undo_manager.set_pending_intent(intent);
+            }
+            self.replace_text_in_ranges(&[(range.clone(), replacement)], window, cx);
+            let inner_start = range.start + new_text.len();
+            self.set_selected_range(inner_start..inner_start + selected.len(), cx);
+            self.undo_manager.record_selections(
+                vec![selection_before],
+                self.selections.iter().copied().collect(),
+            );
+            return;
         }
 
         if self.is_multi_line() {
@@ -10487,6 +10531,29 @@ mod tests {
                 .update(cx, |state, cx| state.redo(&Redo, window, cx));
         });
         assert_cursors(&mut cx, &view.input, "{\n  |\n}");
+    }
+
+    #[gpui::test]
+    fn test_typing_an_opening_bracket_wraps_the_selection(cx: &mut TestAppContext) {
+        let view = InputView::<EditorMode>::new(cx);
+        let mut cx = VisualTestContext::from_window(view.window_handle.into(), cx);
+        cx.update(|window, cx| {
+            view.input.update(cx, |state, cx| {
+                state.set_value("SELECT a, b FROM t", window, cx);
+                state.set_selected_range(7..11, cx);
+                state.replace_text_in_range(None, "(", window, cx);
+
+                assert_eq!(state.value(), "SELECT (a, b) FROM t");
+                assert_eq!(state.selected_range(), 8..12);
+
+                // The wrapped text stays selected, so a second bracket nests.
+                state.replace_text_in_range(None, "[", window, cx);
+                assert_eq!(state.value(), "SELECT ([a, b]) FROM t");
+
+                state.undo(&Undo, window, cx);
+                assert_eq!(state.value(), "SELECT (a, b) FROM t");
+            });
+        });
     }
 
     #[gpui::test]
