@@ -3,7 +3,7 @@
 //! fields answer Left and Right.
 
 use super::hooks_section::{HookFocus, HookFormField};
-use super::keybindings_section::KeybindingsListItem;
+use super::keybindings_section::{KeybindingsListItem, KeybindingsSelection};
 use super::{ActiveSettingsSection, SettingsCoordinator, SettingsFocus, SettingsSectionId};
 use dbflux_app::keymap::Command;
 use dbflux_core::{HookExecutionMode, ThemeSetting};
@@ -96,11 +96,11 @@ fn ctrl_h_and_ctrl_l_move_between_navigation_and_section(cx: &mut TestAppContext
     );
 }
 
-/// The theme row of Appearance is a segmented field: Left and Right pick the
-/// choice next to the current one and stop at either end.
+/// The theme row is a segmented field: Left and Right pick the choice next
+/// to the current one and stop at either end.
 #[gpui::test]
 fn arrows_move_the_choice_of_a_segmented_general_row(cx: &mut TestAppContext) {
-    let (settings, window) = open_settings(cx, SettingsSectionId::Appearance);
+    let (settings, window) = open_settings(cx, SettingsSectionId::General);
     focus_content(&settings, window);
     assert_eq!(
         general_cursor(&settings, window),
@@ -238,21 +238,8 @@ fn the_keybindings_editor_records_sequences_and_edits_predicates(cx: &mut TestAp
         })
     });
     window.run_until_parked();
-    // The editor row is below the visible rows of the virtual list, as when
-    // a row is selected and its editor opens under it; bring it into view.
-    window.update(|_, cx| {
-        keybindings.update(cx, |section, _| {
-            let editor_index = section
-                .keybindings_items
-                .iter()
-                .position(|item| matches!(item, KeybindingsListItem::PredicateEditor { .. }))
-                .expect("the predicate editor row is in the list");
-            section.keybindings_list.scroll_to(gpui::ListOffset {
-                item_ix: editor_index,
-                offset_in_item: gpui::px(0.),
-            });
-        });
-    });
+    // The editor row opens below the drawn rows of the virtual list; opening
+    // it scrolls it into view, or its input could not take keys.
     for _ in 0..2 {
         window.update(|window, _| window.refresh());
         window.run_until_parked();
@@ -408,8 +395,75 @@ fn shift_g_scrolls_the_keybindings_list_to_its_last_row(cx: &mut TestAppContext)
         window.run_until_parked();
     }
 
+    window.update(|_, cx| {
+        let section = keybindings.read(cx);
+        let last = section.keybindings_items.len() - 1;
+        assert!(
+            section.keybindings_list.bounds_for_item(last).is_some(),
+            "the last row is drawn"
+        );
+    });
+}
+
+/// Collapsing a group halfway down the list keeps the list where it was,
+/// instead of jumping back to the top.
+#[gpui::test]
+fn collapsing_a_keybindings_group_keeps_the_scroll_position(cx: &mut TestAppContext) {
+    let _keymap_state = dbflux_ui_base::keymap::keymap_state_test_guard();
+
+    let (settings, window) = open_settings(cx, SettingsSectionId::Keybindings);
+    focus_content(&settings, window);
+
+    let keybindings = window.update(|_, cx| match &settings.read(cx).active_section_entity {
+        ActiveSettingsSection::Keybindings(section) => section.clone(),
+        _ => unreachable!("the keybindings section is open"),
+    });
+
+    window.update(|_, cx| {
+        keybindings.update(cx, |section, cx| {
+            section.keybindings_expanded.extend(
+                dbflux_app::keymap::ContextId::all_variants()
+                    .iter()
+                    .copied(),
+            );
+            cx.notify();
+        });
+    });
+    window.run_until_parked();
+
+    // Scroll to a context header far down, select it, and collapse it.
+    let header_index = window.update(|_, cx| {
+        keybindings.update(cx, |section, cx| {
+            let (header_index, ctx_idx) = section
+                .keybindings_items
+                .iter()
+                .enumerate()
+                .find_map(|(index, item)| match item {
+                    KeybindingsListItem::ContextHeader { ctx_idx, .. } if index > 20 => {
+                        Some((index, *ctx_idx))
+                    }
+                    _ => None,
+                })
+                .expect("a context header far down the list");
+            section.keybindings_selection = KeybindingsSelection::Context(ctx_idx);
+            section.keybindings_list.scroll_to(gpui::ListOffset {
+                item_ix: header_index,
+                offset_in_item: gpui::px(0.),
+            });
+            cx.notify();
+            header_index
+        })
+    });
+    window.run_until_parked();
+
+    window.simulate_keystrokes("enter");
+    for _ in 0..2 {
+        window.update(|window, _| window.refresh());
+        window.run_until_parked();
+    }
+
     let top = window.update(|_, cx| keybindings.read(cx).keybindings_list.logical_scroll_top());
-    assert!(top.item_ix > 0, "the list scrolled down to the last row");
+    assert_eq!(top.item_ix, header_index, "the list stays where it was");
 }
 
 /// Typing in the key bindings filter types: its letters are not the page's
@@ -621,77 +675,4 @@ fn every_settings_section_is_covered(cx: &mut TestAppContext) {
             "{section:?}: {checked:?}"
         );
     }
-}
-
-/// On Appearance, R restores the syntax color of the row under the cursor and
-/// Shift+R every syntax color of the variant shown.
-#[gpui::test]
-fn r_and_shift_r_restore_appearance_syntax_colors(cx: &mut TestAppContext) {
-    use super::general_section::GeneralFormRow;
-    use dbflux_core::SyntaxRole;
-
-    let (settings, window) = open_settings(cx, SettingsSectionId::Appearance);
-    focus_content(&settings, window);
-
-    let section = window.update(|_, cx| match &settings.read(cx).active_section_entity {
-        ActiveSettingsSection::General(section) => section.clone(),
-        _ => unreachable!("the appearance section is open"),
-    });
-
-    window.update(|_, cx| {
-        section.update(cx, |section, _| {
-            section.set_syntax_variant(ThemeSetting::Dark);
-            section.set_syntax_override(SyntaxRole::Keyword, "#111111".to_string());
-            section.set_syntax_override(SyntaxRole::String, "#222222".to_string());
-            section.gen_form_cursor = section
-                .gen_form_rows()
-                .iter()
-                .position(|row| *row == GeneralFormRow::SyntaxColor(SyntaxRole::Keyword))
-                .expect("keyword row");
-        });
-    });
-
-    let dark_overrides = |window: &mut VisualTestContext| {
-        window.update(|_, cx| section.read(cx).gen_settings.syntax_colors.dark.clone())
-    };
-
-    window.simulate_keystrokes("r");
-    let after_r = dark_overrides(window);
-    assert!(
-        !after_r.contains_key(&SyntaxRole::Keyword),
-        "R resets the row"
-    );
-    assert!(
-        after_r.contains_key(&SyntaxRole::String),
-        "other rows keep theirs"
-    );
-
-    let dark_accent = |window: &mut VisualTestContext| {
-        window.update(|_, cx| section.read(cx).gen_settings.accent_colors.dark.clone())
-    };
-    window.update(|_, cx| {
-        section.update(cx, |section, _| {
-            section.set_accent_override("#333333".to_string());
-            section.gen_form_cursor = section
-                .gen_form_rows()
-                .iter()
-                .position(|row| *row == GeneralFormRow::AccentColor)
-                .expect("accent row");
-        });
-    });
-    window.simulate_keystrokes("r");
-    assert_eq!(dark_accent(window), None, "R resets the accent row");
-    assert!(
-        dark_overrides(window).contains_key(&SyntaxRole::String),
-        "R on the accent row keeps the syntax colors"
-    );
-
-    window.update(|_, cx| {
-        section.update(cx, |section, _| {
-            section.set_accent_override("#333333".to_string())
-        });
-    });
-    window.simulate_keystrokes("shift-r");
-    assert!(dark_overrides(window).is_empty(), "Shift+R resets them all");
-    assert_eq!(dark_accent(window), None, "Shift+R resets the accent too");
 }
