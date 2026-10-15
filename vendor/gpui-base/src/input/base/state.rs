@@ -36,6 +36,7 @@ use super::{
     kind::InputModeKind,
     mask_pattern::normalize_number_input,
     mode::LayoutMode,
+    selection::TextSelector,
     undo_manager::{EditIntent, UndoManager},
 };
 use crate::actions::{SelectDown, SelectLeft, SelectRight, SelectUp};
@@ -3804,8 +3805,18 @@ impl<M: InputModeKind> InputBaseState<M> {
         M::clear_inline_completion(self, cx);
 
         self.cursor_line_end_affinity = line_end_affinity;
-        let offset = self.cursor_boundary(offset, Bias::Left);
         let word_range = self.selected_word_range;
+        // A drag that started with a double click grows by whole words.
+        let offset = match word_range {
+            Some(word) if !self.masked && offset > word.end => {
+                TextSelector::word_range(&self.text, offset - 1).map_or(offset, |range| range.end)
+            }
+            Some(word) if !self.masked && offset < word.start => {
+                TextSelector::word_range(&self.text, offset).map_or(offset, |range| range.start)
+            }
+            _ => offset,
+        };
+        let offset = self.cursor_boundary(offset, Bias::Left);
         Self::extend_selection(self.active_selection_mut(), offset, word_range);
         let range = self.normalize_token_range(self.selected_range());
         self.set_selection(range.start, range.end);
@@ -7999,6 +8010,28 @@ mod tests {
 
                 state.delete_previous_word(&DeleteToPreviousWordStart, window, cx);
                 assert_eq!(state.value(), "FROM ");
+            });
+        });
+    }
+
+    #[gpui::test]
+    fn test_double_click_drag_extends_by_whole_words(cx: &mut TestAppContext) {
+        let input_view = InputView::build(cx, |state| state);
+        let mut cx = VisualTestContext::from_window(input_view.window_handle.into(), cx);
+        let input = input_view.input;
+
+        cx.update(|window, cx| {
+            input.update(cx, |state, cx| {
+                state.set_value("aaa bbb ccc ddd", window, cx);
+                state.select_word(5, window, cx);
+                assert_eq!(state.selected_range(), 4..7);
+
+                state.select_to(9, cx);
+                assert_eq!(state.selected_range(), 4..11);
+                state.select_to(1, cx);
+                assert_eq!(state.selected_range(), 0..7);
+                state.select_to(6, cx);
+                assert_eq!(state.selected_range(), 4..7);
             });
         });
     }
