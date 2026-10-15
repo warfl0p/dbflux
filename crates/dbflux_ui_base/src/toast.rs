@@ -772,7 +772,9 @@ impl ToastHost {
                         .child(meta),
                 )
             })
-            .child(gpui::div().flex_shrink_0().child(close_button));
+            // Pinned to the top so the button sits at the same spot in every
+            // toast: dismissing one moves the next under the pointer.
+            .child(gpui::div().flex_shrink_0().self_start().child(close_button));
 
         // `.occlude()` makes the toast card opaque to hit-testing so clicks on
         // empty toast area do not leak through to the workspace underneath.
