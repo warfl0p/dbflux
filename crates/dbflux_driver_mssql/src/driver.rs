@@ -2731,6 +2731,34 @@ impl Connection for MssqlConnection {
         get_schema_routines(self, database, schema_name)
     }
 
+    fn view_definition(
+        &self,
+        database: &str,
+        schema: Option<&str>,
+        name: &str,
+    ) -> Result<Option<String>, DbError> {
+        let qualified_db = format!("[{}]", database.replace(']', "]]"));
+        let escaped_schema = schema.unwrap_or("dbo").replace('\'', "''");
+        let escaped_name = name.replace('\'', "''");
+
+        let sql = format!(
+            "SELECT CAST(m.definition AS NVARCHAR(MAX)) AS definition \
+             FROM {qualified_db}.sys.views v \
+             JOIN {qualified_db}.sys.schemas s ON s.schema_id = v.schema_id \
+             JOIN {qualified_db}.sys.sql_modules m ON m.object_id = v.object_id \
+             WHERE s.name = '{escaped_schema}' AND v.name = '{escaped_name}'"
+        );
+
+        let result = self.execute_simple(&sql)?;
+
+        Ok(result.rows.into_iter().next().and_then(|row| {
+            row.into_iter().next().and_then(|value| match value {
+                Value::Text(definition) => Some(definition),
+                _ => None,
+            })
+        }))
+    }
+
     fn routine_definition(
         &self,
         _database: &str,

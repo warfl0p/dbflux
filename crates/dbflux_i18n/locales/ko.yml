@@ -1653,6 +1653,9 @@ document:
         view_table_data: "데이터 보기"
         view_table_columns: "열 보기"
         view_table_partitions: "파티션 보기"
+        view_table_properties: "속성 보기"
+        view_table_statistics: "통계 보기"
+        view_table_source: "소스 보기"
         column_picker: "열 선택"
         refresh_profile: "열 통계 새로 고침"
         sample_profile: "처음 행 프로파일링"
@@ -1889,6 +1892,22 @@ document:
         data: "데이터"
         columns: "열"
         partitions: "파티션"
+        properties: "속성"
+      section:
+        statistics: "통계"
+        source: "소스"
+      properties:
+        column:
+          name: "열 이름"
+          position: "#"
+          type: "데이터 유형"
+          not_null: "Null 불가"
+          default: "기본값"
+          primary_key: "기본 키"
+        loading: "속성을 읽는 중…"
+        no_columns: "열 없음"
+        columns_failed: "열 읽기 실패: %{error}"
+        source_failed: "뷰 소스 읽기 실패: %{error}"
       projection_keeps_keys: "행을 편집할 수 있도록 기본 키는 프로젝션에 남습니다: %{columns}"
       sample_failed: "샘플 프로파일링 실패: %{error}"
       badge:

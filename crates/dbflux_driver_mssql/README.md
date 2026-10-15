@@ -136,6 +136,8 @@ Requires the `VIEW SERVER STATE` permission.
   table-valued functions (`IF`), multi-statement table-valued functions (`TF`),
   and CLR aggregates (`AF`) are listed per schema via `sys.objects`. Source
   definitions are fetched with `OBJECT_DEFINITION(object_id)`.
+- **View source:** `view_definition` returns a view's `CREATE VIEW` text from
+  `sys.sql_modules` for the Source section of its Properties.
 
 ### Faithful CREATE TABLE (schema diff)
 
@@ -354,6 +356,8 @@ Requires the `VIEW SERVER STATE` permission.
   SQL Browser service on UDP 1434) but not when going through an SSH tunnel,
   since libssh2 only forwards TCP. The standard workaround is to assign a
   static TCP port to the instance and connect to that port directly.
+- `table_details` reads columns from `sys.tables`, so the Columns section of a
+  view's Properties is empty; its Source section still shows the definition.
 - Schema introspection uses the `sys.*` catalog views; users without the
   default `VIEW DEFINITION` permission will see partial metadata. SQL
   Server's metadata visibility rules apply.

@@ -19,6 +19,7 @@ Popular open-source relational database.
 - Supports query cancellation through a dedicated cancel path (`KILL QUERY` flow).
 - Includes SQL/code generation for CRUD, indexes, foreign keys, and table DDL operations.
 - Routine discovery: lists stored procedures and user-defined functions from `information_schema.ROUTINES` including parameter types and return type hints (Functions only).
+- View source: `view_definition` returns `SHOW CREATE VIEW` for the Source section of a view's Properties.
 - Routine definition: retrieves the full `CREATE FUNCTION` or `CREATE PROCEDURE` body via `SHOW CREATE FUNCTION`/`SHOW CREATE PROCEDURE` (read-only; definition is not editable or executable in the viewer).
 - Multi-statement scripts (several `;`-separated statements) are split and executed statement by statement, each through the typed prepared path, returning one result set per statement. A statement the server refuses to prepare, such as `START TRANSACTION` or `BEGIN` on MySQL, runs through the text protocol instead. An explicit row limit retains at most N rows total across script and server result sets, flagging actual omitted rows even when N is zero; later mutations still complete and errors propagate.
 - Data-transfer engine: native multi-row `INSERT` bulk-load (`BULK_INSERT`), driver-native `CREATE TABLE` DDL from a source table's columns, `TRUNCATE TABLE` support, and a referential-integrity toggle (`SET FOREIGN_KEY_CHECKS`) for FK-safe migrations. Both MySQL and MariaDB share this support.

@@ -1,8 +1,9 @@
-//! The Columns and Partitions views of a table, next to its Data grid.
+//! The Properties and Partitions views of a table, next to its Data grid.
 //!
-//! A table gets them only when its connection reports the matching
-//! [`TableViewFeatures`]; the grid never checks a driver id. The profile
-//! behind the Columns view is read from metadata when the table opens (the
+//! Every table gets Properties (see `table_properties`); its Statistics
+//! section and the Partitions view need the matching [`TableViewFeatures`]
+//! of the connection; the grid never checks a driver id. The profile
+//! behind the Statistics section is read from metadata when the table opens (the
 //! driver promises not to read rows for it), and it also feeds the Data grid:
 //! the second header line of each column, the column projection picker and
 //! the read estimate. Reading a sample of rows is an explicit, audited action.
@@ -38,29 +39,26 @@ use dbflux_ui_base::user_error::{ErrorKind, UserFacingError, report_error, repor
 use gpui::*;
 use gpui_component::ActiveTheme;
 
+use super::table_properties::PropertiesSection;
 use super::{DataGridPanel, DataSource, TableReload};
 
 /// Rows a sample profile reads. The limit goes inside the query the driver
 /// runs, so a sample never reads more.
 pub(super) const SAMPLE_PROFILE_ROWS: u64 = 1_000_000;
 
-/// Data, Columns or Partitions, the views of a table.
+/// Data, Properties or Partitions, the views of a table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum TableTab {
     #[default]
     Data,
-    Columns,
+    Properties,
     Partitions,
 }
 
-/// The table views `features` offer, in header order: Data always, Columns
-/// with a column profile, Partitions with partitions.
+/// The table views `features` offer, in header order: Data and Properties
+/// always, Partitions with partitions.
 pub(super) fn available_table_tabs(features: TableViewFeatures) -> Vec<TableTab> {
-    let mut tabs = vec![TableTab::Data];
-
-    if features.contains(TableViewFeatures::COLUMN_PROFILE) {
-        tabs.push(TableTab::Columns);
-    }
+    let mut tabs = vec![TableTab::Data, TableTab::Properties];
 
     if features.contains(TableViewFeatures::PARTITIONS) {
         tabs.push(TableTab::Partitions);
@@ -82,6 +80,7 @@ pub(super) struct TableViewsState {
     profile_generation: u64,
     pub(super) profile_view: Option<Entity<ColumnProfileView>>,
     pub(super) partitions_view: Option<Entity<PartitionListView>>,
+    pub(super) properties: super::table_properties::TablePropertiesState,
     partitions_requested: bool,
     /// Bumped on every partitions read, so a late answer is dropped.
     partitions_generation: u64,
@@ -144,8 +143,8 @@ impl DataGridPanel {
     }
 
     /// Reads the connection's table view features and, when it offers a
-    /// column profile, builds the Columns (and Partitions) views and starts
-    /// reading the profile from metadata.
+    /// column profile, builds the Statistics section (and the Partitions
+    /// view) and starts reading the profile from metadata.
     pub(super) fn init_table_views(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(connection) = self.table_view_connection(cx) else {
             return;
@@ -238,6 +237,10 @@ impl DataGridPanel {
             self.load_table_partitions(cx);
         }
 
+        if tab == TableTab::Properties {
+            self.ensure_table_properties(window, cx);
+        }
+
         cx.notify();
     }
 
@@ -277,10 +280,8 @@ impl DataGridPanel {
     pub(super) fn focus_table_view(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         match self.table_views.tab {
             TableTab::Data => false,
-            TableTab::Columns => {
-                if let Some(view) = self.table_views.profile_view.clone() {
-                    view.update(cx, |view, cx| view.focus(window, cx));
-                }
+            TableTab::Properties => {
+                self.focus_table_properties(window, cx);
                 true
             }
             TableTab::Partitions => {
@@ -292,7 +293,7 @@ impl DataGridPanel {
         }
     }
 
-    /// Whether the Columns view offers to profile a sample of rows.
+    /// Whether the Statistics section offers to profile a sample of rows.
     pub(super) fn offers_sample_profile(&self) -> bool {
         self.table_views
             .features
@@ -300,7 +301,7 @@ impl DataGridPanel {
             && self.table_views.profile.is_some()
     }
 
-    /// Starts a sample profile through the Columns view, which refuses it
+    /// Starts a sample profile through the Statistics section, which refuses it
     /// while another profile action runs.
     pub(super) fn request_sample_profile(&mut self, cx: &mut Context<Self>) {
         if let Some(view) = self.table_views.profile_view.clone() {
@@ -310,7 +311,7 @@ impl DataGridPanel {
         }
     }
 
-    /// Commands for the Columns and Partitions views. `None` lets the
+    /// Commands for the Properties and Partitions views. `None` lets the
     /// command reach the grid's own handling (menus, focus moves); the grid
     /// itself is hidden, so table edits and reads are swallowed here.
     pub(super) fn dispatch_table_view_command(
@@ -321,20 +322,27 @@ impl DataGridPanel {
     ) -> Option<bool> {
         use dbflux_app::keymap::Command;
 
+        let statistics = self.table_views.tab == TableTab::Properties
+            && self.properties_section() == PropertiesSection::Statistics;
+
         match (self.table_views.tab, cmd) {
             (TableTab::Data, _) => None,
-            (TableTab::Columns, Command::CycleResultView) => {
+            (TableTab::Properties, Command::CycleResultView) if statistics => {
                 let view = self.table_views.profile_view.clone()?;
                 view.update(cx, |view, cx| view.cycle_sort(cx));
                 Some(true)
             }
-            (TableTab::Columns, Command::FocusSearch) => {
+            (TableTab::Properties, Command::FocusSearch) if statistics => {
                 let view = self.table_views.profile_view.clone()?;
                 view.update(cx, |view, cx| view.focus_filter(window, cx));
                 Some(true)
             }
-            (TableTab::Columns, Command::RefreshSchema) => {
+            (TableTab::Properties, Command::RefreshSchema) if statistics => {
                 self.load_table_profile(cx);
+                Some(true)
+            }
+            (TableTab::Properties, Command::RefreshSchema) => {
+                self.load_table_properties(window, cx);
                 Some(true)
             }
             (TableTab::Partitions, Command::RefreshSchema) => {
@@ -525,7 +533,7 @@ impl DataGridPanel {
             && self.builder.current_visual_spec.is_none()
     }
 
-    /// Offers the Columns view's column toggles only while a projection
+    /// Offers the Statistics section's column toggles only while a projection
     /// applies, so it never shows a selection the grid is ignoring.
     fn sync_columns_view_projection(&mut self, cx: &mut Context<Self>) {
         let applies = self.table_projection_applies();
@@ -916,7 +924,7 @@ impl DataGridPanel {
         .detach();
     }
 
-    /// Data / Columns / Partitions switch at the right of the header; only
+    /// Data / Properties / Partitions switch at the right of the header; only
     /// the views the connection offers are shown.
     pub(super) fn render_table_tabs(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let panel = cx.entity().downgrade();
@@ -930,11 +938,11 @@ impl DataGridPanel {
                     dbflux_i18n::t!("document.data.table_views.tab.data"),
                 )
                 .icon(AppIcon::Table),
-                TableTab::Columns => SegmentedItem::new(
+                TableTab::Properties => SegmentedItem::new(
                     table_tab_id(tab),
-                    dbflux_i18n::t!("document.data.table_views.tab.columns"),
+                    dbflux_i18n::t!("document.data.table_views.tab.properties"),
                 )
-                .icon(AppIcon::Columns),
+                .icon(AppIcon::Info),
                 TableTab::Partitions => SegmentedItem::new(
                     table_tab_id(tab),
                     dbflux_i18n::t!("document.data.table_views.tab.partitions"),
@@ -948,7 +956,7 @@ impl DataGridPanel {
             table_tab_id(self.table_views.tab),
             move |selected, window, cx| {
                 let tab = match selected.as_ref() {
-                    "columns" => TableTab::Columns,
+                    "properties" => TableTab::Properties,
                     "partitions" => TableTab::Partitions,
                     _ => TableTab::Data,
                 };
@@ -979,14 +987,10 @@ impl DataGridPanel {
         )
     }
 
-    /// The body of the Columns or Partitions tab.
-    pub(super) fn render_table_view_body(&self, _cx: &mut Context<Self>) -> AnyElement {
+    /// The body of the Properties or Partitions tab.
+    pub(super) fn render_table_view_body(&self, cx: &mut Context<Self>) -> AnyElement {
         let view = match self.table_views.tab {
-            TableTab::Columns => self
-                .table_views
-                .profile_view
-                .clone()
-                .map(IntoElement::into_any_element),
+            TableTab::Properties => Some(self.render_table_properties(cx)),
             TableTab::Partitions => self
                 .table_views
                 .partitions_view
@@ -1042,7 +1046,7 @@ impl DataGridPanel {
 pub(super) fn table_tab_id(tab: TableTab) -> &'static str {
     match tab {
         TableTab::Data => "data",
-        TableTab::Columns => "columns",
+        TableTab::Properties => "properties",
         TableTab::Partitions => "partitions",
     }
 }

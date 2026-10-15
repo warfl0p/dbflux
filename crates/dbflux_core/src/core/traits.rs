@@ -1440,6 +1440,21 @@ pub trait Connection: Send + Sync {
         ))
     }
 
+    /// Fetch the source of a view as a statement that recreates it, such as
+    /// `CREATE VIEW name AS SELECT ...`.
+    ///
+    /// Returns `Ok(None)` when the object is not a view, or when the driver
+    /// cannot read view definitions (the default). The Properties view of a
+    /// table shows its Source section only for `Some`.
+    fn view_definition(
+        &self,
+        _database: &str,
+        _schema: Option<&str>,
+        _name: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(None)
+    }
+
     /// Best-effort extraction of tables referenced by a SQL query string.
     ///
     /// Returns `None` if the driver cannot parse the query, or `Some(refs)` with

@@ -2520,6 +2520,46 @@ impl Connection for MysqlConnection {
         fetch_schema_routines(&mut conn, database)
     }
 
+    fn view_definition(
+        &self,
+        database: &str,
+        _schema: Option<&str>,
+        name: &str,
+    ) -> Result<Option<String>, DbError> {
+        let mut conn = self
+            .catalog_conn
+            .lock()
+            .map_err(|e| DbError::query_failed(format!("Lock error: {}", e)))?;
+
+        let view_rows: Vec<mysql::Row> = conn
+            .exec(
+                r"SELECT 1 FROM information_schema.VIEWS
+                  WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+                (database, name),
+            )
+            .map_err(|e| format_mysql_query_error(&e))?;
+
+        if view_rows.is_empty() {
+            return Ok(None);
+        }
+
+        // SHOW CREATE takes no placeholders for identifiers; backtick-escaping
+        // keeps the names inert.
+        let show_sql = format!(
+            "SHOW CREATE VIEW `{}`.`{}`",
+            database.replace('`', "``"),
+            name.replace('`', "``")
+        );
+
+        let rows: Vec<mysql::Row> = conn
+            .query(&show_sql)
+            .map_err(|e| format_mysql_query_error(&e))?;
+
+        Ok(rows
+            .first()
+            .and_then(|row| row.get::<String, _>("Create View")))
+    }
+
     fn routine_definition(
         &self,
         _database: &str,

@@ -1653,6 +1653,9 @@ document:
         view_table_data: "Mostrar Datos"
         view_table_columns: "Mostrar Columnas"
         view_table_partitions: "Mostrar Particiones"
+        view_table_properties: "Mostrar Propiedades"
+        view_table_statistics: "Mostrar Estadísticas"
+        view_table_source: "Mostrar Código fuente"
         column_picker: "Elegir columnas"
         refresh_profile: "Actualizar estadísticas de columnas"
         sample_profile: "Perfilar las primeras filas"
@@ -1889,6 +1892,22 @@ document:
         data: "Datos"
         columns: "Columnas"
         partitions: "Particiones"
+        properties: "Propiedades"
+      section:
+        statistics: "Estadísticas"
+        source: "Código fuente"
+      properties:
+        column:
+          name: "Nombre de columna"
+          position: "#"
+          type: "Tipo de dato"
+          not_null: "No nulo"
+          default: "Predeterminado"
+          primary_key: "Clave primaria"
+        loading: "Leyendo las propiedades…"
+        no_columns: "Sin columnas"
+        columns_failed: "Falló la lectura de las columnas: %{error}"
+        source_failed: "Falló la lectura del código de la vista: %{error}"
       projection_keeps_keys: "La clave primaria sigue en la proyección para poder editar filas: %{columns}"
       sample_failed: "Falló el perfilado de la muestra: %{error}"
       badge:

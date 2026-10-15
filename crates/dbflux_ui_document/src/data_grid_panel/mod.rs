@@ -17,6 +17,7 @@ mod render;
 mod result_search;
 pub(crate) mod row_inspector;
 pub(crate) mod side_island;
+mod table_properties;
 mod table_views;
 mod utils;
 pub(crate) mod value_panel;

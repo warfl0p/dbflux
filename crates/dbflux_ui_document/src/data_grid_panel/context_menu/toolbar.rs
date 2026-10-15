@@ -10,6 +10,7 @@ use crate::DataViewMode;
 use crate::chart::keyboard::step_time_range;
 use crate::data_grid_panel::documents::CollectionTab;
 use crate::data_grid_panel::documents::builder::BuilderSupport;
+use crate::data_grid_panel::table_properties::PropertiesSection;
 use crate::data_grid_panel::table_views::TableTab;
 use crate::data_grid_panel::value_panel::ValuePanelButton;
 use crate::data_grid_panel::{ChartRailTab, DataGridPanel, DataSource};
@@ -75,13 +76,15 @@ pub(crate) enum ToolbarAction {
     StepToRoot,
     /// A view tab of a document collection (Documents, Schema, Aggregate).
     CollectionView(CollectionTab),
-    /// A view tab of a table (Data, Columns, Partitions).
+    /// A view tab of a table (Data, Properties, Partitions).
     TableView(TableTab),
+    /// A section of a table's Properties view (Columns, Statistics, Source).
+    PropertiesSection(PropertiesSection),
     /// The column picker of a table's Data view: opens it for the keyboard.
     ColumnPicker,
-    /// Reads a table's column profile again (Columns view).
+    /// Reads a table's column profile again (Statistics section).
     RefreshProfile,
-    /// Profiles a sample of a table's rows (Columns view).
+    /// Profiles a sample of a table's rows (Statistics section).
     SampleProfile,
     /// Reads a table's partitions again (Partitions view).
     RefreshPartitions,
@@ -164,7 +167,12 @@ impl ToolbarAction {
             ToolbarAction::CollectionView(CollectionTab::Schema) => "view-schema",
             ToolbarAction::CollectionView(CollectionTab::Aggregate) => "view-aggregate",
             ToolbarAction::TableView(TableTab::Data) => "view-table-data",
-            ToolbarAction::TableView(TableTab::Columns) => "view-table-columns",
+            ToolbarAction::TableView(TableTab::Properties) => "view-table-properties",
+            ToolbarAction::PropertiesSection(PropertiesSection::Columns) => "view-table-columns",
+            ToolbarAction::PropertiesSection(PropertiesSection::Statistics) => {
+                "view-table-statistics"
+            }
+            ToolbarAction::PropertiesSection(PropertiesSection::Source) => "view-table-source",
             ToolbarAction::TableView(TableTab::Partitions) => "view-table-partitions",
             ToolbarAction::ColumnPicker => "column-picker",
             ToolbarAction::RefreshProfile => "refresh-profile",
@@ -219,7 +227,8 @@ impl ToolbarAction {
             ToolbarAction::CollectionView(CollectionTab::Schema) => AppIcon::Layers,
             ToolbarAction::CollectionView(CollectionTab::Aggregate) => AppIcon::Braces,
             ToolbarAction::TableView(TableTab::Data) => AppIcon::Table,
-            ToolbarAction::TableView(TableTab::Columns) => AppIcon::Columns,
+            ToolbarAction::TableView(TableTab::Properties) => AppIcon::Info,
+            ToolbarAction::PropertiesSection(section) => section.icon(),
             ToolbarAction::TableView(TableTab::Partitions) => AppIcon::Layers,
             ToolbarAction::ColumnPicker => AppIcon::Columns,
             ToolbarAction::RefreshProfile | ToolbarAction::RefreshPartitions => AppIcon::RefreshCcw,
@@ -311,7 +320,12 @@ impl DataGridPanel {
 
         let current_tab = self.table_tab();
 
-        if current_tab == TableTab::Columns && self.table_views.profile_view.is_some() {
+        let properties_section =
+            (current_tab == TableTab::Properties).then(|| self.properties_section());
+
+        if properties_section == Some(PropertiesSection::Statistics)
+            && self.table_views.profile_view.is_some()
+        {
             actions.push(ToolbarAction::RefreshProfile);
 
             if self.offers_sample_profile() {
@@ -321,6 +335,15 @@ impl DataGridPanel {
 
         if current_tab == TableTab::Partitions && self.table_views.partitions_view.is_some() {
             actions.push(ToolbarAction::RefreshPartitions);
+        }
+
+        if let Some(current_section) = properties_section {
+            actions.extend(
+                self.properties_sections()
+                    .into_iter()
+                    .filter(|section| *section != current_section)
+                    .map(ToolbarAction::PropertiesSection),
+            );
         }
 
         actions.extend(
@@ -574,8 +597,17 @@ impl DataGridPanel {
             ToolbarAction::TableView(TableTab::Data) => {
                 dbflux_i18n::t!("document.data.context_menu.toolbar.view_table_data")
             }
-            ToolbarAction::TableView(TableTab::Columns) => {
+            ToolbarAction::TableView(TableTab::Properties) => {
+                dbflux_i18n::t!("document.data.context_menu.toolbar.view_table_properties")
+            }
+            ToolbarAction::PropertiesSection(PropertiesSection::Columns) => {
                 dbflux_i18n::t!("document.data.context_menu.toolbar.view_table_columns")
+            }
+            ToolbarAction::PropertiesSection(PropertiesSection::Statistics) => {
+                dbflux_i18n::t!("document.data.context_menu.toolbar.view_table_statistics")
+            }
+            ToolbarAction::PropertiesSection(PropertiesSection::Source) => {
+                dbflux_i18n::t!("document.data.context_menu.toolbar.view_table_source")
             }
             ToolbarAction::TableView(TableTab::Partitions) => {
                 dbflux_i18n::t!("document.data.context_menu.toolbar.view_table_partitions")
@@ -781,6 +813,10 @@ impl DataGridPanel {
             ToolbarAction::CollectionView(tab) => self.set_collection_tab(tab, cx),
             ToolbarAction::TableView(tab) => {
                 self.set_table_tab(tab, window, cx);
+                self.focus_table_view(window, cx);
+            }
+            ToolbarAction::PropertiesSection(section) => {
+                self.set_properties_section(section, cx);
                 self.focus_table_view(window, cx);
             }
             ToolbarAction::ColumnPicker => {

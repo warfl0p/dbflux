@@ -226,7 +226,7 @@ impl Render for DataGridPanel {
         self.ensure_table_view_controls(window, cx);
         let st = self.derive_render_state(cx);
 
-        // The Columns and Partitions views of a table replace the filter row,
+        // The Properties and Partitions views of a table replace the filter row,
         // the grid and the status bar; the header with the tabs stays.
         let table_side_view =
             !st.document_collection && self.table_tab() != super::table_views::TableTab::Data;
