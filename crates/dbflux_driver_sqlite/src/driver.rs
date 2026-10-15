@@ -1044,6 +1044,24 @@ impl Connection for SqliteConnection {
         })
     }
 
+    fn view_definition(
+        &self,
+        _database: &str,
+        _schema: Option<&str>,
+        name: &str,
+    ) -> Result<Option<String>, DbError> {
+        let conn = self.lock_connection()?;
+
+        conn.query_row(
+            "SELECT sql FROM sqlite_master WHERE type = 'view' AND name = ?1 COLLATE NOCASE",
+            [name],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .optional()
+        .map(Option::flatten)
+        .map_err(|e| format_sqlite_query_error(&e))
+    }
+
     fn schema_indexes(
         &self,
         _database: &str,
@@ -3028,6 +3046,31 @@ mod tests {
         assert_eq!(column_names(&other_case), ["a"]);
 
         assert!(connection.table_details("main", None, "nope").is_err());
+    }
+
+    /// A view's source is the statement that created it; a table has none.
+    #[test]
+    fn view_definition_returns_the_create_statement_of_views_only() {
+        use dbflux_core::Connection;
+
+        let connection = engine_names_connection();
+
+        let source = connection
+            .view_definition("main", None, "DOUBLED_VIEW")
+            .expect("the definition reads");
+        assert!(
+            source
+                .as_deref()
+                .is_some_and(|sql| sql.starts_with("CREATE VIEW")),
+            "unexpected source: {source:?}"
+        );
+
+        assert_eq!(
+            connection
+                .view_definition("main", None, "doubled")
+                .expect("a table reads"),
+            None
+        );
     }
 
     // --- kind_from_decltype unit tests (TDD: RED → GREEN) ---

@@ -2277,6 +2277,41 @@ impl Connection for PostgresConnection {
         get_schema_routines(&mut client, schema_name)
     }
 
+    fn view_definition(
+        &self,
+        _database: &str,
+        schema: Option<&str>,
+        name: &str,
+    ) -> Result<Option<String>, DbError> {
+        let schema_name = schema.unwrap_or("public");
+
+        let mut client = self
+            .client
+            .lock()
+            .map_err(|e| DbError::QueryFailed(format!("Lock error: {}", e).into()))?;
+
+        let row = client
+            .query_opt(
+                r#"
+                SELECT c.relkind::text AS relkind,
+                       pg_catalog.pg_get_viewdef(c.oid, true) AS definition
+                FROM pg_catalog.pg_class c
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = $1
+                  AND c.relname = $2
+                  AND c.relkind IN ('v', 'm')
+                "#,
+                &[&schema_name, &name],
+            )
+            .map_err(|e| format_pg_query_error(&e))?;
+
+        Ok(row.map(|row| {
+            let relkind: String = row.get("relkind");
+            let definition: String = row.get("definition");
+            postgres_view_statement(schema_name, name, relkind == "m", &definition)
+        }))
+    }
+
     fn routine_definition(
         &self,
         _database: &str,
@@ -6043,6 +6078,28 @@ fn has_application_name(conn_str: &str) -> bool {
 fn pg_quote_ident(ident: &str) -> String {
     debug_assert!(!ident.is_empty(), "identifier cannot be empty");
     format!("\"{}\"", ident.replace('"', "\"\""))
+}
+
+/// The statement that recreates a view from the query `pg_get_viewdef`
+/// returns, which starts with a space and ends with a semicolon.
+fn postgres_view_statement(
+    schema: &str,
+    name: &str,
+    materialized: bool,
+    definition: &str,
+) -> String {
+    let create = if materialized {
+        "CREATE MATERIALIZED VIEW"
+    } else {
+        "CREATE OR REPLACE VIEW"
+    };
+
+    format!(
+        "{create} {}.{} AS\n{}",
+        pg_quote_ident(schema),
+        pg_quote_ident(name),
+        definition.trim_start()
+    )
 }
 
 fn is_safe_postgres_type_expression(expression: &str) -> bool {

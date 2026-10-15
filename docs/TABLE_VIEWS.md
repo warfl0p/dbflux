@@ -1,37 +1,59 @@
 # Columns and Partitions
 
-A table whose driver can describe its storage opens with more than its rows.
-The header gets a **Data | Columns** switch, plus **Partitions** for
-ClickHouse, and the Data view gains a column picker and, on ClickHouse, an
-estimate of what the next read costs. Everything these views show comes from
-metadata the server already keeps, so opening a table reads no more rows than
-before.
+Every table and view opens with a **Data | Properties** switch in its header.
+**Properties** has a list of sections on its left:
 
-| Driver | Columns from | Partitions | Read estimate | Profile the first rows | Column picker |
+- **Columns**: one row per column with its position, type, whether it is
+  `NOT NULL`, its default and whether it is part of the primary key.
+- **Statistics**: column statistics, for a table whose driver can describe
+  its storage (see [Statistics](#statistics)).
+- **Source**: for a view, the statement that creates it, read-only and
+  highlighted, to select and copy.
+
+Properties is read the first time it opens; `F5` on the Columns or Source
+section reads it again.
+
+| Driver | Source of a view |
+|--------|------------------|
+| PostgreSQL | `pg_get_viewdef`, as `CREATE OR REPLACE VIEW`; a materialized view as `CREATE MATERIALIZED VIEW` |
+| MySQL / MariaDB | `SHOW CREATE VIEW` |
+| SQLite | The `CREATE VIEW` statement kept in `sqlite_master` |
+| SQL Server | `sys.sql_modules` |
+
+Other drivers show no Source section.
+
+A table whose driver can describe its storage gets more: the Statistics
+section, a **Partitions** view for ClickHouse, a column picker in the Data
+view and, on ClickHouse, an estimate of what the next read costs. Everything
+these views show comes from metadata the server already keeps, so opening a
+table reads no more rows than before.
+
+| Driver | Statistics from | Partitions | Read estimate | Profile the first rows | Column picker |
 |--------|--------------|------------|---------------|------------------|---------------|
 | ClickHouse | `system.columns`, `system.tables`, `system.parts` | Yes | Yes | Yes | Yes |
 | DuckDB | `duckdb_columns()`, `pragma_storage_info` | — | — | Yes | Yes |
 | Redshift | `pg_attribute`, `svv_table_info` | — | — | — | Yes |
 | PostgreSQL | `pg_stats` (planner statistics) | — | — | — | Yes |
 
-Other drivers keep the plain table view. The driver decides which of these a
-table gets; DBFlux never checks which database it is talking to.
+Other drivers show Properties without Statistics. The driver decides which of
+these a table gets; DBFlux never checks which database it is talking to.
 
 ## Switching views
 
 | Action | How |
 |--------|-----|
-| Next / previous view | `Alt+l` / `Alt+h`, or the **Data / Columns / Partitions** switch in the header |
-| From the table menu | `m` → Toolbar → **Show Columns**, **Show Partitions**, **Show Data** |
+| Next / previous view | `Alt+l` / `Alt+h`, or the **Data / Properties / Partitions** switch in the header |
+| From the table menu | `m` → Toolbar → **Show Properties**, **Show Partitions**, **Show Data** |
+| A section of Properties | Click it, or `m` → Toolbar → **Show Columns**, **Show Statistics**, **Show Source** |
 
-The Columns and Partitions views replace the filter row, the grid and the
+The Properties and Partitions views replace the filter row, the grid and the
 status bar; the header stays.
 
-## The Columns view
+## Statistics
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/table-views/columns-dark.webp">
-  <img src="images/table-views/columns-light.webp" alt="The Columns view of a PostgreSQL customers table, with the table facts above and one row per column with its distinct values, nulls and range">
+  <img src="images/table-views/columns-light.webp" alt="The column statistics of a PostgreSQL customers table, with the table facts above and one row per column with its distinct values, nulls and range">
 </picture>
 
 One row per column, in table order, with the facts the source knows. A fact
@@ -88,7 +110,7 @@ The profile reads the first rows the server returns, not a random sample. On
 a ClickHouse MergeTree table these rows follow the sort key, so the range of a
 leading sort key column can be much narrower than the table's.
 
-### Keys in the Columns view
+### Keys in Statistics
 
 | Key | Action |
 |-----|--------|
@@ -102,15 +124,15 @@ leading sort key column can be much narrower than the table's.
 
 The **N of M columns** button in the Data filter row (or `m` → Toolbar →
 **Choose columns**) picks the columns the table reads; the eye on each row of
-the Columns view does the same, at once. The query then names only those
+Statistics does the same, at once. The query then names only those
 columns instead of `SELECT *`, which on a columnar engine reads only their
 data. Choosing every column goes back to `SELECT *`.
 
 - On an editable table, the primary key stays in the projection so each row
   can still be saved. A notice says when DBFlux added it back.
 - A builder query or a relational filter (`orders.status = 'paid'`) chooses its
-  own columns, so the picker is hidden while one of them drives the rows. The
-  Columns view then hides its eyes too, and so does every Columns view on a
+  own columns, so the picker is hidden while one of them drives the rows.
+  Statistics then hides its eyes too, and so does Statistics on every
   connection that cannot choose columns.
 - A change with unsaved edits pending is refused, as every reload is.
 
@@ -149,7 +171,7 @@ reads it again.
 
 ## Limitations
 
-- DuckDB reports no size per column, so its Columns view has codecs, ranges and
+- DuckDB reports no size per column, so its Statistics have codecs, ranges and
   nulls but no sizes. String bounds come from segment statistics and are
   prefixes, marked `≈`. Nulls show 0% when no segment saw a null and are
   unknown otherwise. A DuckLake catalog has no storage information and shows
@@ -162,3 +184,4 @@ reads it again.
 - PostgreSQL statistics come from the planner, so they are estimates and are
   only as fresh as the last `ANALYZE`.
 - The chosen columns are not restored with the session.
+- SQL Server lists the Columns of a table only, not of a view.

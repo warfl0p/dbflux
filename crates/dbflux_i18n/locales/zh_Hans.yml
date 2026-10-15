@@ -1661,6 +1661,9 @@ document:
         view_table_data: "显示数据"
         view_table_columns: "显示列"
         view_table_partitions: "显示分区"
+        view_table_properties: "显示属性"
+        view_table_statistics: "显示统计"
+        view_table_source: "显示源代码"
         column_picker: "选择列"
         refresh_profile: "刷新列统计信息"
         sample_profile: "分析前几行"
@@ -1898,6 +1901,22 @@ document:
         data: "数据"
         columns: "列"
         partitions: "分区"
+        properties: "属性"
+      section:
+        statistics: "统计"
+        source: "源代码"
+      properties:
+        column:
+          name: "列名"
+          position: "#"
+          type: "数据类型"
+          not_null: "非空"
+          default: "默认值"
+          primary_key: "主键"
+        loading: "正在读取属性…"
+        no_columns: "没有列"
+        columns_failed: "读取列失败：%{error}"
+        source_failed: "读取视图源代码失败：%{error}"
       projection_keeps_keys: "主键保留在投影中，以便仍可编辑行：%{columns}"
       sample_failed: "分析样本失败：%{error}"
       badge:

@@ -48,7 +48,7 @@ Embedded analytical database, with optional DuckLake catalogs.
 - Each editor tab, grid mutation, and MCP call runs in its own session (a
   separate DuckDB connection to the shared instance), so a transaction left
   open in the editor does not capture other requests.
-- Table views (`TableViewFeatures`): a table's Columns view reads
+- Table views (`TableViewFeatures`): the Statistics section of a table's Properties reads
   `duckdb_columns()` and `pragma_storage_info` for each column's compression,
   min and max from segment statistics, nulls, row groups and rows. The Data
   view gets a column picker that names only the chosen columns in the query
@@ -99,7 +99,7 @@ Embedded analytical database, with optional DuckLake catalogs.
   environment-based providers instead.
 - Extensions that are not bundled are downloaded from the DuckDB extension
   repository the first time they load, which needs network access.
-- The Columns view has no per-column sizes. String bounds from segment
+- Statistics have no per-column sizes. String bounds from segment
   statistics are prefixes, marked `≈`. Nulls show 0% when no segment saw a
   null and are unknown otherwise. A DuckLake catalog has no storage
   information, so its tables show names and types only until a profile runs.
@@ -117,9 +117,9 @@ Files](../../docs/PARQUET_FILES.md).
 DuckDB's role is querying files with SQL. From a DuckDB connection, the editor
 runs `read_csv(...)` and `read_parquet(...)` like any other query.
 
-The Columns view is shared by files and tables, so a Parquet file, a CSV file
-and a DuckDB table show their columns in the same view. There is no separate
-columnar grid.
+Files and tables share one column view: a Parquet or CSV file shows it as its
+Columns view, a DuckDB table as the Statistics section of its Properties. There
+is no separate columnar grid.
 
 Known gaps:
 

@@ -1661,6 +1661,9 @@ document:
         view_table_data: "Show Data"
         view_table_columns: "Show Columns"
         view_table_partitions: "Show Partitions"
+        view_table_properties: "Show Properties"
+        view_table_statistics: "Show Statistics"
+        view_table_source: "Show Source"
         column_picker: "Choose columns"
         refresh_profile: "Refresh column statistics"
         sample_profile: "Profile the first rows"
@@ -1898,6 +1901,22 @@ document:
         data: "Data"
         columns: "Columns"
         partitions: "Partitions"
+        properties: "Properties"
+      section:
+        statistics: "Statistics"
+        source: "Source"
+      properties:
+        column:
+          name: "Column Name"
+          position: "#"
+          type: "Data Type"
+          not_null: "Not Null"
+          default: "Default"
+          primary_key: "Primary Key"
+        loading: "Reading the properties…"
+        no_columns: "No columns"
+        columns_failed: "Reading the columns failed: %{error}"
+        source_failed: "Reading the view source failed: %{error}"
       projection_keeps_keys: "The primary key stays in the projection so rows can still be edited: %{columns}"
       sample_failed: "Profiling a sample failed: %{error}"
       badge:

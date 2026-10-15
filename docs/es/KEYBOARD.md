@@ -401,7 +401,7 @@ no hacen nada. Borrar tampoco modifica el portapapeles.
 | `g` / `Shift+g` (o `Home` / `End`)            | Primera / última fila                      |
 | `Ctrl+d` / `Ctrl+u` (o `PageDown` / `PageUp`) | Página abajo / arriba                      |
 | `]` / `[`                                     | Página siguiente / anterior de resultados  |
-| `Alt+l` / `Alt+h`                             | Pestaña de resultados siguiente / anterior de una consulta, vista siguiente / anterior (Documentos, Esquema, Agregación) de una colección de documentos, o vista siguiente / anterior (Datos, Columnas, Particiones) de una tabla, dando la vuelta en los extremos |
+| `Alt+l` / `Alt+h`                             | Pestaña de resultados siguiente / anterior de una consulta, vista siguiente / anterior (Documentos, Esquema, Agregación) de una colección de documentos, o vista siguiente / anterior (Datos, Propiedades, Particiones) de una tabla, dando la vuelta en los extremos |
 | `Alt+w`                                       | Cerrar la pestaña de resultados visible; si era la última, el editor recibe el foco |
 | `F5`                                          | Recargar el documento enfocado (filas de la tabla, lista de buckets, listado de objetos, claves) |
 | `Ctrl+e` / `Cmd+e`                            | Abrir el menú de exportación: las teclas del menú contextual recorren los formatos de guardar y copiar, `Enter` ejecuta uno, `Escape` lo cierra |
@@ -444,13 +444,15 @@ tablas: `Alt+l` y `Alt+h` pasan de Claves más grandes a Por prefijo y viceversa
 tabla, un orden por columna de la tabla donde está el teclado (como lo hace un
 clic en la cabecera) y Cancelar mientras se lee el archivo.
 
-La vista Columnas de una tabla toma `j` / `k` para moverse entre columnas,
+La sección Estadísticas de las Propiedades de una tabla toma `j` / `k` para moverse entre columnas,
 `Space` para agregar a la vista Datos la columna bajo el cursor o quitarla,
 `Shift+t` para recorrer el orden (orden de la tabla, tamaño, nombre), `/` para
 filtrar las columnas y `F5` para volver a leer las estadísticas. En la vista
-Particiones, `F5` vuelve a leer las particiones. El submenú Barra de
-herramientas de `m` lista Mostrar Datos, Mostrar Columnas, Mostrar Particiones,
-Elegir columnas, Actualizar estadísticas de columnas, Perfilar las primeras
+Particiones, `F5` vuelve a leer las particiones. En las secciones
+Columnas y Código fuente, `F5` vuelve a leer las propiedades. El submenú Barra
+de herramientas de `m` lista Mostrar Datos, Mostrar Propiedades, Mostrar
+Particiones, las otras secciones de Propiedades (Mostrar Columnas, Mostrar
+Estadísticas, Mostrar Código fuente), Elegir columnas, Actualizar estadísticas de columnas, Perfilar las primeras
 filas y Actualizar particiones cuando la tabla los ofrece. Ver [Columnas y
 particiones](TABLE_VIEWS.md).
 

@@ -17,6 +17,7 @@ use dbflux_components::components::column_profile_view::ProfileAction;
 
 use super::{TableTab, available_table_tabs, header_annotations};
 use crate::data_grid_panel::DataGridPanel;
+use crate::data_grid_panel::table_properties::{PropertiesSection, columns_table_model};
 
 /// What the stub connection was asked, for the assertions.
 #[derive(Default)]
@@ -26,6 +27,7 @@ struct Calls {
     partitions: usize,
     estimates: Vec<TableBrowseRequest>,
     samples: usize,
+    view_definitions: usize,
     /// Makes every browse fail, as a driver error would.
     fail_browses: bool,
     /// Makes every sample fail, as a driver error would.
@@ -174,6 +176,54 @@ impl Connection for StubColumnarConnection {
 
     fn table_view_features(&self) -> TableViewFeatures {
         self.features
+    }
+
+    fn table_details(
+        &self,
+        _: &str,
+        schema: Option<&str>,
+        table: &str,
+    ) -> Result<dbflux_core::TableInfo, DbError> {
+        let column = |name: &str, type_name: &str| dbflux_core::ColumnInfo {
+            name: name.to_string(),
+            type_name: type_name.to_string(),
+            nullable: true,
+            is_primary_key: false,
+            default_value: None,
+            enum_values: None,
+        };
+
+        Ok(dbflux_core::TableInfo {
+            name: table.to_string(),
+            schema: schema.map(String::from),
+            columns: Some(vec![
+                column("site_id", "UInt32"),
+                column("path", "String"),
+                column("country", "String"),
+            ]),
+            indexes: None,
+            foreign_keys: None,
+            constraints: None,
+            sample_fields: None,
+            presentation: dbflux_core::CollectionPresentation::DataGrid,
+            child_items: None,
+            storage_hints: None,
+            pseudo_columns: Box::default(),
+        })
+    }
+
+    fn view_definition(
+        &self,
+        _: &str,
+        _: Option<&str>,
+        name: &str,
+    ) -> Result<Option<String>, DbError> {
+        self.calls
+            .lock()
+            .map_err(|_| DbError::query_failed("poisoned"))?
+            .view_definitions += 1;
+
+        Ok(Some(format!("CREATE VIEW {name} AS SELECT 1")))
     }
 
     fn table_profile(&self, _: &TableRef) -> Result<TableProfile, DbError> {
@@ -344,15 +394,15 @@ fn all_features() -> TableViewFeatures {
 fn tabs_follow_the_features_in_header_order() {
     assert_eq!(
         available_table_tabs(TableViewFeatures::empty()),
-        vec![TableTab::Data]
+        vec![TableTab::Data, TableTab::Properties]
     );
     assert_eq!(
         available_table_tabs(TableViewFeatures::COLUMN_PROFILE),
-        vec![TableTab::Data, TableTab::Columns]
+        vec![TableTab::Data, TableTab::Properties]
     );
     assert_eq!(
         available_table_tabs(all_features()),
-        vec![TableTab::Data, TableTab::Columns, TableTab::Partitions]
+        vec![TableTab::Data, TableTab::Properties, TableTab::Partitions]
     );
 }
 
@@ -395,7 +445,7 @@ fn a_columnar_table_opens_with_tabs_a_profile_and_annotated_headers(cx: &mut Tes
         let panel = panel.read(app);
         assert_eq!(
             panel.table_tabs(),
-            vec![TableTab::Data, TableTab::Columns, TableTab::Partitions]
+            vec![TableTab::Data, TableTab::Properties, TableTab::Partitions]
         );
         assert_eq!(panel.table_tab(), TableTab::Data);
         assert!(panel.table_views.profile.is_some());
@@ -488,7 +538,7 @@ fn the_partitions_tab_reads_its_list_once_when_first_shown(cx: &mut TestAppConte
     window.update(|window, app| {
         panel.update(app, |panel, cx| {
             panel.set_table_tab(TableTab::Partitions, window, cx);
-            panel.set_table_tab(TableTab::Columns, window, cx);
+            panel.set_table_tab(TableTab::Properties, window, cx);
             panel.set_table_tab(TableTab::Partitions, window, cx);
         })
     });
@@ -525,17 +575,95 @@ fn next_result_tab_steps_through_the_table_views(cx: &mut TestAppContext) {
 
     assert_eq!(
         tabs,
-        vec![TableTab::Columns, TableTab::Partitions, TableTab::Data]
+        vec![TableTab::Properties, TableTab::Partitions, TableTab::Data]
     );
 }
 
 #[gpui::test]
-fn a_connection_without_table_views_keeps_the_plain_grid(cx: &mut TestAppContext) {
+fn the_properties_tab_reads_the_structure_and_source_once_when_first_shown(
+    cx: &mut TestAppContext,
+) {
+    let (panel, calls, window) = open_table(all_features(), cx);
+
+    assert_eq!(
+        calls.lock().unwrap().view_definitions,
+        0,
+        "nothing is read before the tab is shown"
+    );
+
+    window.update(|window, app| {
+        panel.update(app, |panel, cx| {
+            panel.set_table_tab(TableTab::Properties, window, cx);
+            panel.set_table_tab(TableTab::Data, window, cx);
+            panel.set_table_tab(TableTab::Properties, window, cx);
+        })
+    });
+    window.run_until_parked();
+
+    assert_eq!(calls.lock().unwrap().view_definitions, 1);
+
+    window.update(|_, app| {
+        let panel = panel.read(app);
+        assert_eq!(
+            panel.properties_sections(),
+            vec![
+                PropertiesSection::Columns,
+                PropertiesSection::Statistics,
+                PropertiesSection::Source
+            ]
+        );
+        assert_eq!(panel.properties_section(), PropertiesSection::Columns);
+    });
+}
+
+#[test]
+fn the_columns_model_has_one_row_per_column_in_order() {
+    let column = |name: &str, nullable: bool, is_primary_key: bool, default: Option<&str>| {
+        dbflux_core::ColumnInfo {
+            name: name.to_string(),
+            type_name: "int8".to_string(),
+            nullable,
+            is_primary_key,
+            default_value: default.map(String::from),
+            enum_values: None,
+        }
+    };
+
+    let model = columns_table_model(&[
+        column("id", false, true, Some("nextval('seq')")),
+        column("note", true, false, None),
+    ]);
+
+    assert_eq!(model.row_count(), 2);
+    assert_eq!(model.col_count(), 6);
+
+    let text = |row: usize, col: usize| {
+        model
+            .cell(row, col)
+            .map(|cell| cell.display_text().to_string())
+            .unwrap_or_default()
+    };
+
+    assert_eq!(text(0, 0), "id");
+    assert_eq!(text(0, 1), "1");
+    assert_eq!(text(0, 3), "✓");
+    assert_eq!(text(0, 4), "nextval('seq')");
+    assert_eq!(text(0, 5), "✓");
+    assert_eq!(text(1, 1), "2");
+    assert_eq!(text(1, 3), "");
+    assert_eq!(text(1, 5), "");
+}
+
+#[gpui::test]
+fn a_connection_without_table_views_has_no_statistics(cx: &mut TestAppContext) {
     let (panel, calls, window) = open_table(TableViewFeatures::empty(), cx);
 
     window.update(|_, app| {
         let panel = panel.read(app);
-        assert_eq!(panel.table_tabs(), vec![TableTab::Data]);
+        assert_eq!(
+            panel.table_tabs(),
+            vec![TableTab::Data, TableTab::Properties]
+        );
         assert!(panel.table_views.profile_view.is_none());
         assert!(!panel.shows_table_column_picker());
         assert!(panel.table_projection_columns().is_empty());
@@ -879,10 +1007,10 @@ fn the_table_views_are_named_radio_buttons(cx: &mut TestAppContext) {
     let capture = FrameCapture::observe(window);
     let frame = capture.frame(window);
 
-    let columns = dbflux_i18n::t!("document.data.table_views.tab.columns").to_string();
+    let properties = dbflux_i18n::t!("document.data.table_views.tab.properties").to_string();
     assert_eq!(
-        accessible_name(&frame, "segmented-table-view-columns"),
-        Some(columns)
+        accessible_name(&frame, "segmented-table-view-properties"),
+        Some(properties)
     );
 
     let data = accessibility_node(&frame, "segmented-table-view-data")
@@ -893,5 +1021,71 @@ fn the_table_views_are_named_radio_buttons(cx: &mut TestAppContext) {
     assert!(
         accessibility_node(&frame, "segmented-table-view-partitions").is_some(),
         "every view the connection offers is announced"
+    );
+}
+
+#[gpui::test]
+fn the_properties_sections_are_named_and_covered(cx: &mut TestAppContext) {
+    use dbflux_components::accessibility::accessible_name;
+    use dbflux_ui_base::keyboard_coverage::{Coverage, FrameCapture};
+
+    init_test_runtime(cx);
+    let calls = Arc::new(Mutex::new(Calls::default()));
+    let (app_state, profile_id) = app_state_with(all_features(), calls, cx);
+
+    let panel_slot = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let (_, window) = cx.add_window_view({
+        let panel_slot = panel_slot.clone();
+        move |window, cx| {
+            let panel = cx.new(|cx| {
+                DataGridPanel::new_for_table(
+                    profile_id,
+                    TableRef::with_schema("events", "page_views"),
+                    None,
+                    app_state,
+                    window,
+                    cx,
+                )
+            });
+            panel_slot.replace(Some(panel.clone()));
+
+            gpui_component::Root::new(panel, window, cx)
+        }
+    });
+    window.run_until_parked();
+
+    let panel = panel_slot.borrow().clone().expect("the panel");
+    let capture = FrameCapture::observe(window);
+
+    window.update(|window, app| {
+        panel.update(app, |panel, cx| {
+            panel.set_table_tab(TableTab::Properties, window, cx)
+        })
+    });
+    window.run_until_parked();
+    window.update(|window, _| window.refresh());
+    window.run_until_parked();
+
+    let menu: Vec<String> = window.update(|_, app| {
+        panel
+            .read(app)
+            .toolbar_actions(app)
+            .into_iter()
+            .map(|action| action.id().to_string())
+            .collect()
+    });
+    let frame = capture.frame(window);
+
+    let checked = Coverage::new(crate::keyboard_coverage::DATA_GRID)
+        .with_menu_entries(menu)
+        .assert_covered(&frame);
+    assert!(
+        checked.iter().any(|id| id == "properties-section-source"),
+        "{checked:?}"
+    );
+
+    assert_eq!(
+        accessible_name(&frame, "properties-section-source"),
+        Some(dbflux_i18n::t!("document.data.table_views.section.source").to_string())
     );
 }

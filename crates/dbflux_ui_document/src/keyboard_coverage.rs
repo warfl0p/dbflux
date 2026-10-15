@@ -194,12 +194,14 @@ pub(crate) const DATA_GRID: SurfaceRegistry = SurfaceRegistry {
             "collection-builder-toggle",
             KeyboardPath::Menu("open-builder"),
         ),
-        // The Data / Columns / Partitions views of a table whose connection
-        // offers them.
+        // The Data / Properties / Partitions views of a table; Partitions
+        // only when its connection offers them.
         (
             "segmented-table-view-*",
             KeyboardPath::Command(Command::NextResultTab),
         ),
+        // The Columns / Statistics / Source sections of the Properties view.
+        ("properties-section-*", KeyboardPath::Menu("view-table-*")),
         // The column picker of a table's Data view.
         (
             "column-projection-trigger",
@@ -212,7 +214,7 @@ pub(crate) const DATA_GRID: SurfaceRegistry = SurfaceRegistry {
         ("column-projection-select-all", KeyboardPath::TabStop),
         ("column-projection-select-none", KeyboardPath::TabStop),
         ("column-projection-apply", KeyboardPath::TabStop),
-        // The Columns view of a table.
+        // The Statistics section of a table's Properties view.
         (
             "column-profile-eye-*",
             KeyboardPath::Command(Command::ExpandCollapse),
