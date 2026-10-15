@@ -464,7 +464,7 @@ impl DataGridPanel {
                         if this.commits_document_patches(cx) {
                             this.commit_document_edits(cx);
                         } else {
-                            this.handle_save_row(*row_idx, cx);
+                            this.handle_save_row(*row_idx, false, cx);
                         }
                     }
                     DataTableEvent::StepIntoRequested { row, col } => {
@@ -543,7 +543,7 @@ impl DataGridPanel {
                         cx.notify();
                     }
                     DataTableEvent::CommitInsertRequested(insert_idx) => {
-                        this.handle_commit_insert(*insert_idx, cx);
+                        this.handle_commit_insert(*insert_idx, false, cx);
                     }
                     DataTableEvent::CommitDeleteRequested(row_idx) => {
                         this.handle_commit_delete(*row_idx, cx);
