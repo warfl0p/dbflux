@@ -55,6 +55,24 @@ pub enum SidebarTab {
     Dashboards,
 }
 
+impl SidebarTab {
+    pub fn next(self) -> Self {
+        match self {
+            SidebarTab::Connections => SidebarTab::Scripts,
+            SidebarTab::Scripts => SidebarTab::Dashboards,
+            SidebarTab::Dashboards => SidebarTab::Connections,
+        }
+    }
+
+    pub fn previous(self) -> Self {
+        match self {
+            SidebarTab::Connections => SidebarTab::Dashboards,
+            SidebarTab::Scripts => SidebarTab::Connections,
+            SidebarTab::Dashboards => SidebarTab::Scripts,
+        }
+    }
+}
+
 pub enum SidebarEvent {
     GenerateSql(String),
     RequestFocus,
@@ -270,6 +288,12 @@ pub enum SidebarEvent {
     /// disconnecting right away.
     RequestActiveQueryDisconnect {
         profile_id: Uuid,
+    },
+
+    /// Request to ask for the connection password before connecting a profile
+    /// whose password is neither saved nor supplied by a value source.
+    RequestConnectionPassword {
+        prompt: dbflux_app::ConnectionPasswordPrompt,
     },
 
     /// Request to prompt the user for an SSH tunnel passphrase.
@@ -521,12 +545,12 @@ pub enum ContextMenuAction {
     GenerateCollectionCode(CollectionCodeKind),
     /// Open a new code document pre-seeded with a query template for this collection.
     ///
-    /// Available for any `DatabaseCategory::TimeSeries` measurement. The template
+    /// Available for any collection with the time-series facet. The template
     /// text is produced by the driver's `QueryGenerator::template_for_collection`.
     QueryCollection,
     /// Open a new empty code document for writing queries against this database/bucket.
     ///
-    /// Available for database nodes belonging to a time-series connection.
+    /// Available for database nodes whose objects sit in a measurement folder.
     NewQueryForDatabase,
     /// Open the connection's native console against this database, in its
     /// own tab. Offered where the driver advertises `NATIVE_CONSOLE`.
@@ -1098,6 +1122,9 @@ pub struct Sidebar {
     /// Profile ID waiting for an SSH passphrase to be supplied via the tunnel-auth modal.
     /// Set when a connect attempt fails with a passphrase-required error.
     pub pending_tunnel_auth_profile_id: Option<Uuid>,
+    /// Connection password of the attempt waiting for the SSH passphrase, so
+    /// the retry does not ask for it again.
+    pub(crate) pending_tunnel_auth_password: Option<dbflux_core::secrecy::SecretString>,
     /// In-flight metric catalog fetch tasks, keyed by profile_id.
     ///
     /// Dropping the task on collapse abandons the await; the underlying cache fetch
@@ -1426,6 +1453,7 @@ impl Sidebar {
             scripts_gutter_metadata,
             hovered_item_id: None,
             pending_tunnel_auth_profile_id: None,
+            pending_tunnel_auth_password: None,
             pending_metric_namespace_fetches: HashMap::new(),
             pending_metric_fetches: HashMap::new(),
             pending_remote_dashboard_fetches: HashMap::new(),
@@ -1443,6 +1471,12 @@ impl Sidebar {
     /// Return the profile ID that is currently awaiting SSH passphrase input, if any.
     pub fn pending_tunnel_auth_profile_id(&self) -> Option<Uuid> {
         self.pending_tunnel_auth_profile_id
+    }
+
+    /// Drops the connect attempt that was waiting for an SSH passphrase.
+    pub fn clear_pending_tunnel_auth(&mut self) {
+        self.pending_tunnel_auth_profile_id = None;
+        self.pending_tunnel_auth_password = None;
     }
 
     /// Records whether the sidebar holds keyboard focus. Gaining it, including
@@ -1523,12 +1557,11 @@ impl Sidebar {
     }
 
     pub fn cycle_tab(&mut self, cx: &mut Context<Self>) {
-        let next = match self.active_tab {
-            SidebarTab::Connections => SidebarTab::Scripts,
-            SidebarTab::Scripts => SidebarTab::Dashboards,
-            SidebarTab::Dashboards => SidebarTab::Connections,
-        };
-        self.set_active_tab(next, cx);
+        self.set_active_tab(self.active_tab.next(), cx);
+    }
+
+    pub fn cycle_tab_back(&mut self, cx: &mut Context<Self>) {
+        self.set_active_tab(self.active_tab.previous(), cx);
     }
 
     fn build_initial_scripts_tree(state: &AppState) -> Vec<TreeItem> {
@@ -2080,14 +2113,28 @@ impl Sidebar {
 
 #[cfg(test)]
 mod tests {
-    use super::Sidebar;
     use super::{ContextMenuAction, ContextMenuItem, ItemIdParts, NODE_KIND_NONE, parse_node_kind};
+    use super::{Sidebar, SidebarTab};
     use crate::operations::{connect_prepare_error_toast, format_connect_prepare_error};
     use dbflux_app::{ExternalDriverDiagnostic, ExternalDriverStage};
     use dbflux_core::PrepareConnectError;
     use dbflux_core::{SchemaNodeId, SchemaNodeKind};
     use gpui_component::tree::TreeItem;
     use uuid::Uuid;
+
+    #[test]
+    fn sidebar_tab_next_cycles_forward_and_wraps() {
+        assert_eq!(SidebarTab::Connections.next(), SidebarTab::Scripts);
+        assert_eq!(SidebarTab::Scripts.next(), SidebarTab::Dashboards);
+        assert_eq!(SidebarTab::Dashboards.next(), SidebarTab::Connections);
+    }
+
+    #[test]
+    fn sidebar_tab_previous_cycles_backward_and_wraps() {
+        assert_eq!(SidebarTab::Connections.previous(), SidebarTab::Dashboards);
+        assert_eq!(SidebarTab::Dashboards.previous(), SidebarTab::Scripts);
+        assert_eq!(SidebarTab::Scripts.previous(), SidebarTab::Connections);
+    }
 
     fn test_uuid() -> Uuid {
         Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()

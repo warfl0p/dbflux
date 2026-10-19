@@ -157,6 +157,8 @@ impl DataGridPanel {
     /// table, so editability and any committed builder binding see them.
     pub(super) fn apply_pk_details(&mut self, pk_names: Vec<String>, cx: &mut Context<Self>) {
         self.pk_details_pending = false;
+        // The details carry the table's facets (a hypertable's time axis).
+        self.sync_source_facets(cx);
         cx.notify();
         if !pk_names.is_empty() {
             self.pk_columns = pk_names;
@@ -351,7 +353,8 @@ impl DataGridPanel {
     /// rows have no row identity) or when no primary key columns are known
     /// (preventing UPDATE/DELETE target identification).
     pub fn mutations_enabled(&self) -> bool {
-        if self.is_grouped_result() {
+        // Neighbor rows carry a computed `nearest_distance` column the table lacks.
+        if self.is_grouped_result() || self.nearest_neighbors.is_some() {
             return false;
         }
 

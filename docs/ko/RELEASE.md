@@ -104,15 +104,39 @@ git push origin vX.Y.Z[-suffix.N]
 
 ## 아티팩트 식별과 서명
 
-"이것을 누가 빌드했는가" 신호를 담는 별개의 세 가지가 있으며, 서로 겹치지 않습니다:
+"이것을 누가 빌드했는가" 신호는 별개의 계층들이 담습니다:
 
 | 계층 | 다루는 것 | 시크릿 | 없을 때 |
 |-------|----------------|--------|--------------|
 | GPG 분리 서명(`.asc`)과 `.sha256` | 다운로드한 파일 | `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE` | 빌드가 실패합니다. 모든 릴리스는 서명됩니다. |
 | 빌드 출처 증명(attestation) | 아티팩트를 만든 워크플로 실행과 커밋 | 없음 (키 없는 OIDC) | 항상 켜져 있습니다. |
 | `.app`의 macOS 코드 서명 | 키체인과 Gatekeeper가 보는 애플리케이션 식별 | `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD` | 번들은 경고와 함께 애드혹 서명됩니다. |
+| Windows Authenticode (stable 및 RC) | 포터블 ZIP과 설치 관리자 안의 `dbflux.exe`, 그리고 설치 실행 파일 자체 | `SIGNPATH_API_TOKEN` | stable 및 RC Windows 빌드가 실패합니다. nightly는 Authenticode 서명을 요청하지 않습니다. |
 
-Windows 실행 파일도 설치 관리자도 Authenticode로 서명되지 않으므로, 첫 실행에서 SmartScreen이 경고합니다. 이는 CA의 인증서가 필요하며 별도로 추적됩니다.
+### Windows 코드 서명
+
+stable 및 RC Windows 빌드는 [SignPath](https://docs.signpath.io/trusted-build-systems/github)를
+조직 `963ebe33-9db3-4a84-9eea-f726ca65dd9c`, 프로젝트 `dbflux`, 정책 `release-signing`으로
+사용합니다. 제출자 토큰을 저장소 Actions 시크릿 `SIGNPATH_API_TOKEN`에 저장하세요. 기본
+아티팩트 구성은 단일 PE 파일(`<pe-file><authenticode-sign /></pe-file>`)을 받아야 하며,
+SignPath Foundation이 요구하는 제품 및 버전 제한은 SignPath 포털에서 구성합니다.
+
+SignPath Foundation이 프로덕션 인증서를 `release-signing`에 가져오기 전까지 job의
+`SIGNPATH_SIGNING_POLICY`는 `test-signing`이며, 프로젝트의 자체 서명 테스트 인증서로 서명합니다.
+Windows는 이 인증서를 신뢰하지 않으므로 해당 빌드는 여전히 알 수 없는 게시자 경고를 표시합니다.
+검증 단계는 그 정책과 그 인증서에 대해서만 신뢰되지 않은 결과를 허용합니다. 프로덕션 인증서가
+유효해지면 변수를 `release-signing`으로 바꾸세요.
+
+워크플로는 두 개의 요청을 제출합니다. 먼저 `dbflux.exe`, 그다음 서명된 애플리케이션으로 빌드한
+설치 실행 파일입니다. 각 요청은 SignPath의 수동 승인을 최대 한 시간까지 기다립니다. 토큰 누락,
+요청 거부, 시간 초과, 유효하지 않은 서명 또는 타임스탬프 누락은 빌드를 실패시키며, 서명되지 않은
+stable 또는 RC 대체본은 게시되지 않습니다. GPG 서명과 SHA256 체크섬은 최종 서명된 패키지를 다룹니다.
+게시는 플랫폼 아티팩트만 선택하며, 중간 단계의 서명되지 않은 업로드는 제외합니다.
+
+nightly는 무인으로 빌드되어 승인할 사람이 없으므로 Authenticode 서명 없이 기존 GPG 서명과 체크섬을 유지합니다. Inno Setup
+제거 프로그램은 이 흐름에서 Authenticode로 서명되지 않습니다. 유효한 서명은 게시자를 식별하지만
+SmartScreen이 모든 평판 경고를 표시하지 않는다는 보장은 아닙니다. 릴리스 서명에는 정식 저장소와
+GitHub 호스팅 러너가 필요하며, `act`에서는 사용할 수 없습니다.
 
 ### macOS 코드 서명
 
@@ -401,7 +425,7 @@ cargo test --workspace
 
 `scripts/lint.py`는 `crates/` 아래의 자체 크레이트만 대상으로 하며, `vendor/` 아래의 서드파티 크레이트는 린트하거나 재포맷하지 않습니다.
 
-이 빠른 스위트들은 드라이버 라이브 통합 테스트를 포괄하지 않습니다. 드라이버별 스위트는 컨테이너, 로컬 파일 또는 자격 증명이 필요한 Redshift 클러스터를 기반으로 하며, [tests/driver-live/README.md](../../tests/driver-live/README.md)에 문서화되어 있습니다. rc나 stable에 태깅하기 전에 실행하세요. CI는 동일한 스위트를 게시 게이트로 사용합니다 — `release.yml`이 `tests.yml`을 호출하고 `Create Release` 잡이 그 완료를 기다립니다 — 하지만 이 스위트들은 빌드된 아티팩트가 아니라 소스 코드를 검증하며, 나이틀리 빌드는 테스트 게이트가 없습니다(`nightly.yml`은 `build.yml`을 직접 호출합니다).
+이 빠른 스위트들은 드라이버 라이브 통합 테스트를 포괄하지 않습니다. 드라이버별 스위트는 컨테이너, 로컬 파일 또는 자격 증명이 필요한 Redshift 클러스터를 기반으로 하며, [tests/driver-live/README.md](../../tests/driver-live/README.md)에 문서화되어 있습니다. rc나 stable에 태깅하기 전에 실행하세요. CI는 릴리스 시점에 어떤 스위트도 실행하지 않습니다. `release.yml`은 `tests.yml`이나 `style.yml`을 호출하지 않고 빌드와 게시를 수행하며, 풀 리퀘스트와 `main`에서 이미 실행된 검사에 의존합니다. 나이틀리를 포함해 어떤 릴리스 채널도 테스트 게이트가 없습니다(`nightly.yml`은 `build.yml`을 직접 호출합니다).
 
 ## 관련 자료
 

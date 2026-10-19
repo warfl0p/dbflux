@@ -458,10 +458,9 @@ connection_manager:
       relational: "관계형"
       document: "문서"
       key_value: "키-값"
-      wide_column: "와이드 컬럼"
       time_series_and_logs: "시계열 및 로그"
-      graph: "그래프"
       object_storage: "오브젝트 스토리지"
+      other: "기타"
   export:
     target:
       connection: 연결
@@ -1579,7 +1578,6 @@ document:
       stats:
         rebuilding: "차트 다시 생성 중…"
         no_stats: 이 계열에는 사용할 수 있는 통계가 없습니다.
-        unavailable: 사용할 수 없음
         title: 통계
         window:
           title: 구간
@@ -1587,12 +1585,6 @@ document:
           end: 종료
           span: 기간
           points: 포인트
-        source:
-          title: 소스
-          measurement: measurement
-          field: 필드
-          host: 호스트
-          region: 리전
     context_menu:
       header: "%{column} · 행 %{row}"
       item:
@@ -1608,6 +1600,7 @@ document:
         set_null: NULL로 설정
         add_row: 행 추가
         inspect_row: 행 검사
+        find_similar_rows: 유사한 행 찾기
         view_value: 값 보기
         duplicate_row: 행 복제
         delete_row: 행 삭제
@@ -1668,6 +1661,9 @@ document:
         refresh_profile: "열 통계 새로 고침"
         sample_profile: "처음 행 프로파일링"
         refresh_partitions: "파티션 새로 고침"
+        nearest_distance: "거리 변경 (현재 %{distance})"
+        nearest_clear: "테이블 행으로 돌아가기"
+        nearest_column: "벡터 열 변경"
       error:
         no_results_to_export: 내보낼 결과가 없습니다
         invalid_json: JSON이 올바르지 않습니다
@@ -1793,6 +1789,39 @@ document:
         builder_notice: 행은 빌더 쿼리에서 가져옵니다
         edit_in_builder: 빌더에서 편집
         reset_builder: 초기화
+      nearest:
+        summary: "%{column} 기준 %{anchor}와 유사"
+        similar_to: "유사 대상"
+        by: "기준"
+        k: "K"
+        anchor: "기준 행"
+        anchor_row: "%{row}행"
+        read_only: "유사한 행은 읽기 전용입니다"
+        menu_detail: "%{column} 기준 · 가장 가까운 %{limit}개"
+        menu_blocked:
+          no_vector: "%{column} 값 없음"
+          pending_edits:
+            one: "먼저 변경 1개를 저장하거나 되돌리기"
+            many: "먼저 변경 %{count}개를 저장하거나 되돌리기"
+        column:
+          l2: "L2 거리"
+          cosine: "코사인 거리"
+          inner_product: "내적"
+        rows:
+          of_total: "%{total}행 중 가장 가까운 %{count}행"
+          count: "가장 가까운 %{count}행"
+        back_to_table: 테이블로 돌아가기
+        distance:
+          l2: L2
+          cosine: 코사인
+          inner_product: 내적
+        error:
+          no_vector: "선택한 행의 %{column} 값이 없습니다"
+          failed: "유사한 행 찾기 실패: %{error}"
+          pending_edits:
+            one: "먼저 변경 사항을 저장하거나 되돌리세요"
+            many: "먼저 변경 사항 %{count}개를 저장하거나 되돌리세요"
+          invalid_k: "K는 1부터 %{max}까지의 정수여야 합니다"
       toast:
         query_imported: 쿼리를 성공적으로 가져왔습니다
         mutation_queued: 변경 작업이 승인 대기열에 추가되었습니다.
@@ -3672,6 +3701,13 @@ modals:
     remember: 이 세션 동안 기억
     cancel: 취소
     connect: 연결
+  connection_password:
+    title: "비밀번호 필요"
+    connection_label: "연결"
+    placeholder: "비밀번호"
+    show_password: "비밀번호 표시"
+    hide_password: "비밀번호 숨기기"
+    remember: "DBFlux를 닫을 때까지 기억"
   unsaved_changes:
     title: 저장되지 않은 변경 사항
     prompt: 다음 문서에 저장되지 않은 변경 사항이 있습니다. 어떻게 하시겠습니까?
@@ -4189,6 +4225,7 @@ settings:
       cycle_result_view: "결과 보기 전환"
       toggle_value_panel: 값 패널 전환
       toggle_row_inspector: 행 검사기 전환
+      find_similar_rows: 유사한 행 찾기
       results_set_null: 셀을 NULL로 설정
       open_context_menu: 상황에 맞는 메뉴 열기
       open_pane_actions: 패널 작업 열기
@@ -4197,6 +4234,7 @@ settings:
       menu_select: 메뉴 선택
       menu_back: 메뉴 뒤로
       sidebar_next_tab: 사이드바 다음 탭
+      sidebar_prev_tab: 사이드바 이전 탭
       refresh_schema: 스키마 새로고침
       open_connection_manager: 연결 관리자 열기
       export_connections: "연결 내보내기"
@@ -5130,9 +5168,7 @@ sidebar:
       relational: 테이블 (%{count})
       document: 컬렉션 (%{count})
       key_value: 키 (%{count})
-      graph: 노드 (%{count})
       time_series: 측정값 (%{count})
-      wide_column: 테이블 (%{count})
       log_stream: 로그 그룹 (%{count})
       object_storage: 버킷 (%{count})
     folder:

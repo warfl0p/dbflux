@@ -4,12 +4,14 @@ mod chrome;
 pub(crate) mod context_menu;
 mod document_view;
 mod documents;
+mod facets;
 pub(crate) mod filter_bar;
 mod grid;
 pub(crate) mod mutation_confirm;
 pub(crate) mod mutation_executor;
 mod mutations;
 mod navigation;
+mod nearest_neighbors;
 mod primary_key;
 mod query;
 mod refresh;
@@ -18,6 +20,7 @@ mod result_search;
 pub(crate) mod row_inspector;
 pub(crate) mod side_island;
 mod table_properties;
+mod table_documents;
 mod table_views;
 mod utils;
 pub(crate) mod value_panel;
@@ -472,6 +475,10 @@ struct ContextMenuItem {
     icon: Option<dbflux_components::icons::AppIcon>,
     is_separator: bool,
     is_danger: bool,
+    /// A muted second line under the label.
+    detail: Option<SharedString>,
+    /// Drawn but not activatable; `detail` says why.
+    disabled: bool,
 }
 
 /// Kind of SQL statement to generate from row data.
@@ -669,9 +676,14 @@ struct ChartState {
     chart_source_time_range_panel:
         Option<Entity<dbflux_components::common::time_range::view::TimeRangePanel>>,
 
-    /// The source is a collection on a `TimeSeries` connection. Such a source
-    /// offers the Data / Chart / JSON result views and opens as a chart.
-    time_series_collection: bool,
+    /// The source carries a time-series facet. Such a source offers the
+    /// Data / Chart / JSON result views and opens as a chart.
+    time_series_source: bool,
+
+    /// The column a time-series source is indexed by, when its driver names
+    /// it. The chart puts it on the time axis instead of the first timestamp
+    /// column.
+    time_series_column: Option<String>,
 
     /// Whether the time-series collection already received its first result.
     /// Only that first result picks the chart view and seeds the axis bindings.
@@ -849,6 +861,11 @@ pub struct DataGridPanel {
     /// in key order. The rows on screen were built without the key, so the
     /// banner waits for the reordered page instead of flashing until it lands.
     pk_requery_pending: bool,
+    /// The rows on screen are the nearest neighbors of a row, not a page of
+    /// the table. Cleared by any other result.
+    nearest_neighbors: Option<nearest_neighbors::NearestNeighborSearch>,
+    /// The neighbor bar's controls and the search in flight.
+    nearest: nearest_neighbors::NearestNeighborsUi,
     view_config: super::data_view::DataViewConfig,
     context_menu: Option<TableContextMenu>,
     is_active_tab: bool,
@@ -954,10 +971,9 @@ impl DataGridPanel {
         panel.init_table_views(window, cx);
         panel.refresh(window, cx);
 
-        // If pk_columns is empty, fetch table details to get PK info
-        if pk_columns.is_empty() {
-            panel.fetch_table_details_for_pk(profile_id, &table, cx);
-        }
+        // The details carry the primary key when the schema snapshot did not,
+        // and the table's facets either way; the fetch reuses cached details.
+        panel.fetch_table_details_for_pk(profile_id, &table, cx);
 
         panel.ensure_filter_source_columns_loaded(cx);
         panel.ensure_fk_cache_loaded(cx);
@@ -1243,10 +1259,11 @@ impl DataGridPanel {
         )
         .detach();
 
-        let category = Self::connection_category(&source, &app_state, cx);
-        let time_series_collection = matches!(source, DataSource::Collection { .. })
-            && category == Some(DatabaseCategory::TimeSeries);
-        let view_config = Self::view_config_for(&source, category);
+        let source_facets = Self::source_facets(&source, &app_state, cx);
+        let time_series = facets::time_series_facet(&source_facets).cloned();
+        let time_series_source = time_series.is_some();
+        let time_series_column = time_series.and_then(|facet| facet.time_column);
+        let view_config = Self::view_config_for(&source, &source_facets);
         let result_view_mode = ResultViewMode::Table;
 
         let connection_id = match &source {
@@ -1301,6 +1318,7 @@ impl DataGridPanel {
         );
 
         let collection = documents::CollectionViewState::new(window, cx);
+        let nearest = nearest_neighbors::NearestNeighborsUi::new(window, cx);
 
         if matches!(source, DataSource::Collection { .. }) && filter_completion_cache.is_none() {
             let provider: Rc<dyn CompletionProvider> =
@@ -1365,7 +1383,8 @@ impl DataGridPanel {
             chart: ChartState {
                 chart_shell: None,
                 chart_source_time_range_panel: None,
-                time_series_collection,
+                time_series_source,
+                time_series_column,
                 time_series_result_seen: false,
             },
             mutation_confirm: MutationConfirmState {
@@ -1429,6 +1448,8 @@ impl DataGridPanel {
             panel_size: Size::default(),
             pk_details_pending: false,
             pk_requery_pending: false,
+            nearest_neighbors: None,
+            nearest,
             view_config,
             context_menu: None,
             is_active_tab: true,
@@ -1508,24 +1529,23 @@ impl DataGridPanel {
         }
     }
 
-    /// View configuration a source opens with, given the category of the
-    /// connection behind it.
+    /// View configuration a source opens with, given its facets.
     ///
-    /// A collection of a document database opens in the document tree. A
-    /// time-series collection holds flat rows (time, tags, fields), so it opens
-    /// in the grid. Every other source keeps its own recommended view.
+    /// A collection opens in the view of its first facet: the document tree
+    /// when its driver declares documents first, the grid otherwise. Every
+    /// other source keeps its own recommended view.
     fn view_config_for(
         source: &DataSource,
-        category: Option<DatabaseCategory>,
+        facets: &[dbflux_core::ObjectFacet],
     ) -> super::data_view::DataViewConfig {
         use super::data_view::{DataViewConfig, DataViewMode};
 
-        match (source, category) {
-            (DataSource::Collection { .. }, Some(DatabaseCategory::Document)) => DataViewConfig {
-                mode: DataViewMode::Document,
-            },
-            (DataSource::Collection { .. }, Some(DatabaseCategory::TimeSeries)) => DataViewConfig {
-                mode: DataViewMode::Table,
+        match source {
+            DataSource::Collection { .. } => DataViewConfig {
+                mode: DataViewMode::for_facets(facets)
+                    .first()
+                    .copied()
+                    .unwrap_or_default(),
             },
             _ => DataViewConfig::for_source(source),
         }

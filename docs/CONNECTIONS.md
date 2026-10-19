@@ -257,6 +257,13 @@ implementation is **AWS SSM Port Forwarding** (`aws` feature required).
 The **local** tunnel port is assigned automatically by DBFlux and the OS — only
 the remote port is configurable.
 
+SSM needs the AWS CLI and the Session Manager plugin on the `PATH`. On macOS
+and Linux, when DBFlux is started outside a terminal (from Finder, the Dock or
+a desktop entry), it reads the `PATH` from your login shell at startup, so tools
+installed with Homebrew or added in your shell configuration are found. If the
+shell takes longer than five seconds to start, DBFlux keeps the `PATH` it was
+launched with and logs a warning.
+
 ---
 
 ## Value sources: Secret Manager, Parameter Store, Auth Session
@@ -308,6 +315,13 @@ switches between them.
 - **One access method per connection.** Switching methods clears the others.
 - **Secrets live in your OS keyring**, never in the DBFlux database. If the
   keyring is unavailable, "Save" checkboxes disappear and secrets aren't kept.
+- **An unsaved password is asked for when you connect.** If a connection's
+  password is neither saved in the keyring nor taken from a value source,
+  DBFlux asks for it before connecting, and every database that connection
+  opens uses it until you disconnect. Leave it empty for servers that need no
+  password. **Remember until DBFlux closes** keeps it in memory, never in the
+  keyring, so later connects do not ask again; Cancel leaves the connection
+  closed.
 - **A disabled proxy or a No-Proxy match silently connects directly.**
 - **`No Proxy` does not support CIDR** — list hosts/suffixes, not IP ranges.
 - **SSM and auth-backed value sources both require an Auth Profile.**

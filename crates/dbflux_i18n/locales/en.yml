@@ -458,10 +458,9 @@ connection_manager:
       relational: "Relational"
       document: "Document"
       key_value: "Key-value"
-      wide_column: "Wide column"
       time_series_and_logs: "Time series and logs"
-      graph: "Graph"
       object_storage: "Object storage"
+      other: "Other"
   export:
     target:
       connection: connection
@@ -1579,7 +1578,6 @@ document:
       stats:
         rebuilding: "Rebuilding chart…"
         no_stats: No stats available for this series.
-        unavailable: unavailable
         title: Stats
         window:
           title: Window
@@ -1587,12 +1585,6 @@ document:
           end: end
           span: span
           points: points
-        source:
-          title: Source
-          measurement: measurement
-          field: field
-          host: host
-          region: region
     context_menu:
       header: "%{column} · row %{row}"
       item:
@@ -1608,6 +1600,7 @@ document:
         set_null: Set to NULL
         add_row: Add row
         inspect_row: Inspect row
+        find_similar_rows: Find similar rows
         view_value: View value
         duplicate_row: Duplicate row
         delete_row: Delete row
@@ -1668,6 +1661,9 @@ document:
         refresh_profile: "Refresh column statistics"
         sample_profile: "Profile the first rows"
         refresh_partitions: "Refresh partitions"
+        nearest_distance: "Change the distance (now %{distance})"
+        nearest_clear: "Back to the table rows"
+        nearest_column: "Change the vector column"
       error:
         no_results_to_export: No results to export
         invalid_json: Invalid JSON
@@ -1793,6 +1789,39 @@ document:
         builder_notice: Rows come from the builder query
         edit_in_builder: Edit in builder
         reset_builder: Reset
+      nearest:
+        summary: "Similar to %{anchor} by %{column}"
+        similar_to: "Similar to"
+        by: "by"
+        k: "K"
+        anchor: "anchor"
+        anchor_row: "row %{row}"
+        read_only: "Similar rows are read-only"
+        menu_detail: "by %{column} · nearest %{limit}"
+        menu_blocked:
+          no_vector: "No value in %{column}"
+          pending_edits:
+            one: "Save or revert 1 change first"
+            many: "Save or revert %{count} changes first"
+        column:
+          l2: "L2 distance"
+          cosine: "Cosine distance"
+          inner_product: "Inner product"
+        rows:
+          of_total: "%{count} nearest of %{total} rows"
+          count: "%{count} nearest rows"
+        back_to_table: Back to table
+        distance:
+          l2: L2
+          cosine: Cosine
+          inner_product: Inner product
+        error:
+          no_vector: "The selected row has no value in %{column}"
+          failed: "Finding similar rows failed: %{error}"
+          pending_edits:
+            one: "Save or revert your change first"
+            many: "Save or revert your %{count} changes first"
+          invalid_k: "K must be a whole number from 1 to %{max}"
       toast:
         query_imported: Query imported successfully
         mutation_queued: Mutation queued for approval.
@@ -3672,6 +3701,13 @@ modals:
     remember: Remember for this session
     cancel: Cancel
     connect: Connect
+  connection_password:
+    title: "Password required"
+    connection_label: "Connection"
+    placeholder: "Password"
+    show_password: "Show password"
+    hide_password: "Hide password"
+    remember: "Remember until DBFlux closes"
   unsaved_changes:
     title: Unsaved changes
     prompt: You have unsaved changes in the following documents. What would you like to do?
@@ -4189,6 +4225,7 @@ settings:
       cycle_result_view: "Cycle result view"
       toggle_value_panel: Toggle value panel
       toggle_row_inspector: Toggle row inspector
+      find_similar_rows: Find similar rows
       results_set_null: Set cell to NULL
       open_context_menu: Open context menu
       open_pane_actions: Open pane actions
@@ -4197,6 +4234,7 @@ settings:
       menu_select: Menu select
       menu_back: Menu back
       sidebar_next_tab: Sidebar next tab
+      sidebar_prev_tab: Sidebar previous tab
       refresh_schema: Refresh schema
       open_connection_manager: Open connection manager
       export_connections: "Export connections"
@@ -5131,9 +5169,7 @@ sidebar:
       relational: Tables (%{count})
       document: Collections (%{count})
       key_value: Keys (%{count})
-      graph: Nodes (%{count})
       time_series: Measurements (%{count})
-      wide_column: Tables (%{count})
       log_stream: Log Groups (%{count})
       object_storage: Buckets (%{count})
     folder:

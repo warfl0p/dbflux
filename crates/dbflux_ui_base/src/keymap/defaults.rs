@@ -313,7 +313,7 @@ fn sidebar_layer() -> KeymapLayer {
     layer.bind(KeyChord::new("/", Modifiers::none()), Command::FocusSearch);
     layer.bind(
         KeyChord::new("q", Modifiers::none()),
-        Command::SidebarNextTab,
+        Command::SidebarPrevTab,
     );
     layer.bind(
         KeyChord::new("e", Modifiers::none()),
@@ -683,6 +683,10 @@ fn results_layer() -> KeymapLayer {
     layer.bind(
         KeyChord::new("space", Modifiers::ctrl()),
         Command::ToggleRowInspector,
+    );
+    layer.bind(
+        KeyChord::new("s", Modifiers::shift()),
+        Command::FindSimilarRows,
     );
 
     // Copy selected cell(s) to clipboard — Cmd+C on macOS, Ctrl+C elsewhere.

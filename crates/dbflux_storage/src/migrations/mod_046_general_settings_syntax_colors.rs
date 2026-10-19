@@ -1,4 +1,4 @@
-//! Migration 045: Add `syntax_colors_json` to `cfg_general_settings`.
+//! Migration 046: Add `syntax_colors_json` to `cfg_general_settings`.
 //!
 //! Persists the syntax colors the user picked in place of the palette's, as
 //! JSON keyed by palette variant and syntax role. The column defaults to an
@@ -12,7 +12,7 @@ pub(crate) struct MigrationImpl;
 
 impl Migration for MigrationImpl {
     fn name(&self) -> &str {
-        "045_general_settings_syntax_colors"
+        "046_general_settings_syntax_colors"
     }
 
     fn run(&self, tx: &Transaction) -> Result<(), MigrationError> {

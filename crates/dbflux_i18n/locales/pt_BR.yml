@@ -458,10 +458,9 @@ connection_manager:
       relational: "Relacional"
       document: "Documento"
       key_value: "Chave-valor"
-      wide_column: "Colunar amplo"
       time_series_and_logs: "Séries temporais e logs"
-      graph: "Grafo"
       object_storage: "Armazenamento de objetos"
+      other: "Outros"
   export:
     target:
       connection: conexão
@@ -1579,7 +1578,6 @@ document:
       stats:
         rebuilding: "Reconstruindo o gráfico…"
         no_stats: Nenhuma estatística disponível para esta série.
-        unavailable: indisponível
         title: Estatísticas
         window:
           title: Janela
@@ -1587,12 +1585,6 @@ document:
           end: fim
           span: duração
           points: pontos
-        source:
-          title: Origem
-          measurement: measurement
-          field: field
-          host: host
-          region: região
     context_menu:
       header: "%{column} · linha %{row}"
       item:
@@ -1608,6 +1600,7 @@ document:
         set_null: Definir como NULL
         add_row: Adicionar linha
         inspect_row: Inspecionar linha
+        find_similar_rows: Encontrar linhas semelhantes
         view_value: Ver valor
         duplicate_row: Duplicar linha
         delete_row: Excluir linha
@@ -1668,6 +1661,9 @@ document:
         refresh_profile: "Atualizar estatísticas das colunas"
         sample_profile: "Perfilar as primeiras linhas"
         refresh_partitions: "Atualizar partições"
+        nearest_distance: "Alterar a distância (atual: %{distance})"
+        nearest_clear: "Voltar às linhas da tabela"
+        nearest_column: "Mudar a coluna vetorial"
       error:
         no_results_to_export: Nenhum resultado para exportar
         invalid_json: JSON inválido
@@ -1793,6 +1789,39 @@ document:
         builder_notice: As linhas vêm da consulta do construtor
         edit_in_builder: Editar no construtor
         reset_builder: Redefinir
+      nearest:
+        summary: "Semelhantes a %{anchor} por %{column}"
+        similar_to: "Semelhantes a"
+        by: "por"
+        k: "K"
+        anchor: "referência"
+        anchor_row: "linha %{row}"
+        read_only: "Linhas semelhantes são somente leitura"
+        menu_detail: "por %{column} · %{limit} mais próximas"
+        menu_blocked:
+          no_vector: "Sem valor em %{column}"
+          pending_edits:
+            one: "Salve ou reverta 1 alteração antes"
+            many: "Salve ou reverta %{count} alterações antes"
+        column:
+          l2: "Distância L2"
+          cosine: "Distância cosseno"
+          inner_product: "Produto interno"
+        rows:
+          of_total: "%{count} mais próximas de %{total} linhas"
+          count: "%{count} linhas mais próximas"
+        back_to_table: Voltar à tabela
+        distance:
+          l2: L2
+          cosine: Cosseno
+          inner_product: Produto interno
+        error:
+          no_vector: "A linha selecionada não tem valor em %{column}"
+          failed: "Falha ao encontrar linhas semelhantes: %{error}"
+          pending_edits:
+            one: "Salve ou reverta sua alteração antes"
+            many: "Salve ou reverta suas %{count} alterações antes"
+          invalid_k: "K deve ser um número inteiro de 1 a %{max}"
       toast:
         query_imported: Consulta importada com sucesso
         mutation_queued: Alteração enviada para aprovação.
@@ -3672,6 +3701,13 @@ modals:
     remember: Lembrar durante esta sessão
     cancel: Cancelar
     connect: Conectar
+  connection_password:
+    title: "Senha necessária"
+    connection_label: "Conexão"
+    placeholder: "Senha"
+    show_password: "Mostrar senha"
+    hide_password: "Ocultar senha"
+    remember: "Lembrar até fechar o DBFlux"
   unsaved_changes:
     title: Alterações não salvas
     prompt: Você tem alterações não salvas nos documentos a seguir. O que você gostaria de fazer?
@@ -4189,6 +4225,7 @@ settings:
       cycle_result_view: "Alternar visão do resultado"
       toggle_value_panel: Alternar painel de valor
       toggle_row_inspector: Alternar inspetor de linha
+      find_similar_rows: Encontrar linhas semelhantes
       results_set_null: Definir célula como NULL
       open_context_menu: Abrir menu de contexto
       open_pane_actions: Abrir ações do painel
@@ -4197,6 +4234,7 @@ settings:
       menu_select: Selecionar no menu
       menu_back: Voltar no menu
       sidebar_next_tab: Próxima aba da barra lateral
+      sidebar_prev_tab: Aba anterior da barra lateral
       refresh_schema: Atualizar schema
       open_connection_manager: Abrir gerenciador de conexões
       export_connections: "Exportar conexões"
@@ -5131,9 +5169,7 @@ sidebar:
       relational: Tabelas (%{count})
       document: Coleções (%{count})
       key_value: Chaves (%{count})
-      graph: Nós (%{count})
       time_series: Measurements (%{count})
-      wide_column: Tabelas (%{count})
       log_stream: Grupos de logs (%{count})
       object_storage: Buckets (%{count})
     folder:

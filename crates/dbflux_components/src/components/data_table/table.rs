@@ -1266,6 +1266,7 @@ impl DataTable {
                     enum_dropdown.as_ref(),
                     edit_buffer,
                     state.document_presentation(),
+                    state.has_reference_row(),
                     total_width,
                     state.horizontal_offset(),
                     font_size,
@@ -1313,6 +1314,7 @@ fn render_rows(
     enum_dropdown: Option<&Entity<crate::controls::Dropdown>>,
     edit_buffer: &super::model::EditBuffer,
     document: Option<&DocumentPresentation>,
+    reference_row: bool,
     total_width: f32,
     h_offset: Pixels,
     font_size: Pixels,
@@ -1372,6 +1374,10 @@ fn render_rows(
             let is_active_row = selection.active.is_some_and(|active| active.row == row_ix);
             let tint = ChromeColors::tint(theme);
             let cell_wash = tint.opacity(GridMetrics::CELL_SELECTED_ALPHA);
+            let is_reference_row = reference_row && row_ix == 0;
+            // Under a reference row the others are numbered from 1, so the
+            // number reads as their rank.
+            let row_number = if reference_row { row_ix } else { row_ix + 1 };
 
             let cells: Vec<AnyElement> = (0..model.col_count())
                 .map(|col_ix| {
@@ -1579,6 +1585,7 @@ fn render_rows(
             // the focused cell gets the selected-row wash; clean rows
             // otherwise alternate.
             let row_wash = row_bg
+                .or(is_reference_row.then(|| tint.opacity(GridMetrics::REFERENCE_ROW_ALPHA)))
                 .or(is_active_row.then_some(theme.table_active))
                 .or((row_ix % 2 == 1).then_some(theme.table_even));
 
@@ -1593,6 +1600,9 @@ fn render_rows(
                 .border_b_1()
                 .border_color(theme.table_row_border)
                 .when_some(row_wash, |d, bg| d.bg(bg))
+                .when(row_bg.is_none() && is_reference_row, |d| {
+                    d.border_color(tint.opacity(GridMetrics::REFERENCE_ROW_BORDER_ALPHA))
+                })
                 .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
                 .children(cells)
                 .child(
@@ -1617,9 +1627,23 @@ fn render_rows(
                                 .size_full()
                                 .pr(CELL_PADDING_X)
                                 .text_size(font_size)
-                                .text_color(if is_active_row { tint } else { theme.input })
+                                .text_color(if is_active_row || is_reference_row {
+                                    tint
+                                } else {
+                                    theme.input
+                                })
                                 .when_some(row_wash, |d, bg| d.bg(bg))
-                                .child((row_ix + 1).to_string()),
+                                .map(|gutter| {
+                                    if is_reference_row {
+                                        gutter.child(
+                                            Icon::new(AppIcon::Crosshair)
+                                                .size(nested_icon)
+                                                .color(tint),
+                                        )
+                                    } else {
+                                        gutter.child(row_number.to_string())
+                                    }
+                                }),
                         ),
                 )
                 .into_any_element()

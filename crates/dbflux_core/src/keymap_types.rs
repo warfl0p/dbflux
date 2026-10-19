@@ -116,6 +116,8 @@ pub enum Command {
     CycleResultView,
     ToggleValuePanel,
     ToggleRowInspector,
+    /// Shows the rows nearest to the active row by its vector column.
+    FindSimilarRows,
     ResultsSetNull,
     // Context menu
     OpenContextMenu,
@@ -129,6 +131,7 @@ pub enum Command {
 
     // === Sidebar ===
     SidebarNextTab,
+    SidebarPrevTab,
     RefreshSchema,
     OpenConnectionManager,
     ExportConnections,
@@ -289,6 +292,8 @@ impl Command {
             "run_query" => Some(Command::RunQuery),
             "run_query_in_new_tab" => Some(Command::RunQueryInNewTab),
             "save_query" => Some(Command::SaveQuery),
+            "save_file_as" => Some(Command::SaveFileAs),
+            "open_script_file" => Some(Command::OpenScriptFile),
             "toggle_comment" => Some(Command::ToggleComment),
             "format_query" => Some(Command::FormatQuery),
             "open_history" => Some(Command::ToggleHistoryDropdown),
@@ -423,6 +428,7 @@ impl Command {
             Command::CycleResultView => "Cycle result view",
             Command::ToggleValuePanel => "Toggle value panel",
             Command::ToggleRowInspector => "Toggle row inspector",
+            Command::FindSimilarRows => "Find similar rows",
             Command::ResultsSetNull => "Set cell to NULL",
             Command::OpenContextMenu => "Open context menu",
             Command::OpenPaneActions => "Open pane actions",
@@ -432,6 +438,7 @@ impl Command {
             Command::MenuBack => "Menu back",
 
             Command::SidebarNextTab => "Sidebar next tab",
+            Command::SidebarPrevTab => "Sidebar previous tab",
             Command::RefreshSchema => "Refresh schema",
             Command::OpenConnectionManager => "Open connection manager",
             Command::ExportConnections => "Export connections",
@@ -625,6 +632,7 @@ impl Command {
             Command::CycleResultView => "cycle_result_view",
             Command::ToggleValuePanel => "toggle_value_panel",
             Command::ToggleRowInspector => "toggle_row_inspector",
+            Command::FindSimilarRows => "find_similar_rows",
             Command::ResultsSetNull => "results_set_null",
             Command::OpenContextMenu => "open_context_menu",
             Command::OpenPaneActions => "open_pane_actions",
@@ -634,6 +642,7 @@ impl Command {
             Command::MenuBack => "menu_back",
 
             Command::SidebarNextTab => "sidebar_next_tab",
+            Command::SidebarPrevTab => "sidebar_prev_tab",
             Command::RefreshSchema => "refresh_schema",
             Command::OpenConnectionManager => "open_connection_manager",
             Command::ExportConnections => "export_connections",
@@ -844,6 +853,7 @@ impl Command {
             Command::CycleResultView,
             Command::ToggleValuePanel,
             Command::ToggleRowInspector,
+            Command::FindSimilarRows,
             Command::ResultsSetNull,
             Command::OpenContextMenu,
             Command::OpenPaneActions,
@@ -852,6 +862,7 @@ impl Command {
             Command::MenuSelect,
             Command::MenuBack,
             Command::SidebarNextTab,
+            Command::SidebarPrevTab,
             Command::RefreshSchema,
             Command::OpenConnectionManager,
             Command::ExportConnections,
@@ -1038,6 +1049,7 @@ impl Command {
             | Command::CycleResultView
             | Command::ToggleValuePanel
             | Command::ToggleRowInspector
+            | Command::FindSimilarRows
             | Command::ResultsSetNull
             | Command::OpenContextMenu
             | Command::MenuUp
@@ -1046,6 +1058,7 @@ impl Command {
             | Command::MenuBack => "Results",
 
             Command::SidebarNextTab
+            | Command::SidebarPrevTab
             | Command::RefreshSchema
             | Command::OpenConnectionManager
             | Command::ExportConnections
@@ -1658,6 +1671,22 @@ impl ContextId {
 #[cfg(test)]
 mod tests {
     use super::{Command, ContextId};
+
+    #[test]
+    fn script_file_commands_resolve_from_their_palette_ids() {
+        for command in [Command::SaveFileAs, Command::OpenScriptFile] {
+            assert_eq!(Command::from_palette_id(command.id()), Some(command));
+        }
+    }
+
+    #[test]
+    fn every_palette_id_resolves_back_to_its_command() {
+        for command in Command::all_variants() {
+            if let Some(resolved) = Command::from_palette_id(command.id()) {
+                assert_eq!(resolved, command, "palette id {:?}", command.id());
+            }
+        }
+    }
 
     #[test]
     fn command_display_names_are_stable() {

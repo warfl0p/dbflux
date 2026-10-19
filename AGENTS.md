@@ -17,6 +17,7 @@ Both are created from the repository's own templates — never from a remembered
 - An issue uses one of the forms in `.github/ISSUE_TEMPLATE/` — `bug_report.yml` for a defect, `feature_request.yml` for a capability. Fill the form's fields in the order it declares them, and keep the `[bug] ` / `[feature] ` title prefix and the `Labels I plan to apply` checklist it renders.
 - A pull request uses `.github/pull_request_template.md` verbatim: `Summary`, `What does this resolve?`, `How was this solved?`, `Validation`, `Where was this tested?`, `Checklist`, `Labels to apply`. Do not add sections of your own; follow-up work and known limitations belong where the template asks for them.
 - The mechanics (duplicate search, choosing the form, `gh` commands, reading the full branch delta) live in `skills/issue-creation/SKILL.md` and `skills/branch-pr/SKILL.md`.
+- Open the issue first and wait for maintainer approval (the `status:approved` label) before implementing a feature or behavior change; a bug fix may open its issue and PR together, and the maintainer may skip the wait. PRs are squash-merged, so split large work into independent PRs from `main` rather than long stacks (see `CONTRIBUTING.md` § Pull Requests).
 - Use only labels from the taxonomy in `CONTRIBUTING.md` § Label Guide, and never invent labels such as `area:*`.
 - A contributor without write access to `0xErwin1/dbflux` cannot apply labels from a fork. State the labels the change needs where the template asks for them and ask a maintainer to apply them during triage — do not drop that part of the template.
 
@@ -136,8 +137,9 @@ cargo run -p dbflux --features ui-automation
 
 - Prioritize correctness and clarity over speed
 - Do not write comments that summarize code; only explain non-obvious "why"
-- Prefer implementing in existing files unless it's a new logical component
-- Avoid creating many small files
+- Keep code organized by module: extend the module that owns the behavior, and once a file passes ~1000 lines of production code, split it into a module directory (`foo/mod.rs` plus submodules) by responsibility. New files belong inside the module directory they serve, not loose next to unrelated files.
+- Keep tests in the module's `tests` submodule (`foo/tests.rs` or `foo/tests/`), not inline in large files and not as sibling `*_tests.rs` files.
+- Keep functions under ~100 lines; split new or substantially rewritten functions that exceed it into private helpers. Existing functions and files over these limits are exempt until they are refactored.
 - Avoid creative additions unless explicitly requested
 - Use full words for variable names (no abbreviations like "q" for "queue")
 
@@ -419,6 +421,7 @@ Key abstractions for UI adaptation:
 - `QueryLanguage`: Determines editor syntax highlighting, placeholder text, comment prefix
 - `DriverCapabilities`: Determines which features to enable (pagination, transactions, etc.)
 - `CollectionPresentation`: Determines how a collection/container opens (for example data grid vs event stream)
+- `ObjectFacet` (via `Connection::object_facets` for tables and `Connection::collection_facets` for collections, both default `[Tabular]`): Determines the view modes, gates, filter wording and grid actions inside the data document, per object. A table can carry several (PostgreSQL adds `Document` for a `jsonb` column, `TimeSeries` for a hypertable and `Vector` for each `vector(n)` column). Never derive them from `DatabaseCategory` in the UI; only the RPC adapter uses `category_collection_facets`
 - `CollectionChildInfo`: Declares driver-owned child sources that appear in the sidebar without the UI inferring them from driver-specific conventions
 - `EventStreamTarget`: Lets the workspace/audit viewer open driver-backed event streams without embedding driver-specific routing
 - `SourceContextSpec`: Lets drivers declare extra query-context controls while the UI stays generic
@@ -469,6 +472,7 @@ Key abstractions for UI adaptation:
 4. Define the connection form in the driver crate (e.g. `const DRIVER_FORM: DriverFormDef`) and return it from `DbDriver::form_definition()`. Form definitions live with the driver, not in `dbflux_core`.
 5. Implement `ErrorFormatter` for driver-specific error messages
 6. Implement `QueryGenerator` when the driver can generate native mutation/read templates for UI previews, copy-as-query, or MCP previews
+   - Override `Connection::object_facets` when an object exposes more than one paradigm, and implement the matching `QueryGenerator` method (for example `generate_nearest_neighbors` for `ObjectFacet::Vector`).
 7. Implement `LanguageService` when the driver speaks a non-SQL dialect (e.g. `TSqlLanguageService` lives in `dbflux_driver_mssql`). SQL drivers can reuse `SqlLanguageService` from `dbflux_core`.
 8. Add feature flag in `crates/dbflux/Cargo.toml` (binary) and `crates/dbflux_app/Cargo.toml`. No UI crate gains a per-driver feature flag. The feature MUST also be added to `default` in `crates/dbflux/Cargo.toml` — release builds ship default features, so a driver left out of `default` silently ships disabled.
 9. Register in `AppState::new()` under `#[cfg(feature = "name")]`
@@ -483,9 +487,11 @@ For external RPC-backed drivers, keep discovery/adaptation in `dbflux_app::rpc_s
 
 Drivers declare their capabilities via `DriverMetadata`:
 
-- `DatabaseCategory`: Relational, Document, KeyValue, Graph, TimeSeries, WideColumn
+- `DatabaseCategory`: Relational, Document, KeyValue, TimeSeries, LogStream, ObjectStorage
 - `QueryLanguage`: SQL, MongoQuery, RedisCommands, Cypher, etc. (determines editor syntax highlighting and placeholder)
 - `DriverCapabilities`: bitflags for features (PAGINATION, TRANSACTIONS, NESTED_DOCUMENTS, etc.)
+- `ObjectFacet` (`dbflux_core/src/schema/facet.rs`): per-object paradigms. A new paradigm lands as one facet variant, a driver that emits it and the view that renders it, in the same plan. Never add a core facet, `DataStructure` variant or view kind as a skeleton to be filled in later.
+- A new `DatabaseCategory` also needs its arm in `category_presentation` (`dbflux_components/src/category.rs`), the single source of category icons, tones and container labels.
 
 ### Documentation translations
 

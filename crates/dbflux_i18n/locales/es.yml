@@ -458,10 +458,9 @@ connection_manager:
       relational: "Relacional"
       document: "Documentos"
       key_value: "Clave-valor"
-      wide_column: "Columnas anchas"
       time_series_and_logs: "Series temporales y logs"
-      graph: "Grafos"
       object_storage: "Almacenamiento de objetos"
+      other: "Otros"
   export:
     target:
       connection: conexión
@@ -1579,7 +1578,6 @@ document:
       stats:
         rebuilding: "Reconstruyendo el gráfico…"
         no_stats: No hay estadísticas disponibles para esta serie.
-        unavailable: no disponible
         title: Estadísticas
         window:
           title: Ventana
@@ -1587,12 +1585,6 @@ document:
           end: fin
           span: duración
           points: puntos
-        source:
-          title: Origen
-          measurement: medición
-          field: campo
-          host: host
-          region: región
     context_menu:
       header: "%{column} · fila %{row}"
       item:
@@ -1608,6 +1600,7 @@ document:
         set_null: Establecer NULL
         add_row: Agregar fila
         inspect_row: Inspeccionar fila
+        find_similar_rows: Buscar filas similares
         view_value: Ver valor
         duplicate_row: Duplicar fila
         delete_row: Eliminar fila
@@ -1668,6 +1661,9 @@ document:
         refresh_profile: "Actualizar estadísticas de columnas"
         sample_profile: "Perfilar las primeras filas"
         refresh_partitions: "Actualizar particiones"
+        nearest_distance: "Cambiar la distancia (actual: %{distance})"
+        nearest_clear: "Volver a las filas de la tabla"
+        nearest_column: "Cambiar la columna vectorial"
       error:
         no_results_to_export: No hay resultados para exportar
         invalid_json: JSON no válido
@@ -1793,6 +1789,39 @@ document:
         builder_notice: Las filas vienen de la consulta del generador
         edit_in_builder: Editar en el generador
         reset_builder: Restablecer
+      nearest:
+        summary: "Similares a %{anchor} por %{column}"
+        similar_to: "Similares a"
+        by: "por"
+        k: "K"
+        anchor: "referencia"
+        anchor_row: "fila %{row}"
+        read_only: "Las filas similares son de solo lectura"
+        menu_detail: "por %{column} · %{limit} más cercanas"
+        menu_blocked:
+          no_vector: "Sin valor en %{column}"
+          pending_edits:
+            one: "Guarda o revierte 1 cambio primero"
+            many: "Guarda o revierte %{count} cambios primero"
+        column:
+          l2: "Distancia L2"
+          cosine: "Distancia coseno"
+          inner_product: "Producto interno"
+        rows:
+          of_total: "%{count} más cercanas de %{total} filas"
+          count: "%{count} filas más cercanas"
+        back_to_table: Volver a la tabla
+        distance:
+          l2: L2
+          cosine: Coseno
+          inner_product: Producto interno
+        error:
+          no_vector: "La fila seleccionada no tiene valor en %{column}"
+          failed: "No se pudieron buscar filas similares: %{error}"
+          pending_edits:
+            one: "Guarda o revierte tu cambio primero"
+            many: "Guarda o revierte tus %{count} cambios primero"
+          invalid_k: "K debe ser un número entero de 1 a %{max}"
       toast:
         query_imported: Consulta importada correctamente
         mutation_queued: Mutación en cola para aprobación.
@@ -3672,6 +3701,13 @@ modals:
     remember: Recordar durante esta sesión
     cancel: Cancelar
     connect: Conectar
+  connection_password:
+    title: "Se requiere la contraseña"
+    connection_label: "Conexión"
+    placeholder: "Contraseña"
+    show_password: "Mostrar contraseña"
+    hide_password: "Ocultar contraseña"
+    remember: "Recordar hasta cerrar DBFlux"
   unsaved_changes:
     title: Cambios sin guardar
     prompt: Tienes cambios sin guardar en los siguientes documentos. ¿Qué quieres hacer?
@@ -4189,6 +4225,7 @@ settings:
       cycle_result_view: "Alternar vista del resultado"
       toggle_value_panel: Alternar panel de valor
       toggle_row_inspector: Alternar inspector de fila
+      find_similar_rows: Buscar filas similares
       results_set_null: Establecer celda en NULL
       open_context_menu: Abrir menú contextual
       open_pane_actions: Abrir acciones del panel
@@ -4197,6 +4234,7 @@ settings:
       menu_select: "Menú: seleccionar"
       menu_back: "Menú: atrás"
       sidebar_next_tab: "Barra lateral: siguiente pestaña"
+      sidebar_prev_tab: "Barra lateral: pestaña anterior"
       refresh_schema: Actualizar schema
       open_connection_manager: Abrir gestor de conexiones
       export_connections: "Exportar conexiones"
@@ -5131,9 +5169,7 @@ sidebar:
       relational: Tablas (%{count})
       document: Colecciones (%{count})
       key_value: Claves (%{count})
-      graph: Nodos (%{count})
       time_series: Mediciones (%{count})
-      wide_column: Tablas (%{count})
       log_stream: Log Groups (%{count})
       object_storage: Buckets (%{count})
     folder:
