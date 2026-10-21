@@ -1,4 +1,4 @@
-//! Migration 047: Add `accent_color_dark` and `accent_color_light` to
+//! Migration 048: Add `accent_color_dark` and `accent_color_light` to
 //! `cfg_general_settings`.
 //!
 //! Persists the accent color the user picked in place of the palette's, as
@@ -12,7 +12,7 @@ pub(crate) struct MigrationImpl;
 
 impl Migration for MigrationImpl {
     fn name(&self) -> &str {
-        "047_general_settings_accent_colors"
+        "048_general_settings_accent_colors"
     }
 
     fn run(&self, tx: &Transaction) -> Result<(), MigrationError> {

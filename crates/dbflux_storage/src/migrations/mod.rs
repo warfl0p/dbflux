@@ -188,9 +188,10 @@ impl MigrationRegistry {
         registry.register(mod_043_connection_profile_show_all_databases::MigrationImpl);
         registry.register(mod_044_ssh_tunnel_config_host::MigrationImpl);
         registry.register(mod_045_general_settings_table_alias::MigrationImpl);
-        registry.register(mod_046_general_settings_syntax_colors::MigrationImpl);
-        registry.register(mod_047_general_settings_accent_colors::MigrationImpl);
-        registry.register(mod_048_general_settings_blank_line_delimiter::MigrationImpl);
+        registry.register(mod_046_connection_profile_read_only::MigrationImpl);
+        registry.register(mod_047_general_settings_syntax_colors::MigrationImpl);
+        registry.register(mod_048_general_settings_accent_colors::MigrationImpl);
+        registry.register(mod_049_general_settings_blank_line_delimiter::MigrationImpl);
         registry
     }
 
@@ -426,9 +427,10 @@ mod mod_042_connection_profile_navigator_view;
 mod mod_043_connection_profile_show_all_databases;
 mod mod_044_ssh_tunnel_config_host;
 mod mod_045_general_settings_table_alias;
-mod mod_046_general_settings_syntax_colors;
-mod mod_047_general_settings_accent_colors;
-mod mod_048_general_settings_blank_line_delimiter;
+mod mod_046_connection_profile_read_only;
+mod mod_047_general_settings_syntax_colors;
+mod mod_048_general_settings_accent_colors;
+mod mod_049_general_settings_blank_line_delimiter;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1086,8 +1088,43 @@ mod tests {
     }
 
     #[test]
-    fn test_046_general_settings_syntax_colors_upgrades_and_is_idempotent() {
-        let temp_dir = temp_dir("046_general_settings_syntax_colors");
+    fn test_046_existing_profiles_load_as_not_read_only() {
+        let temp_dir = temp_dir("046_connection_profile_read_only");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let db_path = temp_dir.join("test.db");
+
+        let conn = Connection::open(&db_path).unwrap();
+        let registry = MigrationRegistry::new();
+        registry.run_all(&conn).expect("create schema");
+        conn.execute_batch(
+            "ALTER TABLE cfg_connection_profiles DROP COLUMN read_only;
+             DELETE FROM sys_migrations WHERE name = '046_connection_profile_read_only';
+             INSERT INTO cfg_connection_profiles (id, name) VALUES ('legacy', 'Legacy');",
+        )
+        .expect("restore pre-046 schema with an existing profile");
+
+        registry.run_all(&conn).expect("upgrade profile schema");
+        let read_only: i64 = conn
+            .query_row(
+                "SELECT read_only FROM cfg_connection_profiles WHERE id = 'legacy'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("read the migrated flag");
+        assert_eq!(read_only, 0, "existing profiles must load as not read-only");
+
+        registry
+            .run_all(&conn)
+            .expect("rerun profile schema upgrade");
+
+        drop(conn);
+        let _ = std::fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_047_general_settings_syntax_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("047_general_settings_syntax_colors");
         if let Err(error) = std::fs::remove_dir_all(&temp_dir)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -1102,7 +1139,7 @@ mod tests {
         conn.execute_batch(
             "ALTER TABLE cfg_general_settings DROP COLUMN syntax_colors_json;
              UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
-             DELETE FROM sys_migrations WHERE name = '046_general_settings_syntax_colors';",
+             DELETE FROM sys_migrations WHERE name = '047_general_settings_syntax_colors';",
         )
         .expect("restore pre-044 general settings schema");
 
@@ -1127,7 +1164,7 @@ mod tests {
             .expect("rerun general settings schema upgrade");
         let applied: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sys_migrations WHERE name = '046_general_settings_syntax_colors'",
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '047_general_settings_syntax_colors'",
                 [],
                 |row| row.get(0),
             )
@@ -1139,8 +1176,8 @@ mod tests {
     }
 
     #[test]
-    fn test_047_general_settings_accent_colors_upgrades_and_is_idempotent() {
-        let temp_dir = temp_dir("047_general_settings_accent_colors");
+    fn test_048_general_settings_accent_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("048_general_settings_accent_colors");
         if let Err(error) = std::fs::remove_dir_all(&temp_dir)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -1156,7 +1193,7 @@ mod tests {
             "ALTER TABLE cfg_general_settings DROP COLUMN accent_color_dark;
              ALTER TABLE cfg_general_settings DROP COLUMN accent_color_light;
              UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
-             DELETE FROM sys_migrations WHERE name = '047_general_settings_accent_colors';",
+             DELETE FROM sys_migrations WHERE name = '048_general_settings_accent_colors';",
         )
         .expect("restore pre-045 general settings schema");
 
@@ -1182,7 +1219,7 @@ mod tests {
             .expect("rerun general settings schema upgrade");
         let applied: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sys_migrations WHERE name = '047_general_settings_accent_colors'",
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '048_general_settings_accent_colors'",
                 [],
                 |row| row.get(0),
             )
@@ -1252,9 +1289,10 @@ mod tests {
             "043_connection_profile_show_all_databases",
             "044_ssh_tunnel_config_host",
             "045_general_settings_table_alias",
-            "046_general_settings_syntax_colors",
-            "047_general_settings_accent_colors",
-            "048_general_settings_blank_line_delimiter",
+            "046_connection_profile_read_only",
+            "047_general_settings_syntax_colors",
+            "048_general_settings_accent_colors",
+            "049_general_settings_blank_line_delimiter",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();

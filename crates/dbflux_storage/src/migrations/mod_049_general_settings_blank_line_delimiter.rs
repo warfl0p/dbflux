@@ -1,4 +1,4 @@
-//! Migration 048: Add `blank_line_delimits_statements` to
+//! Migration 049: Add `blank_line_delimits_statements` to
 //! `cfg_general_settings`.
 //!
 //! Persists whether a blank line ends a SQL statement in the editor. The
@@ -12,7 +12,7 @@ pub(crate) struct MigrationImpl;
 
 impl Migration for MigrationImpl {
     fn name(&self) -> &str {
-        "048_general_settings_blank_line_delimiter"
+        "049_general_settings_blank_line_delimiter"
     }
 
     fn run(&self, tx: &Transaction) -> Result<(), MigrationError> {
