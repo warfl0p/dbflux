@@ -4080,6 +4080,9 @@ settings:
         "8s": "8 segundos"
         "15s": "15 segundos"
         never: "Manter até dispensar"
+    show_error_toasts:
+      label: "Mostrar avisos de erro"
+      hint: "Erros das ações que você executou aparecem como aviso até serem dispensados. Desativado, ficam apenas na central de notificações, atrás do sino."
     share_stable_db:
       label: Usar o banco de dados estável
       error: Falha ao atualizar a configuração de banco de dados compartilhado

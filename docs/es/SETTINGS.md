@@ -70,6 +70,7 @@ Integration](MCP_AI_INTEGRATION.md).
 | Ajuste | Opciones | Predeterminado |
 |---------|---------|---------|
 | **Duración de los avisos** | 4 segundos, 8 segundos, 15 segundos, Mantener hasta descartarlos | 8 segundos |
+| **Mostrar avisos de error** | Activado, Desactivado | Activado |
 
 **Duración de los avisos** define cuánto permanece un aviso antes de cerrarse
 solo. Los avisos de éxito y de información se cierran al cabo de ese tiempo, y
@@ -82,6 +83,14 @@ puntero se va.
 Los avisos se apilan en la esquina superior derecha del área de documentos. Se
 muestran como máximo cuatro a la vez; los más antiguos se pliegan en una entrada
 *N más* que los expande o los descarta todos juntos.
+
+**Mostrar avisos de error** decide si un error de una acción que ejecutaste,
+como una conexión fallida, aparece como aviso. Desactivado, el error solo se
+lista en el centro de notificaciones tras la campana, cuya insignia se vuelve
+roja, donde puedes abrirlo en Audit o descartarlo. Los errores que nunca llegan
+al centro de notificaciones, como una query fallida en el editor, siguen
+mostrando un aviso. Ver
+[Centro de notificaciones](KEYBOARD.md#centro-de-notificaciones).
 
 ### Seguridad de ejecución (confirmación de queries peligrosas)
 

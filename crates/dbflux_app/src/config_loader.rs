@@ -113,6 +113,7 @@ pub fn save_general_settings(
         vim_mode: if settings.vim_mode { 1 } else { 0 },
         table_alias_completion: i32::from(settings.table_alias_completion),
         table_alias_use_as: i32::from(settings.table_alias_use_as),
+        show_error_toasts: i32::from(settings.show_error_toasts),
         editor_row_limit,
         vim_leader: settings.vim_leader.clone(),
         ui_font_family: settings.ui_font_family.clone(),
@@ -1118,6 +1119,7 @@ fn load_general_settings(
         vim_mode: dto.vim_mode != 0,
         table_alias_completion: dto.table_alias_completion != 0,
         table_alias_use_as: dto.table_alias_use_as != 0,
+        show_error_toasts: dto.show_error_toasts != 0,
         editor_row_limit: usize::try_from(dto.editor_row_limit)
             .ok()
             .filter(|value| *value > 0)
@@ -2621,6 +2623,7 @@ mod tests {
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
+            show_error_toasts: 1,
             updated_at: String::new(),
         };
 
@@ -2722,6 +2725,7 @@ mod tests {
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
+            show_error_toasts: 1,
             updated_at: String::new(),
         };
         runtime
@@ -3060,6 +3064,23 @@ mod tests {
     }
 
     #[test]
+    fn show_error_toasts_defaults_on_and_round_trips() {
+        let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
+
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(loaded.general_settings.show_error_toasts);
+
+        let settings = GeneralSettings {
+            show_error_toasts: false,
+            ..Default::default()
+        };
+        super::save_general_settings(&runtime, &settings).expect("save error toast setting");
+
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert!(!loaded.general_settings.show_error_toasts);
+    }
+
+    #[test]
     fn table_alias_settings_default_on_without_as_and_round_trip() {
         let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
 
@@ -3155,6 +3176,7 @@ mod tests {
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
+            show_error_toasts: 1,
             updated_at: String::new(),
         };
         runtime

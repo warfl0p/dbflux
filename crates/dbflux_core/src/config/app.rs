@@ -391,6 +391,12 @@ pub struct GeneralSettings {
     #[serde(default = "default_toast_auto_dismiss_secs")]
     pub toast_auto_dismiss_secs: u32,
 
+    /// Show a toast for each error reported through the user-facing error
+    /// seam. Off lists those errors in the notifications center only. On by
+    /// default.
+    #[serde(default = "default_true")]
+    pub show_error_toasts: bool,
+
     // -- Editor --
     /// Modal (Vim) editing in multi-line editors. Off by default.
     #[serde(default)]
@@ -550,6 +556,7 @@ impl Default for GeneralSettings {
             object_preview_size_limit_mib: default_object_preview_size_limit_mib(),
             key_value_size_limit_mib: default_key_value_size_limit_mib(),
             toast_auto_dismiss_secs: Self::DEFAULT_TOAST_AUTO_DISMISS_SECS,
+            show_error_toasts: true,
             vim_mode: false,
             table_alias_completion: true,
             table_alias_use_as: false,

@@ -192,6 +192,7 @@ impl MigrationRegistry {
         registry.register(mod_047_general_settings_syntax_colors::MigrationImpl);
         registry.register(mod_048_general_settings_accent_colors::MigrationImpl);
         registry.register(mod_049_general_settings_blank_line_delimiter::MigrationImpl);
+        registry.register(mod_050_general_settings_error_toasts::MigrationImpl);
         registry
     }
 
@@ -431,6 +432,7 @@ mod mod_046_connection_profile_read_only;
 mod mod_047_general_settings_syntax_colors;
 mod mod_048_general_settings_accent_colors;
 mod mod_049_general_settings_blank_line_delimiter;
+mod mod_050_general_settings_error_toasts;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1293,6 +1295,7 @@ mod tests {
             "047_general_settings_syntax_colors",
             "048_general_settings_accent_colors",
             "049_general_settings_blank_line_delimiter",
+            "050_general_settings_error_toasts",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();
