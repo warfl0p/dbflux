@@ -57,6 +57,7 @@ pub(super) enum GeneralFormRow {
     ObjectPreviewLimit,
     KeyValueSizeLimit,
     ToastTimeout,
+    ShowErrorToasts,
     ShareStableDb,
     SaveButton,
 }
@@ -1989,6 +1990,7 @@ mod tests {
                 "requires-preview",
                 "settings.general.requires_preview.label",
             ),
+            ("error-toasts", "settings.general.show_error_toasts.label"),
         ];
 
         for (id, key) in expected {

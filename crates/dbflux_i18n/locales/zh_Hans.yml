@@ -4018,6 +4018,9 @@ settings:
         "8s": "8 秒"
         "15s": "15 秒"
         never: "保留直到关闭"
+    show_error_toasts:
+      label: "显示错误通知"
+      hint: "你执行的操作出错时会弹出通知，直到你关闭它。关闭此项后，错误只列在铃铛后的通知中心里。"
     share_stable_db:
       label: 使用稳定数据库
       error: 更新共享数据库设置失败

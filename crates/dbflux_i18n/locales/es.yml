@@ -4018,6 +4018,9 @@ settings:
         "8s": "8 segundos"
         "15s": "15 segundos"
         never: "Mantener hasta descartarlos"
+    show_error_toasts:
+      label: "Mostrar avisos de error"
+      hint: "Los errores de las acciones que ejecutaste aparecen como aviso hasta que lo cierras. Desactivado, solo se listan en el centro de notificaciones, tras la campana."
     share_stable_db:
       label: Usar la base de datos estable
       error: No se pudo actualizar la configuración de base de datos compartida

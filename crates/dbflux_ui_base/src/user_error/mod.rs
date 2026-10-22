@@ -121,12 +121,39 @@ impl UserFacingError {
 /// | Inside a `cx.update(|cx| { ... })`      | `report_error`          |
 pub fn report_error(err: UserFacingError, cx: &mut App) {
     use crate::app_state_entity::AppStateGlobal;
+
+    trace_user_error(&err);
+
+    let app_state = cx
+        .try_global::<AppStateGlobal>()
+        .map(|app_state_global| app_state_global.entity.clone());
+
+    let show_toast = app_state
+        .as_ref()
+        .is_none_or(|app_state| app_state.read(cx).general_settings().show_error_toasts);
+
+    if show_toast {
+        push_error_toast(&err, cx);
+    }
+
+    if let Some(entity) = app_state {
+        entity.update(cx, |s, cx| {
+            s.notifications
+                .record_error(crate::notifications::ErrorNotification::from_user_error(
+                    &err,
+                    dbflux_core::chrono::Utc::now(),
+                ));
+            s.note_user_error(err.correlation_id, err.severity, cx);
+        });
+    }
+}
+
+fn push_error_toast(err: &UserFacingError, cx: &mut App) {
+    use crate::app_state_entity::AppStateGlobal;
     use crate::toast::{Toast, ToastAction, copy_action, now_hms};
 
     let id_str = err.correlation_id.to_string();
     let summary = &err.summary;
-
-    trace_user_error(&err);
 
     let mut toast = match err.severity {
         EventSeverity::Warn => Toast::warning(err.summary.clone()),
@@ -164,18 +191,6 @@ pub fn report_error(err: UserFacingError, cx: &mut App) {
         .action(view_in_audit);
 
     toast.push(cx);
-
-    if let Some(app_state_global) = cx.try_global::<AppStateGlobal>() {
-        let entity = app_state_global.entity.clone();
-        entity.update(cx, |s, cx| {
-            s.notifications
-                .record_error(crate::notifications::ErrorNotification::from_user_error(
-                    &err,
-                    dbflux_core::chrono::Utc::now(),
-                ));
-            s.note_user_error(err.correlation_id, err.severity, cx);
-        });
-    }
 }
 
 /// Emits the tracing event the audit bridge turns into the audit row.
@@ -375,6 +390,62 @@ mod tests {
         assert_eq!(ErrorKind::Driver.as_str(), "driver");
         assert_eq!(ErrorKind::User.as_str(), "user");
         assert_eq!(ErrorKind::Config.as_str(), "config");
+    }
+}
+
+#[cfg(test)]
+mod report_tests {
+    use gpui::{AppContext, TestAppContext};
+
+    use super::*;
+    use crate::app_state_entity::AppStateGlobal;
+    use crate::notifications::NotificationSources;
+    use crate::object_tree::test_support::test_app_state;
+    use crate::toast::{ToastGlobal, ToastHost};
+
+    fn report_with_error_toasts(
+        show_error_toasts: bool,
+        cx: &mut TestAppContext,
+    ) -> (usize, usize) {
+        let state = test_app_state(cx);
+
+        cx.update(|cx| {
+            let host = cx.new(|_| ToastHost::new());
+            cx.set_global(ToastGlobal { host: host.clone() });
+            cx.set_global(AppStateGlobal {
+                entity: state.clone(),
+            });
+
+            state.update(cx, |state, _| {
+                let mut settings = state.general_settings().clone();
+                settings.show_error_toasts = show_error_toasts;
+                state.update_general_settings(settings);
+            });
+
+            report_error(
+                UserFacingError::new(ErrorKind::Network, "connect failed"),
+                cx,
+            );
+
+            let toasts = host.read(cx).toast_count();
+            let errors = state
+                .read(cx)
+                .notifications
+                .snapshot(&NotificationSources::default())
+                .entries
+                .len();
+            (toasts, errors)
+        })
+    }
+
+    #[gpui::test]
+    fn reported_error_shows_a_toast_and_a_notification_by_default(cx: &mut TestAppContext) {
+        assert_eq!(report_with_error_toasts(true, cx), (1, 1));
+    }
+
+    #[gpui::test]
+    fn reported_error_skips_the_toast_when_error_toasts_are_off(cx: &mut TestAppContext) {
+        assert_eq!(report_with_error_toasts(false, cx), (0, 1));
     }
 }
 

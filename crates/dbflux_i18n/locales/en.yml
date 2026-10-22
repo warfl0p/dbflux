@@ -4018,6 +4018,9 @@ settings:
         "8s": "8 seconds"
         "15s": "15 seconds"
         never: "Keep until dismissed"
+    show_error_toasts:
+      label: "Show error toasts"
+      hint: "Errors from actions you ran pop up as a toast until dismissed. Off lists them in the notifications center only, behind the bell."
     share_stable_db:
       label: Use the stable database
       error: Failed to update the shared-database setting
