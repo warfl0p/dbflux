@@ -171,12 +171,19 @@ impl CodeDocument {
     }
 
     fn connection_items(app_state: &Entity<AppStateEntity>, cx: &App) -> Vec<DropdownItem> {
-        let mut items: Vec<_> = app_state
-            .read(cx)
+        let state = app_state.read(cx);
+        let tree = state.connection_tree();
+
+        // Prefix the folder path so same-named profiles in different folders
+        // can be told apart.
+        let mut items: Vec<_> = state
             .connections()
             .values()
             .map(|connected| {
-                DropdownItem::with_value(&connected.profile.name, connected.profile.id.to_string())
+                let profile = &connected.profile;
+                let mut path = tree.folder_path(profile.id);
+                path.push(&profile.name);
+                DropdownItem::with_value(path.join(" / "), profile.id.to_string())
             })
             .collect();
 
