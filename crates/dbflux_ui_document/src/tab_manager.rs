@@ -1,5 +1,6 @@
 #![allow(clippy::type_complexity)]
 
+use super::data_grid_panel::ReferencedRowTarget;
 use super::dedup::DocumentKey;
 use super::handle::DocumentEvent;
 use super::pane::{EmptyScriptCleanup, PaneHandle};
@@ -282,6 +283,18 @@ impl Tab {
         }
     }
 
+    /// Opens `path` in this tab when it is a secret store document. A no-op
+    /// for every other document type.
+    pub fn navigate_secret_path(&self, path: Option<String>, cx: &mut App) {
+        match self {
+            Tab::Pane(p) => {
+                if let Some(navigate) = p.navigate_secret_path.as_ref() {
+                    navigate(path, cx);
+                }
+            }
+        }
+    }
+
     /// Drains an open-this-object-in-an-editor-tab intent, if this tab has one
     /// pending. `None` for every other document type.
     pub fn take_pending_open_object_editor(
@@ -416,6 +429,11 @@ impl TabManager {
                 DocumentEvent::RequestConnect { profile_id } => {
                     cx.emit(TabManagerEvent::RequestConnect {
                         profile_id: *profile_id,
+                    });
+                }
+                DocumentEvent::OpenReferencedRow { target } => {
+                    cx.emit(TabManagerEvent::OpenReferencedRow {
+                        target: target.clone(),
                     });
                 }
                 _ => {}
@@ -918,6 +936,11 @@ pub enum TabManagerEvent {
     /// A document asked for a profile to be connected.
     RequestConnect {
         profile_id: uuid::Uuid,
+    },
+    /// Open the row a foreign-key value points at (see
+    /// [`ReferencedRowTarget`]).
+    OpenReferencedRow {
+        target: ReferencedRowTarget,
     },
 }
 

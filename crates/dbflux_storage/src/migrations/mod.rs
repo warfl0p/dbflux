@@ -189,10 +189,11 @@ impl MigrationRegistry {
         registry.register(mod_044_ssh_tunnel_config_host::MigrationImpl);
         registry.register(mod_045_general_settings_table_alias::MigrationImpl);
         registry.register(mod_046_connection_profile_read_only::MigrationImpl);
-        registry.register(mod_047_general_settings_syntax_colors::MigrationImpl);
-        registry.register(mod_048_general_settings_accent_colors::MigrationImpl);
-        registry.register(mod_049_general_settings_blank_line_delimiter::MigrationImpl);
-        registry.register(mod_050_general_settings_error_toasts::MigrationImpl);
+        registry.register(mod_047_general_settings_grid_fk_labels::MigrationImpl);
+        registry.register(mod_048_general_settings_syntax_colors::MigrationImpl);
+        registry.register(mod_049_general_settings_accent_colors::MigrationImpl);
+        registry.register(mod_050_general_settings_blank_line_delimiter::MigrationImpl);
+        registry.register(mod_051_general_settings_error_toasts::MigrationImpl);
         registry
     }
 
@@ -429,10 +430,11 @@ mod mod_043_connection_profile_show_all_databases;
 mod mod_044_ssh_tunnel_config_host;
 mod mod_045_general_settings_table_alias;
 mod mod_046_connection_profile_read_only;
-mod mod_047_general_settings_syntax_colors;
-mod mod_048_general_settings_accent_colors;
-mod mod_049_general_settings_blank_line_delimiter;
-mod mod_050_general_settings_error_toasts;
+mod mod_047_general_settings_grid_fk_labels;
+mod mod_048_general_settings_syntax_colors;
+mod mod_049_general_settings_accent_colors;
+mod mod_050_general_settings_blank_line_delimiter;
+mod mod_051_general_settings_error_toasts;
 
 pub use mod_001_initial::MigrationImpl;
 pub use mod_002_audit_extended::MigrationImpl as MigrationImplAuditExtended;
@@ -1125,8 +1127,8 @@ mod tests {
     }
 
     #[test]
-    fn test_047_general_settings_syntax_colors_upgrades_and_is_idempotent() {
-        let temp_dir = temp_dir("047_general_settings_syntax_colors");
+    fn test_048_general_settings_syntax_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("048_general_settings_syntax_colors");
         if let Err(error) = std::fs::remove_dir_all(&temp_dir)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -1141,7 +1143,7 @@ mod tests {
         conn.execute_batch(
             "ALTER TABLE cfg_general_settings DROP COLUMN syntax_colors_json;
              UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
-             DELETE FROM sys_migrations WHERE name = '047_general_settings_syntax_colors';",
+             DELETE FROM sys_migrations WHERE name = '048_general_settings_syntax_colors';",
         )
         .expect("restore pre-044 general settings schema");
 
@@ -1166,7 +1168,7 @@ mod tests {
             .expect("rerun general settings schema upgrade");
         let applied: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sys_migrations WHERE name = '047_general_settings_syntax_colors'",
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '048_general_settings_syntax_colors'",
                 [],
                 |row| row.get(0),
             )
@@ -1178,8 +1180,8 @@ mod tests {
     }
 
     #[test]
-    fn test_048_general_settings_accent_colors_upgrades_and_is_idempotent() {
-        let temp_dir = temp_dir("048_general_settings_accent_colors");
+    fn test_049_general_settings_accent_colors_upgrades_and_is_idempotent() {
+        let temp_dir = temp_dir("049_general_settings_accent_colors");
         if let Err(error) = std::fs::remove_dir_all(&temp_dir)
             && error.kind() != std::io::ErrorKind::NotFound
         {
@@ -1195,7 +1197,7 @@ mod tests {
             "ALTER TABLE cfg_general_settings DROP COLUMN accent_color_dark;
              ALTER TABLE cfg_general_settings DROP COLUMN accent_color_light;
              UPDATE cfg_general_settings SET language = 'es' WHERE id = 1;
-             DELETE FROM sys_migrations WHERE name = '048_general_settings_accent_colors';",
+             DELETE FROM sys_migrations WHERE name = '049_general_settings_accent_colors';",
         )
         .expect("restore pre-045 general settings schema");
 
@@ -1221,7 +1223,7 @@ mod tests {
             .expect("rerun general settings schema upgrade");
         let applied: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sys_migrations WHERE name = '048_general_settings_accent_colors'",
+                "SELECT COUNT(*) FROM sys_migrations WHERE name = '049_general_settings_accent_colors'",
                 [],
                 |row| row.get(0),
             )
@@ -1292,10 +1294,11 @@ mod tests {
             "044_ssh_tunnel_config_host",
             "045_general_settings_table_alias",
             "046_connection_profile_read_only",
-            "047_general_settings_syntax_colors",
-            "048_general_settings_accent_colors",
-            "049_general_settings_blank_line_delimiter",
-            "050_general_settings_error_toasts",
+            "047_general_settings_grid_fk_labels",
+            "048_general_settings_syntax_colors",
+            "049_general_settings_accent_colors",
+            "050_general_settings_blank_line_delimiter",
+            "051_general_settings_error_toasts",
         ];
 
         let pending = registry.get_pending(&conn).unwrap();

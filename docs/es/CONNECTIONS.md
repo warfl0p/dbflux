@@ -28,8 +28,9 @@ El Connection Manager muestra un selector de drivers. Los drivers disponibles
 dependen de los features con los que se compiló el binario; el build estándar
 incluye SQLite, PostgreSQL, MySQL/MariaDB, Microsoft SQL Server, Amazon
 Redshift, ClickHouse, TursoDB, DuckDB, MongoDB, DynamoDB, Redis, InfluxDB, CloudWatch
-Logs y Amazon S3. El selector agrupa los drivers por categoría: Relacional,
-Documentos, Clave-valor, Series temporales y logs, y Almacenamiento de objetos.
+Logs, Amazon S3 y AWS Secrets. El selector agrupa los drivers por categoría:
+Relacional, Documentos, Clave-valor, Series temporales y logs, Almacenamiento de
+objetos, y Almacenes de secretos.
 Los drivers RPC registrados externamente también aparecen aquí cuando están
 configurados (ver `docs/RPC_SERVICES_CONFIG.md`).
 
@@ -45,7 +46,15 @@ conexión; ver [Modo formulario vs. URI directa](#modo-formulario-vs-uri-directa
 La sección **Seguridad** al final de la pestaña Main contiene el interruptor
 **Solo lectura**. Cuando está activado, DBFlux bloquea los cambios hechos desde la
 grilla de datos, el constructor visual de consultas y la comparación de esquemas en
-esa conexión. Las sentencias escritas en el editor de consultas se siguen ejecutando.
+esa conexión, rechaza las sentencias del editor de consultas que cambiarían datos o
+esquema, y deniega las llamadas MCP por encima de la clase `read` (ver
+[Conexiones de solo lectura](MCP_AI_INTEGRATION.md#conexiones-de-solo-lectura)).
+Las sentencias de lectura se siguen ejecutando. En la app, activar el ajuste se aplica
+de inmediato a una conexión abierta, mientras que desactivarlo surte efecto al reconectar.
+MCP toma cualquiera de los dos cambios en su siguiente llamada. El editor clasifica cada sentencia por
+su texto, así que una función con efectos secundarios llamada desde un `SELECT`, como
+`setval` de PostgreSQL, se sigue ejecutando: las credenciales de solo lectura en la
+base de datos siguen siendo el límite más fuerte.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../images/connections/driver-picker-dark.webp">
@@ -221,6 +230,7 @@ El formulario está guiado por el provider. Para AWS SSO rellenas:
 | **SSO session**   | Referencia opcional a un perfil **AWS SSO Session**. Al fijarla, el Start URL y la región se heredan y sus campos inline se deshabilitan visualmente. |
 | **SSO Start URL** | La URL de tu portal de Identity Center (omítela si usas una sesión).                                                                                  |
 | **Region**        | p. ej. `us-east-1`.                                                                                                                                   |
+| **Endpoint URL**  | Opcional, p. ej. `http://localhost:4566` para LocalStack. Solo afecta a Secrets Manager y SSM, mediante una sección `[services]` en `~/.aws/config`. Los perfiles AWS Shared Credentials tienen el mismo campo. |
 | **Account**       | Un desplegable que se rellena **después de iniciar sesión** — lista las cuentas a las que tu sesión SSO tiene acceso.                                 |
 | **Role**          | Un desplegable que se rellena una vez elegida una cuenta.                                                                                             |
 
@@ -307,6 +317,16 @@ Notas:
   obtenerlos en cada reconexión.
 - Las fuentes Secret/Parameter respaldadas por un auth provider **requieren un
   Auth Profile** en la conexión (se valida antes de conectar).
+- Para llegar a LocalStack o a un endpoint de VPC, define **Endpoint URL** en el
+  Auth Profile de AWS. El SDK de AWS también respeta
+  `AWS_ENDPOINT_URL_SECRETS_MANAGER` y `AWS_ENDPOINT_URL_SSM`.
+
+> **Atención:** DBFlux escribe el endpoint en una sección `[services]` a la que
+> apunta el perfil, por lo que solo se aplica a Secrets Manager y SSM. Eso
+> incluye los comandos `secretsmanager` y `ssm` del AWS CLI y el port
+> forwarding de SSM que usen ese perfil. DynamoDB, S3 y CloudWatch mantienen sus
+> endpoints por defecto. Una sección `[services]` compartida con otro perfil
+> nunca se edita: DBFlux le da a este perfil su propia copia.
 
 ---
 

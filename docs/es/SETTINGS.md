@@ -45,6 +45,12 @@ Integration](MCP_AI_INTEGRATION.md).
 | **Write the alias with AS** | Off | Inserta `access_control AS ac` en lugar de `access_control ac`. |
 | **A blank line ends a statement** | Off | Una línea en blanco termina una sentencia SQL igual que `;`, así que ejecutar o completar la sentencia bajo el cursor ignora una sentencia sin terminar por encima. Ejecutar un script entero seleccionado sigue dividiendo solo en los `;`. Ver [el editor](EDITOR.md). |
 
+### Cuadrícula de datos
+
+| Setting                      | Default | Qué hace |
+| ---------------------------- | ------- | -------- |
+| **Mostrar el valor del registro referenciado en celdas de clave foránea** | Off | Las celdas que contienen una clave foránea resuelven y muestran el valor del registro referenciado junto a su id. Se aplica a las páginas cargadas después de guardar; el inspector de filas siempre resuelve las referencias. |
+
 ### Inicio y sesión
 
 | Setting                        | Default | Qué hace                                                         |
@@ -61,7 +67,7 @@ Integration](MCP_AI_INTEGRATION.md).
 | --------------------------------------- | ------- | --------------------------------------------------------- |
 | **Default refresh policy**              | Manual  | Manual o Interval auto-refresh para las data views.       |
 | **Default refresh interval (seconds)**  | 5       | Intervalo usado cuando la policy es Interval (mínimo 1).  |
-| **Max concurrent background tasks**     | 8       | Tope de trabajo simultáneo en segundo plano (mínimo 1).   |
+| **Max concurrent background tasks**     | 8       | Tope de las tareas de conexión y de esquema (mínimo 1). Cuentan las conexiones, desconexiones, hooks de conexión, cambios de base de datos, cargas, actualizaciones y eliminaciones de esquema, y los escaneos key-value en curso. Al llegar al tope, una nueva conexión, cambio de base de datos, carga de esquema o de detalles de tabla, o página key-value se rechaza con un aviso hasta que termine una tarea en curso; no se encola. Las queries, las cargas del data grid, los exports, los dashboards y las mutaciones no cuentan ni tienen límite. |
 | **Pause auto-refresh on error**         | On      | Detiene el auto-refresh de una view después de que falla. |
 | **Auto-refresh only if tab is visible** | Off     | Se salta el refresh de las tabs que no estás mirando.     |
 

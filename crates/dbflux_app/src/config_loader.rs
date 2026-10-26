@@ -127,6 +127,7 @@ pub fn save_general_settings(
         accent_color_dark: settings.accent_colors.dark.clone(),
         accent_color_light: settings.accent_colors.light.clone(),
         blank_line_delimits_statements: i32::from(settings.blank_line_delimits_statements),
+        grid_fk_labels: if settings.grid_fk_labels { 1 } else { 0 },
         updated_at: String::new(),
     };
     repo.upsert(&dto)?;
@@ -514,6 +515,7 @@ fn db_kind_to_str(kind: DbKind) -> String {
         DbKind::ClickHouse => "ClickHouse",
         DbKind::Turso => "Turso",
         DbKind::DuckDB => "DuckDB",
+        DbKind::AwsSecrets => "AwsSecrets",
     }
     .to_string()
 }
@@ -535,6 +537,7 @@ fn str_to_db_kind(s: &str) -> Option<DbKind> {
         "ClickHouse" => Some(DbKind::ClickHouse),
         "Turso" => Some(DbKind::Turso),
         "DuckDB" => Some(DbKind::DuckDB),
+        "AwsSecrets" => Some(DbKind::AwsSecrets),
         _ => None,
     }
 }
@@ -555,6 +558,7 @@ fn default_db_config_for_kind(kind: DbKind) -> dbflux_core::DbConfig {
         DbKind::ClickHouse => dbflux_core::DbConfig::default_clickhouse(),
         DbKind::Turso => dbflux_core::DbConfig::default_turso(),
         DbKind::DuckDB => dbflux_core::DbConfig::default_duckdb(),
+        DbKind::AwsSecrets => dbflux_core::DbConfig::default_aws_secrets(),
     }
 }
 
@@ -1148,6 +1152,7 @@ fn load_general_settings(
             light: dto.accent_color_light.clone(),
         },
         blank_line_delimits_statements: dto.blank_line_delimits_statements != 0,
+        grid_fk_labels: dto.grid_fk_labels != 0,
     }
 }
 
@@ -2624,6 +2629,7 @@ mod tests {
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
+            grid_fk_labels: 0,
             updated_at: String::new(),
         };
 
@@ -2726,6 +2732,7 @@ mod tests {
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
+            grid_fk_labels: 0,
             updated_at: String::new(),
         };
         runtime
@@ -3177,6 +3184,7 @@ mod tests {
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
+            grid_fk_labels: 0,
             updated_at: String::new(),
         };
         runtime

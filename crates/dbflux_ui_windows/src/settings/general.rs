@@ -56,6 +56,7 @@ impl GeneralSection {
             current.table_alias_completion != saved.table_alias_completion,
             current.table_alias_use_as != saved.table_alias_use_as,
             current.blank_line_delimits_statements != saved.blank_line_delimits_statements,
+            current.grid_fk_labels != saved.grid_fk_labels,
             current.toast_auto_dismiss_secs != saved.toast_auto_dismiss_secs,
             current.show_error_toasts != saved.show_error_toasts,
         ];
@@ -162,6 +163,7 @@ impl GeneralSection {
             GeneralFormRow::TableAlias,
             GeneralFormRow::TableAliasUseAs,
             GeneralFormRow::BlankLineDelimiter,
+            GeneralFormRow::GridFkLabels,
             GeneralFormRow::RestoreSession,
             GeneralFormRow::ReopenConnections,
             GeneralFormRow::DefaultFocus,
@@ -321,6 +323,10 @@ impl GeneralSection {
             Some(GeneralFormRow::BlankLineDelimiter) => {
                 self.gen_settings.blank_line_delimits_statements =
                     !self.gen_settings.blank_line_delimits_statements;
+                cx.notify();
+            }
+            Some(GeneralFormRow::GridFkLabels) => {
+                self.gen_settings.grid_fk_labels = !self.gen_settings.grid_fk_labels;
                 cx.notify();
             }
             Some(GeneralFormRow::RestoreSession) => {
@@ -1190,6 +1196,24 @@ impl GeneralSection {
                 cx,
             ));
 
+        let data_grid = div()
+            .flex()
+            .flex_col()
+            .child(dbflux_components::composites::section_header(
+                dbflux_i18n::t!("settings.general.data_grid.group"),
+                Some(AppIcon::Table.into()),
+                cx,
+            ))
+            .child(self.render_gen_checkbox(
+                "grid-fk-labels",
+                dbflux_i18n::t!("settings.general.grid_fk_labels.label"),
+                Some(dbflux_i18n::t!("settings.general.grid_fk_labels.hint")),
+                self.gen_settings.grid_fk_labels,
+                GeneralFormRow::GridFkLabels,
+                |this, value, _cx| this.gen_settings.grid_fk_labels = value,
+                cx,
+            ));
+
         let startup = div()
             .flex()
             .flex_col()
@@ -1273,7 +1297,9 @@ impl GeneralSection {
                 dbflux_i18n::t!("settings.general.max_background_tasks.label"),
                 &self.input_max_bg_tasks,
                 None,
-                None,
+                Some(dbflux_i18n::t!(
+                    "settings.general.max_background_tasks.help"
+                )),
                 GeneralFormRow::MaxBackgroundTasks,
                 cx,
             ))
@@ -1433,6 +1459,7 @@ impl GeneralSection {
                 .flex()
                 .flex_col()
                 .child(editor)
+                .child(data_grid)
                 .child(startup)
                 .child(refresh)
                 .child(safety)

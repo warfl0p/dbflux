@@ -16,13 +16,13 @@
 
 ## 选择驱动
 
-连接管理器会显示一个驱动选择器。可用驱动取决于二进制构建时启用的 feature；标准构建包含 SQLite、PostgreSQL、MySQL/MariaDB、Microsoft SQL Server、Amazon Redshift、ClickHouse、TursoDB、DuckDB、MongoDB、DynamoDB、Redis、InfluxDB、CloudWatch Logs 和 Amazon S3。选择器按类别对驱动分组：关系型、文档、键值、时间序列和日志、对象存储。外部注册的 RPC 驱动在配置后也会出现在这里（参见 `docs/RPC_SERVICES_CONFIG.md`）。
+连接管理器会显示一个驱动选择器。可用驱动取决于二进制构建时启用的 feature；标准构建包含 SQLite、PostgreSQL、MySQL/MariaDB、Microsoft SQL Server、Amazon Redshift、ClickHouse、TursoDB、DuckDB、MongoDB、DynamoDB、Redis、InfluxDB、CloudWatch Logs、Amazon S3 和 AWS Secrets。选择器按类别对驱动分组：关系型、文档、键值、时间序列和日志、对象存储、密钥存储。外部注册的 RPC 驱动在配置后也会出现在这里（参见 `docs/RPC_SERVICES_CONFIG.md`）。
 
 使用 `/` 筛选驱动列表，`j`/`k`（或方向键）移动，`Enter` 确认选择。
 
 每个驱动都有自己的连接表单。表单是动态的：只显示该驱动真正需要的字段。以文件为基础的驱动（如 SQLite）使用文件路径表单。大多数关系型驱动也接受单个连接字符串，参见[表单模式与直接填写 URI](#表单模式与直接填写-uri)。
 
-主选项卡末尾的 **安全** 部分包含 **只读** 开关。开启后，DBFlux 会阻止在该连接上通过数据网格、可视化查询构建器和模式对比进行的更改。在查询编辑器中输入的语句仍会执行。
+主选项卡末尾的 **安全** 部分包含 **只读** 开关。开启后，DBFlux 会阻止在该连接上通过数据网格、可视化查询构建器和模式对比进行的更改，拒绝查询编辑器中会更改数据或模式的语句，并拒绝高于 `read` 类别的 MCP 调用（参见[只读连接](MCP_AI_INTEGRATION.md#只读连接)）。读取语句仍会执行。在应用中，开启该设置会立即作用于已打开的连接，关闭则在重新连接后生效。MCP 会在下一次调用时采用任一方向的更改。编辑器根据文本对语句分类，因此在 `SELECT` 中调用有副作用的函数（如 PostgreSQL 的 `setval`）仍会执行：数据库中的只读凭据仍是更强的边界。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../images/connections/driver-picker-dark.webp">
@@ -144,6 +144,7 @@ SSH 隧道有两种用法：
 | **SSO 会话** | 可选，引用一个 **AWS SSO Session** 配置文件。设置后，起始 URL 和区域将从该会话继承，对应的内联字段会置灰。 |
 | **SSO 起始 URL** | 你的 Identity Center 门户 URL（使用会话时可跳过）。 |
 | **区域** | 例如 `us-east-1`。 |
+| **Endpoint URL** | 可选，例如 LocalStack 使用 `http://localhost:4566`。通过 `~/.aws/config` 中的 `[services]` 节，仅作用于 Secrets Manager 和 SSM。AWS 共享凭据配置文件也有同一字段。 |
 | **账户** | **登录后才**会填充的下拉框，列出当前 SSO 会话可访问的账户。 |
 | **角色** | 选定账户后才会填充的下拉框。 |
 
@@ -204,6 +205,9 @@ SSM 需要 `PATH` 中有 AWS CLI 和 Session Manager 插件。在 macOS 和 Linu
 - AWS 云密钥管理 / AWS 参数存储来源可以指向 JSON 密钥中的某个 **JSON 键**，因此一份 JSON 文档就能为多个字段供值。
 - 解析结果会缓存 **5 分钟**，避免每次重连都重新获取。
 - 由认证提供程序支持的 AWS 云密钥管理 / AWS 参数存储来源**要求连接上配置了认证配置文件**（连接前强制校验）。
+- 要访问 LocalStack 或 VPC 终端节点，请在 AWS 认证配置文件中设置 **Endpoint URL**。AWS SDK 也会读取 `AWS_ENDPOINT_URL_SECRETS_MANAGER` 和 `AWS_ENDPOINT_URL_SSM`。
+
+> **注意：**DBFlux 将终端节点写入配置文件引用的 `[services]` 节，因此只作用于 Secrets Manager 和 SSM，包括使用该配置文件运行的 AWS CLI `secretsmanager`、`ssm` 命令以及 SSM 端口转发。DynamoDB、S3 和 CloudWatch 保持默认终端节点。与其他配置文件共享的 `[services]` 节不会被修改，DBFlux 会为此配置文件创建单独的副本。
 
 ---
 

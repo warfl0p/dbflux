@@ -1,4 +1,4 @@
-//! Migration 050: Add `show_error_toasts` to `cfg_general_settings`.
+//! Migration 051: Add `show_error_toasts` to `cfg_general_settings`.
 //!
 //! Persists whether a reported error shows a toast besides its notifications
 //! center entry. The column defaults to 1 (on), the behavior before the
@@ -12,7 +12,7 @@ pub(crate) struct MigrationImpl;
 
 impl Migration for MigrationImpl {
     fn name(&self) -> &str {
-        "050_general_settings_error_toasts"
+        "051_general_settings_error_toasts"
     }
 
     fn run(&self, tx: &Transaction) -> Result<(), MigrationError> {

@@ -27,9 +27,9 @@ Open the Connection Manager to create or edit connections:
 The Connection Manager presents a driver picker. Available drivers depend on the
 features the binary was built with; the standard build includes SQLite,
 PostgreSQL, MySQL/MariaDB, Microsoft SQL Server, Amazon Redshift, ClickHouse,
-TursoDB, DuckDB, MongoDB, DynamoDB, Redis, InfluxDB, CloudWatch Logs, and Amazon S3. The
-picker groups drivers by category: Relational, Document, Key-value, Time series
-and logs, and Object storage. Externally registered RPC drivers also appear here
+TursoDB, DuckDB, MongoDB, DynamoDB, Redis, InfluxDB, CloudWatch Logs, Amazon S3, and
+AWS Secrets. The picker groups drivers by category: Relational, Document,
+Key-value, Time series and logs, Object storage, and Secret stores. Externally registered RPC drivers also appear here
 when configured (see `docs/RPC_SERVICES_CONFIG.md`).
 
 Use `/` to filter the driver list, `j`/`k` (or arrow keys) to move, and `Enter`
@@ -42,8 +42,14 @@ see [Form mode vs. direct URI](#form-mode-vs-direct-uri).
 
 The **Safety** section at the end of the Main tab holds the **Read-only**
 toggle. When it is on, DBFlux blocks changes made from the data grid, the visual
-query builder and schema diff on that connection. Statements typed in the query
-editor still run.
+query builder and schema diff on that connection, refuses query editor
+statements that would change data or schema, and denies MCP calls above the
+`read` class (see [Read-only connections](MCP_AI_INTEGRATION.md#read-only-connections)).
+Read statements still run. In the app, switching the setting on applies to an
+open connection at once, while switching it off takes effect after reconnecting.
+MCP picks up either change on its next call. The editor classifies a statement from its text, so a
+function with side effects called from a `SELECT`, such as PostgreSQL `setval`,
+still runs: read-only database credentials remain the stronger boundary.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/connections/driver-picker-dark.webp">
@@ -211,6 +217,7 @@ The form is provider-driven. For AWS SSO you fill:
 | **SSO session** | Optional reference to an **AWS SSO Session** profile. When set, Start URL and Region are inherited and their inline fields grey out. |
 | **SSO Start URL** | Your Identity Center portal URL (skip if using a session). |
 | **Region** | e.g. `us-east-1`. |
+| **Endpoint URL** | Optional, e.g. `http://localhost:4566` for LocalStack. Applies to Secrets Manager and SSM only, through a `[services]` section in `~/.aws/config`. AWS Shared Credentials profiles have the same field. |
 | **Account** | A dropdown that populates **after you log in** — it lists the accounts your SSO session can access. |
 | **Role** | A dropdown that populates once an account is chosen. |
 
@@ -293,6 +300,16 @@ Notes:
   reconnect.
 - Secret/Parameter sources backed by an auth provider **require an Auth Profile**
   on the connection (enforced before connecting).
+- To reach LocalStack or a VPC endpoint, set **Endpoint URL** on the AWS Auth
+  Profile. The AWS SDK also honors `AWS_ENDPOINT_URL_SECRETS_MANAGER` and
+  `AWS_ENDPOINT_URL_SSM`.
+
+> **Heads-up:** DBFlux writes the endpoint to a `[services]` section that the
+> profile references, so it applies only to Secrets Manager and SSM. That
+> includes the AWS CLI's `secretsmanager` and `ssm` commands and SSM port
+> forwarding run with that profile. DynamoDB, S3 and CloudWatch keep their
+> default endpoints. A `[services]` section shared with another profile is
+> never edited: DBFlux gives this profile its own copy.
 
 ---
 

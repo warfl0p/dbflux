@@ -1,3 +1,4 @@
+use crate::data_grid_panel::ReferencedRowTarget;
 use dbflux_components::SqlPreviewContext;
 
 /// Events that a document can emit.
@@ -89,5 +90,10 @@ pub enum DocumentEvent {
     /// against a profile that is not connected yet.
     RequestConnect {
         profile_id: uuid::Uuid,
+    },
+    /// Open the row a foreign-key value points at (see
+    /// [`ReferencedRowTarget`]).
+    OpenReferencedRow {
+        target: ReferencedRowTarget,
     },
 }

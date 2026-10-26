@@ -497,7 +497,8 @@ impl DbFluxServer {
             | DatabaseCategory::ReservedGraph
             | DatabaseCategory::TimeSeries
             | DatabaseCategory::ReservedWideColumn
-            | DatabaseCategory::ObjectStorage => {
+            | DatabaseCategory::ObjectStorage
+            | DatabaseCategory::SecretStore => {
                 Self::select_data_table_routed(&check, &request).await
             }
         }
@@ -837,7 +838,8 @@ impl DbFluxServer {
             | DatabaseCategory::ReservedGraph
             | DatabaseCategory::TimeSeries
             | DatabaseCategory::ReservedWideColumn
-            | DatabaseCategory::ObjectStorage => {
+            | DatabaseCategory::ObjectStorage
+            | DatabaseCategory::SecretStore => {
                 let mut request =
                     TableCountRequest::new(Self::table_ref_for_connection(&connection, table));
 
@@ -1391,9 +1393,13 @@ mod tests {
             auth_provider_registry: Arc::new(HashMap::new()),
             driver_settings: Arc::new(HashMap::new()),
             connection_cache: Arc::new(RwLock::new(ConnectionCache::new())),
-            connection_setup_lock: Arc::new(tokio::sync::Mutex::new(())),
+            connection_setup_lock: Arc::new(tokio::sync::Mutex::new(
+                std::collections::HashMap::new(),
+            )),
+            detached_processes: Arc::new(crate::state::DetachedProcessRegistry::new()),
             secret_manager: Arc::new(SecretManager::new(Box::new(NoopSecretStore))),
             mcp_enabled_by_default: true,
+            profile_store_path: None,
         }
     }
 

@@ -43,6 +43,7 @@ pub(super) enum GeneralFormRow {
     TableAlias,
     TableAliasUseAs,
     BlankLineDelimiter,
+    GridFkLabels,
     RestoreSession,
     ReopenConnections,
     DefaultFocus,
@@ -2553,6 +2554,7 @@ mod tests {
                 "blank-line-delimiter",
                 "settings.general.blank_line_delimiter.label",
             ),
+            ("grid-fk-labels", "settings.general.grid_fk_labels.label"),
             ("restore-session", "settings.general.restore_session.label"),
             ("reopen-conns", "settings.general.reopen_connections.label"),
             (
