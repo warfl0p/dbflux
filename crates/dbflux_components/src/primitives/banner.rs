@@ -4,8 +4,9 @@
 //! Colors are sourced entirely from `BannerColors` — no hardcoded hex values.
 
 use gpui::prelude::*;
-use gpui::{AnyElement, App, FontWeight, Hsla, SharedString, Window, div};
+use gpui::{AnyElement, App, FontWeight, Hsla, SharedString, StyleRefinement, Window, div};
 use gpui_component::ActiveTheme;
+use gpui_component::text::{TextView, TextViewStyle};
 
 use crate::icons::AppIcon;
 use crate::primitives::{Chamfer, Icon};
@@ -96,6 +97,31 @@ impl BannerBlock {
     }
 }
 
+/// Renders `text` verbatim as a fenced Markdown code block, so the pre-block
+/// can be selected and copied (e.g. a query error message).
+fn selectable_pre(text: SharedString) -> TextView {
+    let longest_backtick_run = text
+        .split(|character| character != '`')
+        .map(str::len)
+        .max()
+        .unwrap_or(0);
+    let fence = "`".repeat(longest_backtick_run.max(2) + 1);
+    let markdown = format!("{fence}\n{text}\n{fence}");
+
+    // The text is the identity: a new message gets a fresh selection state.
+    let id = SharedString::from(format!("banner-pre-{text}"));
+    // The banner's pre field already draws the box; drop the code block's own.
+    let code_block = StyleRefinement::default()
+        .p_0()
+        .m_0()
+        .border_0()
+        .bg(gpui::transparent_black());
+
+    TextView::markdown(id, markdown)
+        .style(TextViewStyle::default().code_block(code_block))
+        .selectable(true)
+}
+
 impl RenderOnce for BannerBlock {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let accent = self.variant.accent(cx);
@@ -151,7 +177,7 @@ impl RenderOnce for BannerBlock {
                         .font_family(crate::fonts::editor_family(cx))
                         .text_size(FontSizes::XS)
                         .text_color(text_color)
-                        .child(pre),
+                        .child(selectable_pre(pre)),
                 )
             });
 
