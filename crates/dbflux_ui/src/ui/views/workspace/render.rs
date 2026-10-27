@@ -369,7 +369,7 @@ impl Render for Workspace {
             .flex_1()
             .min_w_0()
             .h_full()
-            .ml(IslandMetrics::GAP)
+            .when(!sidebar_collapsed, |island| island.ml(IslandMetrics::GAP))
             .child(
                 div()
                     .flex()
@@ -646,12 +646,15 @@ impl Render for Workspace {
                             .min_h_0()
                             .px(IslandMetrics::GAP)
                             .overflow_hidden()
-                            .child(rail)
                             .child(
                                 div()
                                     .id("sidebar-panel")
                                     .h_full()
-                                    .when(!sidebar_collapsed, |panel| panel.ml(IslandMetrics::GAP))
+                                    .flex()
+                                    .flex_col()
+                                    // The rail sits above the sidebar and
+                                    // goes away with it.
+                                    .when(!sidebar_collapsed, |panel| panel.child(rail))
                                     .on_mouse_down(
                                         MouseButton::Left,
                                         cx.listener(|this, _, window, cx| {
@@ -662,7 +665,7 @@ impl Render for Workspace {
                                             }
                                         }),
                                     )
-                                    .child(sidebar_dock),
+                                    .child(div().flex_1().min_h_0().child(sidebar_dock)),
                             )
                             .child(document_island)
                             .children(

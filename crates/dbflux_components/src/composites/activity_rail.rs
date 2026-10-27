@@ -1,5 +1,5 @@
-//! `ActivityRail` — the column of view buttons at the left edge of the main
-//! window (AppByzTable, DSAppPlan "ActivityRail").
+//! `ActivityRail` — the row of view buttons above the sidebar of the main
+//! window.
 
 use std::rc::Rc;
 
@@ -12,8 +12,8 @@ use crate::icons::AppIcon;
 use crate::primitives::{Chamfer, Icon};
 use crate::tokens::{ButtonMetrics, ChamferCut, ChromeColors, ShellMetrics};
 
-/// Where an entry sits in the rail: stacked from the top, or pinned to the
-/// bottom edge.
+/// Where an entry sits in the rail: in order from the left (`Top`), or
+/// pinned to the right edge (`Bottom`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RailPlacement {
     Top,
@@ -95,9 +95,9 @@ pub fn rail_button_colors(theme: &gpui_component::Theme, active: bool) -> RailBu
 
 type RailSelectHandler = Rc<dyn Fn(&SharedString, &mut Window, &mut App)>;
 
-/// The activity rail: `ShellMetrics::RAIL_WIDTH` wide directly on the desk,
-/// with no fill or line of its own, 38 px buttons stacked from the top and
-/// the bottom entries pinned to the bottom edge.
+/// The activity rail: a row directly on the desk, with no fill or line of
+/// its own, the top entries from the left and the bottom entries pinned to
+/// the right edge.
 #[derive(IntoElement)]
 pub struct ActivityRail {
     id: ElementId,
@@ -191,13 +191,13 @@ impl RenderOnce for ActivityRail {
             .id(self.id)
             .key_context(crate::key_contexts::ACTIVITY_RAIL)
             .flex()
-            .flex_col()
+            .flex_row()
             .flex_shrink_0()
             .items_center()
             .gap(ShellMetrics::RAIL_GAP)
-            .w(ShellMetrics::RAIL_WIDTH)
-            .h_full()
-            .pt(ShellMetrics::RAIL_PADDING_Y)
+            .w_full()
+            .min_w_0()
+            .overflow_hidden()
             .pb(ShellMetrics::RAIL_PADDING_Y)
             .children(top_buttons)
             .child(div().flex_1())

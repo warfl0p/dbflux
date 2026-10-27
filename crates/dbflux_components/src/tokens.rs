@@ -1637,13 +1637,12 @@ impl ShellMetrics {
     pub const BELL_BADGE_FONT: Rems = ui(10.0);
     pub const BELL_BADGE_OFFSET: Rems = ui(-5.0);
 
-    /// Activity rail: 46 px wide on the desk, no fill and no line.
-    pub const RAIL_WIDTH: Rems = ui(46.0);
-    /// Rail buttons: 38 px square, cut 6, 19 px icon, 6 px apart, 4 px from
-    /// the top and the bottom of the rail.
-    pub const RAIL_BUTTON: Rems = ui(38.0);
-    pub const RAIL_ICON: Rems = ui(19.0);
-    pub const RAIL_GAP: Pixels = px(6.0);
+    /// Activity rail: a row above the sidebar on the desk, no fill and no
+    /// line. Buttons are 28 px square with a 16 px icon, 2 px apart, with
+    /// 4 px below the row.
+    pub const RAIL_BUTTON: Rems = ui(28.0);
+    pub const RAIL_ICON: Rems = ui(16.0);
+    pub const RAIL_GAP: Pixels = px(2.0);
     pub const RAIL_PADDING_Y: Pixels = px(4.0);
     /// Wash of the active rail button, over the tint.
     pub const RAIL_ACTIVE_ALPHA: f32 = 0.16;
