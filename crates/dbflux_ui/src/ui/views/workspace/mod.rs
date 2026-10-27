@@ -2334,17 +2334,14 @@ impl Workspace {
         }
     }
 
-    /// Opens the palette with only the scripts it lists, like VS Code's
-    /// Go to File: the workspace files when a workspace is open.
+    /// Opens the palette as VS Code's Go to File: it lists the scripts (the
+    /// workspace files when a workspace is open), and `>` or `@` still
+    /// switch to commands or tables.
     pub fn open_go_to_file(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let items: Vec<PaletteItem> = self
-            .build_palette_items(cx)
-            .into_iter()
-            .filter(|item| matches!(item, PaletteItem::Script { .. }))
-            .collect();
+        let items = self.build_palette_items(cx);
 
         self.command_palette.update(cx, |palette, cx| {
-            palette.open_with_items(items, window, cx);
+            palette.open_files(items, window, cx);
         });
     }
 
