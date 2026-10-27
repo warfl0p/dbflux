@@ -507,10 +507,12 @@ impl Palette {
         self
     }
 
-    /// Neutral VS Code-style grays with the `#7AA2F7` blue accent: every pane
-    /// shares one background.
+    /// DBFlux's dark palette on neutral VS Code-style grays: every pane
+    /// shares one background. The `#7AA2F7` blue accent replaces byzantine,
+    /// with its hover, pressed and selection shades derived from it.
     fn dark() -> Self {
-        let accent = rgb_to_hsla(0x7AA2F7);
+        let tint = rgb_to_hsla(0xD48CC8);
+        let byzantine = rgb_to_hsla(0x702963);
 
         Self {
             mode: ThemeMode::Dark,
@@ -526,28 +528,29 @@ impl Palette {
             text_body: rgb_to_hsla(0xCCCCCF),
             text_muted: rgb_to_hsla(0x9A9B9F),
 
-            byzantine: accent,
-            byzantine_hover: rgb_to_hsla(0x89B4FA),
-            byzantine_deep: rgb_to_hsla(0x3D59A1),
-            tint: accent,
-            ink: rgb_to_hsla(0x191A1B),
+            byzantine,
+            byzantine_hover: rgb_to_hsla(0x7F3171),
+            byzantine_deep: rgb_to_hsla(0x4A1B41),
+            tint,
+            ink: rgb_to_hsla(0xFFFFFF),
 
-            success: rgb_to_hsla(0x9ECE6A),
-            info: rgb_to_hsla(0x7DCFFF),
-            warning: rgb_to_hsla(0xE0AF68),
-            danger: rgb_to_hsla(0xF7768E),
-            cyan: rgb_to_hsla(0x73DACA),
-            semantic_foreground: rgb_to_hsla(0x191A1B),
+            success: rgb_to_hsla(0x7BE0A0),
+            info: rgb_to_hsla(0x6EA8FF),
+            warning: rgb_to_hsla(0xFFC23D),
+            danger: rgb_to_hsla(0xFF6B5E),
+            cyan: rgb_to_hsla(0x6FD3D8),
+            semantic_foreground: rgb_to_hsla(0x09090B),
 
             hover_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.04),
-            alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.025),
-            selected_row_wash: rgb_to_hsla_alpha(0x7AA2F7, 0.10),
-            selected_item_wash: rgb_to_hsla_alpha(0x7AA2F7, 0.16),
+            alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.035),
+            selected_row_wash: rgb_to_hsla_alpha(0xD48CC8, 0.07),
+            selected_item_wash: rgb_to_hsla_alpha(0xD48CC8, 0.12),
             overlay: rgb_to_hsla_alpha(0x121314, 0.62),
-            progress: accent,
+            progress: tint,
 
             syntax: SyntaxColors::dark(),
         }
+        .with_accent(rgb_to_hsla(0x7AA2F7), ThemeSetting::Dark)
     }
 
     fn light() -> Self {
@@ -1175,11 +1178,11 @@ mod tests {
             assert_eq!(theme.colors.ring.h, accent.h);
             assert_eq!(
                 theme.colors.table_active,
-                with_alpha(theme.colors.ring, 0.10)
+                with_alpha(theme.colors.ring, 0.07)
             );
             assert_eq!(
                 theme.colors.list_active,
-                with_alpha(theme.colors.ring, 0.16)
+                with_alpha(theme.colors.ring, 0.12)
             );
             assert_eq!(accent_tint(cx), Some(theme.colors.ring));
             assert_eq!(
