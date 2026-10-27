@@ -303,13 +303,6 @@ impl PaletteItem {
                 } => Some(format!("{} / {}", profile_name, database)),
                 ResourceItem::KeyValueDb { profile_name, .. } => Some(profile_name.clone()),
             },
-            Self::Script { relative_path, .. } => {
-                if relative_path.contains('/') {
-                    Some(relative_path.clone())
-                } else {
-                    None
-                }
-            }
             _ => None,
         }
     }
@@ -335,10 +328,16 @@ impl PaletteItem {
         }
     }
 
-    /// Muted qualifier drawn right after a command's name: its category.
+    /// Muted qualifier drawn right after the name: a command's category, or
+    /// the folder a script sits in, as VS Code's Go to File shows it.
     fn inline_qualifier(&self) -> Option<SharedString> {
         match self {
             Self::Action { category, .. } => Some(category.clone()),
+            Self::Script { relative_path, .. } => std::path::Path::new(relative_path)
+                .parent()
+                .map(|folder| folder.to_string_lossy().to_string())
+                .filter(|folder| !folder.is_empty())
+                .map(SharedString::from),
             _ => None,
         }
     }
@@ -1115,13 +1114,18 @@ impl CommandPalette {
                 row.hover(|row| row.bg(theme.list_hover))
             })
             .child(
-                Icon::new(icon)
-                    .size(PaletteMetrics::ROW_ICON)
-                    .color(icon_color),
+                div().flex_shrink_0().child(
+                    Icon::new(icon)
+                        .size(PaletteMetrics::ROW_ICON)
+                        .color(icon_color),
+                ),
             )
+            // The name keeps its width and the qualifier after it truncates
+            // first; a very long name still stops at most of the row.
             .child(
                 div()
-                    .min_w_0()
+                    .flex_shrink_0()
+                    .max_w(relative(0.7))
                     .truncate()
                     .text_size(PaletteMetrics::ROW_FONT)
                     .text_color(name_color)
@@ -1130,7 +1134,8 @@ impl CommandPalette {
             .when_some(item.inline_qualifier(), |row, qualifier| {
                 row.child(
                     div()
-                        .flex_shrink_0()
+                        .min_w_0()
+                        .truncate()
                         .text_size(PaletteMetrics::QUALIFIER_FONT)
                         .text_color(theme.muted_foreground)
                         .child(qualifier),
