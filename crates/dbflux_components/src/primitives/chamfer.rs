@@ -4,9 +4,9 @@ use std::time::{Duration, Instant};
 
 use gpui::prelude::*;
 use gpui::{
-    App, Bounds, DispatchPhase, ElementId, Hitbox, HitboxBehavior, Hsla, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, PathBuilder, Pixels, Point, Rgba, Window, canvas,
-    div, point, px,
+    App, BorderStyle, Bounds, Corners, DispatchPhase, Edges, ElementId, Hitbox, HitboxBehavior,
+    Hsla, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PathBuilder, Pixels, Point,
+    Rgba, Window, canvas, div, point, px,
 };
 
 use crate::primitives::focus_ring::{FOCUS_RING_SELECTOR, is_keyboard_modality};
@@ -463,15 +463,6 @@ pub fn snap_bounds_to_device(bounds: Bounds<Pixels>, scale_factor: f32) -> Bound
     )
 }
 
-/// Rounds an offset to the nearest device pixel.
-fn snap_offset_to_device(offset: Pixels, scale_factor: f32) -> Pixels {
-    if scale_factor <= 0.0 {
-        return offset;
-    }
-
-    px((f32::from(offset) * scale_factor).round() / scale_factor)
-}
-
 /// Rounds a positive length to a whole number of device pixels, never below one
 /// device pixel, so thin edges stay crisp at fractional scale factors.
 pub fn snap_length_to_device(length: Pixels, scale_factor: f32) -> Pixels {
@@ -557,7 +548,7 @@ impl Chamfer {
         self
     }
 
-    /// 1 px inset border on the straight sides; the cuts stay borderless.
+    /// 1 px inset border along the whole outline, corners included.
     pub fn border(mut self, color: impl Into<Hsla>) -> Self {
         self.colors.border = Some(color.into());
         self
@@ -624,47 +615,163 @@ impl Chamfer {
     pub fn paint(&self, bounds: Bounds<Pixels>, fill: Hsla, window: &mut Window) {
         let scale_factor = window.scale_factor();
         let bounds = snap_bounds_to_device(bounds, scale_factor);
-        let cut = snap_offset_to_device(self.cut, scale_factor);
+        let radius = corner_radius(bounds.size, self.cut);
+        let radii = corner_radii(radius, self.corners);
 
-        paint_polygon(&chamfer_points(bounds, cut, self.corners), fill, window);
+        window.paint_quad(gpui::fill(bounds, fill).corner_radii(radii));
 
         if let Some(border) = self.colors.border {
             let thickness = snap_length_to_device(Borders::THIN, scale_factor);
-
-            for polygon in chamfer_border_polygons(bounds, cut, self.corners, thickness) {
-                paint_polygon(&polygon, border, window);
-            }
+            paint_border(bounds, radii, Edges::all(thickness), border, window);
         }
 
         if let Some(edge) = self.top_edge {
             let thickness = snap_length_to_device(edge.thickness, scale_factor);
-            let polygon = chamfer_top_edge_polygon(bounds, cut, self.corners, thickness);
-            paint_polygon(&polygon, edge.color, window);
+            let widths = Edges {
+                top: thickness,
+                ..Edges::default()
+            };
+            paint_border(bounds, radii, widths, edge.color, window);
         }
 
         if let Some(edge) = self.bottom_edge {
             let thickness = snap_length_to_device(edge.thickness, scale_factor);
-            let polygon = chamfer_bottom_edge_polygon(bounds, cut, self.corners, thickness);
-            paint_polygon(&polygon, edge.color, window);
+            let widths = Edges {
+                bottom: thickness,
+                ..Edges::default()
+            };
+            paint_border(bounds, radii, widths, edge.color, window);
         }
 
         if let Some(edge) = self.left_edge {
             let thickness = snap_length_to_device(edge.thickness, scale_factor);
-            let polygon = chamfer_left_edge_polygon(bounds, cut, self.corners, thickness);
-            paint_polygon(&polygon, edge.color, window);
+            let widths = Edges {
+                left: thickness,
+                ..Edges::default()
+            };
+            paint_border(bounds, radii, widths, edge.color, window);
         }
 
         if let Some(outside) = self.outside_fill {
-            for polygon in chamfer_outside_polygons(bounds, cut, self.corners) {
+            for polygon in rounded_outside_polygons(bounds, radii) {
                 paint_polygon(&polygon, outside, window);
             }
         }
 
         if let Some(ring) = self.ring {
-            let outline = chamfer_ring_points(bounds, cut, self.corners, &ring);
-            stroke_closed_polygon(&outline, ring.thickness, ring.color, window);
+            let distance = ring.offset + ring.thickness;
+            let ring_bounds = bounds.dilate(distance);
+            let grow = |corner: Pixels| {
+                if corner > Pixels::ZERO {
+                    (corner + distance).max(Pixels::ZERO)
+                } else {
+                    Pixels::ZERO
+                }
+            };
+            let ring_radii = Corners {
+                top_left: grow(radii.top_left),
+                top_right: grow(radii.top_right),
+                bottom_right: grow(radii.bottom_right),
+                bottom_left: grow(radii.bottom_left),
+            };
+            paint_border(
+                ring_bounds,
+                ring_radii,
+                Edges::all(ring.thickness),
+                ring.color,
+                window,
+            );
         }
     }
+}
+
+/// Corner radius drawn for a cut depth: half the cut, at most 6 px and at
+/// most half the smaller side, so the corners read like VS Code's.
+fn corner_radius(size: gpui::Size<Pixels>, cut: Pixels) -> Pixels {
+    let radius = px((f32::from(cut) / 2.0).min(6.0));
+    clamp_cut(size, radius)
+}
+
+/// Which corners are rounded. A shape cut on one corner only is half of a
+/// pair (the two segments of a split button), so it rounds its outer side.
+fn corner_radii(radius: Pixels, corners: ChamferCorners) -> Corners<Pixels> {
+    let zero = Pixels::ZERO;
+
+    match corners {
+        ChamferCorners::TopLeftBottomRight => Corners::all(radius),
+        ChamferCorners::TopLeft => Corners {
+            top_left: radius,
+            top_right: zero,
+            bottom_right: zero,
+            bottom_left: radius,
+        },
+        ChamferCorners::BottomRight => Corners {
+            top_left: zero,
+            top_right: radius,
+            bottom_right: radius,
+            bottom_left: zero,
+        },
+    }
+}
+
+fn paint_border(
+    bounds: Bounds<Pixels>,
+    radii: Corners<Pixels>,
+    widths: Edges<Pixels>,
+    color: Hsla,
+    window: &mut Window,
+) {
+    if color.a <= 0.0 {
+        return;
+    }
+
+    window.paint_quad(gpui::quad(
+        bounds,
+        radii,
+        gpui::transparent_black(),
+        widths,
+        color,
+        BorderStyle::Solid,
+    ));
+}
+
+/// The parts of `bounds` outside its rounded corners, one per rounded
+/// corner: the corner point followed by the arc.
+fn rounded_outside_polygons(
+    bounds: Bounds<Pixels>,
+    radii: Corners<Pixels>,
+) -> Vec<Vec<Point<Pixels>>> {
+    const ARC_STEPS: usize = 8;
+    let (left, top, right, bottom) = edges_of(bounds);
+
+    // (corner, arc center, start angle) for each corner, angles in degrees
+    // measured clockwise from the positive x axis in screen space.
+    let corners = [
+        (radii.top_left, (left, top), (1.0, 1.0), 180.0),
+        (radii.top_right, (right, top), (-1.0, 1.0), 270.0),
+        (radii.bottom_right, (right, bottom), (-1.0, -1.0), 0.0),
+        (radii.bottom_left, (left, bottom), (1.0, -1.0), 90.0),
+    ];
+
+    corners
+        .into_iter()
+        .filter(|(radius, ..)| *radius > Pixels::ZERO)
+        .map(|(radius, (corner_x, corner_y), (sign_x, sign_y), start)| {
+            let radius = f32::from(radius);
+            let center = (corner_x + sign_x * radius, corner_y + sign_y * radius);
+            let mut polygon = vec![point(px(corner_x), px(corner_y))];
+
+            for step in 0..=ARC_STEPS {
+                let angle = (start + 90.0 * step as f32 / ARC_STEPS as f32).to_radians();
+                polygon.push(point(
+                    px(center.0 + radius * angle.cos()),
+                    px(center.1 + radius * angle.sin()),
+                ));
+            }
+
+            polygon
+        })
+        .collect()
 }
 
 /// A fill fade in progress, or settled once `started + duration` has passed.
@@ -862,38 +969,6 @@ fn paint_polygon(points: &[Point<Pixels>], color: Hsla, window: &mut Window) {
     }
 }
 
-/// Strokes a closed polygon. Lyon's default miter join keeps the 90° and 135°
-/// corners of a chamfer sharp without spikes.
-fn stroke_closed_polygon(
-    points: &[Point<Pixels>],
-    thickness: Pixels,
-    color: Hsla,
-    window: &mut Window,
-) {
-    if points.len() < 3 || color.a <= 0.0 || thickness <= Pixels::ZERO {
-        return;
-    }
-
-    let mut builder = PathBuilder::stroke(thickness);
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "the len < 3 early return above guarantees a first element"
-    )]
-    builder.move_to(points[0]);
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "len >= 3 here, so the 1.. slice is within the polygon"
-    )]
-    for point in &points[1..] {
-        builder.line_to(*point);
-    }
-    builder.close();
-
-    if let Ok(path) = builder.build() {
-        window.paint_path(path, color);
-    }
-}
-
 type Band = (f32, f32, f32, f32);
 
 fn edges_of(bounds: Bounds<Pixels>) -> Band {
@@ -1048,6 +1123,30 @@ fn to_pixel_points(points: &[Point<f32>]) -> Vec<Point<Pixels>> {
 mod tests {
     use super::*;
     use crate::tokens::ChamferCut;
+
+    #[test]
+    fn rounded_corners_follow_the_cut_and_the_outside_traces_the_arc() {
+        let bounds = rect(10.0, 20.0, 100.0, 30.0);
+
+        assert_eq!(corner_radius(bounds.size, ChamferCut::CONTROL), px(3.0));
+        assert_eq!(corner_radius(bounds.size, ChamferCut::MODAL), px(6.0)); // guardrail-allow: the 6 px radius cap under test
+        assert_eq!(
+            corner_radius(rect(0.0, 0.0, 8.0, 4.0).size, ChamferCut::MODAL),
+            px(2.0)
+        );
+
+        let split_main = corner_radii(px(3.0), ChamferCorners::TopLeft);
+        assert_eq!(split_main.top_left, px(3.0));
+        assert_eq!(split_main.bottom_left, px(3.0));
+        assert_eq!(split_main.top_right, Pixels::ZERO);
+
+        let outside = rounded_outside_polygons(bounds, split_main);
+        assert_eq!(outside.len(), 2);
+        let top_left = &outside[0];
+        assert_points_close(&top_left[..1], &[(10.0, 20.0)]);
+        assert_points_close(&top_left[1..2], &[(10.0, 23.0)]);
+        assert_points_close(&top_left[top_left.len() - 1..], &[(13.0, 20.0)]);
+    }
     use gpui::{Context, Entity, TestAppContext, size};
 
     fn rect(x: f32, y: f32, width: f32, height: f32) -> Bounds<Pixels> {

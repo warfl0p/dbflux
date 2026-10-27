@@ -303,15 +303,15 @@ fn persist_font_config(theme: &mut Theme, fonts: &FontSettings) {
 
 /// Apply border-radius values to the theme based on the active `AppStyle`.
 ///
-/// - `AppStyle::Default` — square corners (0 px), the project's flat chrome
-///   baseline.
+/// - `AppStyle::Default` — VS Code-like rounded corners: 4 px (`radius`) and
+///   6 px (`radius_lg`).
 /// - `AppStyle::Compact` — subtle radii: 2 px (`radius`) and 3 px (`radius_lg`),
 ///   matching the Design System token values.
 fn apply_style_radius(theme: &mut Theme, style: AppStyle) {
     match style {
         AppStyle::Default => {
-            theme.radius = px(0.0);
-            theme.radius_lg = px(0.0);
+            theme.radius = px(4.0);
+            theme.radius_lg = px(6.0);
         }
         AppStyle::Compact => {
             theme.radius = px(2.0);

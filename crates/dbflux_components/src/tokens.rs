@@ -75,16 +75,16 @@ impl FontSizes {
 
 pub struct Radii;
 
-/// Static border-radius constants matching `AppStyle::Default` (square
-/// corners). For style-aware radii at render sites, prefer the
+/// Static border-radius constants matching `AppStyle::Default` (VS Code-like
+/// rounded corners). For style-aware radii at render sites, prefer the
 /// `density::radius_*(cx)` accessors so the active `AppStyle` is honoured.
 impl Radii {
-    /// Small radius — controls, inputs, badges (Default: 0 px).
-    pub const SM: Pixels = px(0.0);
-    /// Medium radius — dropdowns, popovers (Default: 0 px).
-    pub const MD: Pixels = px(0.0);
-    /// Large radius — modals, cards (Default: 0 px).
-    pub const LG: Pixels = px(0.0);
+    /// Small radius — controls, inputs, badges (Default: 3 px).
+    pub const SM: Pixels = px(3.0);
+    /// Medium radius — dropdowns, popovers (Default: 4 px).
+    pub const MD: Pixels = px(4.0);
+    /// Large radius — modals, cards (Default: 6 px).
+    pub const LG: Pixels = px(6.0);
     /// Full radius — pill shapes, avatars, status dots.
     pub const FULL: Pixels = px(9999.0);
 }
@@ -2453,9 +2453,9 @@ mod tests {
 
     #[test]
     fn radii_match_default_style_scale() {
-        assert_eq!(Radii::SM, px(0.0));
-        assert_eq!(Radii::MD, px(0.0));
-        assert_eq!(Radii::LG, px(0.0));
+        assert_eq!(Radii::SM, px(3.0));
+        assert_eq!(Radii::MD, px(4.0));
+        assert_eq!(Radii::LG, px(6.0));
         assert_eq!(Radii::FULL, px(9999.0));
     }
 
