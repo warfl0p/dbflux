@@ -481,6 +481,27 @@ impl ConnectionTree {
 
         children_ids
     }
+
+    /// Names of the folders that hold a profile, outermost first. Empty when
+    /// the profile sits at the root or is not in the tree.
+    pub fn folder_path(&self, profile_id: Uuid) -> Vec<&str> {
+        let mut path = Vec::new();
+        let mut parent_id = self
+            .find_by_profile(profile_id)
+            .and_then(|node| node.parent_id);
+
+        // Bounded by the node count so a corrupted parent cycle cannot loop.
+        while let Some(folder) = parent_id.and_then(|id| self.find_by_id(id)) {
+            if path.len() == self.nodes.len() {
+                break;
+            }
+            path.push(folder.name.as_str());
+            parent_id = folder.parent_id;
+        }
+
+        path.reverse();
+        path
+    }
 }
 
 #[cfg(test)]
@@ -744,5 +765,24 @@ mod tests {
 
         // Can't move after self
         assert!(!tree.move_node_to_position(n1_id, None, Some(n1_id)));
+    }
+
+    #[test]
+    fn folder_path_lists_enclosing_folders_outermost_first() {
+        let mut tree = ConnectionTree::new();
+        let outer = ConnectionTreeNode::new_folder("m+", None, 1000);
+        let inner = ConnectionTreeNode::new_folder("prod", Some(outer.id), 1000);
+        let nested_profile = Uuid::new_v4();
+        let root_profile = Uuid::new_v4();
+        let nested = ConnectionTreeNode::new_connection_ref(nested_profile, Some(inner.id), 1000);
+        let root = ConnectionTreeNode::new_connection_ref(root_profile, None, 2000);
+        tree.add_node(outer);
+        tree.add_node(inner);
+        tree.add_node(nested);
+        tree.add_node(root);
+
+        assert_eq!(tree.folder_path(nested_profile), vec!["m+", "prod"]);
+        assert!(tree.folder_path(root_profile).is_empty());
+        assert!(tree.folder_path(Uuid::new_v4()).is_empty());
     }
 }

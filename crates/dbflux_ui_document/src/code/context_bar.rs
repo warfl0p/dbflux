@@ -172,6 +172,7 @@ impl CodeDocument {
 
     fn connection_items(app_state: &Entity<AppStateEntity>, cx: &App) -> Vec<DropdownItem> {
         let state = app_state.read(cx);
+        let tree = state.connection_tree();
 
         // Every saved profile, not only the connected ones: a run against a
         // disconnected profile connects it first. A live connection without a
@@ -183,9 +184,15 @@ impl CodeDocument {
             .map(|connected| &connected.profile)
             .filter(|profile| !state.profiles().iter().any(|saved| saved.id == profile.id));
 
+        // Prefix the folder path so same-named profiles in different folders
+        // can be told apart.
         let mut items: Vec<_> = saved
             .chain(unsaved)
-            .map(|profile| DropdownItem::with_value(&profile.name, profile.id.to_string()))
+            .map(|profile| {
+                let mut path = tree.folder_path(profile.id);
+                path.push(&profile.name);
+                DropdownItem::with_value(path.join(" / "), profile.id.to_string())
+            })
             .collect();
 
         items.sort_by(|left, right| left.label.as_ref().cmp(right.label.as_ref()));
