@@ -124,26 +124,26 @@ pub fn font_title(cx: &App) -> Rems {
 // Border-radius accessors
 // ---------------------------------------------------------------------------
 
-/// Small radius: 0 px (Default) / 2 px (Compact).
+/// Small radius: 3 px (Default) / 2 px (Compact).
 pub fn radius_sm(cx: &App) -> Pixels {
     match active_style(cx) {
-        AppStyle::Default => px(0.0),
+        AppStyle::Default => px(3.0),
         AppStyle::Compact => px(2.0),
     }
 }
 
-/// Medium radius: 0 px (Default) / 2 px (Compact).
+/// Medium radius: 4 px (Default) / 2 px (Compact).
 pub fn radius_md(cx: &App) -> Pixels {
     match active_style(cx) {
-        AppStyle::Default => px(0.0),
+        AppStyle::Default => px(4.0),
         AppStyle::Compact => px(2.0),
     }
 }
 
-/// Large radius: 0 px (Default) / 3 px (Compact).
+/// Large radius: 6 px (Default) / 3 px (Compact).
 pub fn radius_lg(cx: &App) -> Pixels {
     match active_style(cx) {
-        AppStyle::Default => px(0.0),
+        AppStyle::Default => px(6.0),
         AppStyle::Compact => px(3.0),
     }
 }
@@ -172,9 +172,9 @@ mod tests {
             assert_eq!(font_xl(cx), ui(18.0));
             assert_eq!(font_title(cx), ui(20.0));
 
-            assert_eq!(radius_sm(cx), px(0.0));
-            assert_eq!(radius_md(cx), px(0.0));
-            assert_eq!(radius_lg(cx), px(0.0));
+            assert_eq!(radius_sm(cx), px(3.0));
+            assert_eq!(radius_md(cx), px(4.0));
+            assert_eq!(radius_lg(cx), px(6.0));
         });
     }
 
@@ -204,7 +204,7 @@ mod tests {
             assert_eq!(active_style(cx), AppStyle::Default);
             // Accessors should still return Default-tier values.
             assert_eq!(font_xs(cx), ui(12.0));
-            assert_eq!(radius_sm(cx), px(0.0));
+            assert_eq!(radius_sm(cx), px(3.0));
         });
     }
 
@@ -229,7 +229,7 @@ mod tests {
             assert_eq!(font_label(cx).to_pixels(doubled_rem), px(22.0));
             assert_eq!(font_sm(cx).to_pixels(doubled_rem), px(26.0));
             assert_eq!(font_title(cx).to_pixels(doubled_rem), px(40.0));
-            assert_eq!(radius_sm(cx), px(0.0));
+            assert_eq!(radius_sm(cx), px(3.0));
 
             set_style(cx, AppStyle::Compact);
             assert_eq!(font_xs(cx).to_pixels(doubled_rem), px(22.0));
