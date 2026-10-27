@@ -2048,6 +2048,11 @@ impl Workspace {
                 dbflux_i18n::t!("palette.category.view"),
             ),
             PaletteCommand::new(
+                "go_to_file",
+                dbflux_i18n::t!("palette.command.go_to_file.name"),
+                dbflux_i18n::t!("palette.category.view"),
+            ),
+            PaletteCommand::new(
                 "show_dashboards_view",
                 dbflux_i18n::t!("palette.command.show_dashboards_view.name"),
                 dbflux_i18n::t!("palette.category.view"),
@@ -2329,6 +2334,20 @@ impl Workspace {
         }
     }
 
+    /// Opens the palette with only the scripts it lists, like VS Code's
+    /// Go to File: the workspace files when a workspace is open.
+    pub fn open_go_to_file(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let items: Vec<PaletteItem> = self
+            .build_palette_items(cx)
+            .into_iter()
+            .filter(|item| matches!(item, PaletteItem::Script { .. }))
+            .collect();
+
+        self.command_palette.update(cx, |palette, cx| {
+            palette.open_with_items(items, window, cx);
+        });
+    }
+
     /// Build the palette item list from current app state.
     fn build_palette_items(&self, cx: &Context<Self>) -> Vec<PaletteItem> {
         let mut items: Vec<PaletteItem> = Self::default_commands()
@@ -2370,17 +2389,14 @@ impl Workspace {
             }
         }
 
-        if let Some(dir) = app_state.scripts_directory() {
+        if let Some(workspace) = app_state
+            .scripts_directory()
+            .and_then(|dir| dir.workspace())
+        {
+            // A workspace stands alone, its files named relative to it.
+            Self::flatten_script_entries(workspace.entries(), workspace.path(), None, &mut items);
+        } else if let Some(dir) = app_state.scripts_directory() {
             Self::flatten_script_entries(dir.entries(), dir.root_path(), None, &mut items);
-
-            for external in dir.external_roots() {
-                Self::flatten_script_entries(
-                    external.entries(),
-                    external.path(),
-                    Some(&external.label()),
-                    &mut items,
-                );
-            }
         }
 
         // Add the "Import Dashboard from JSON" entry only when the active

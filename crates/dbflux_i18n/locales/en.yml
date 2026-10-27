@@ -3934,7 +3934,7 @@ palette:
     open_script_file:
       name: Open script file…
     add_external_scripts_folder:
-      name: "Add external scripts folder…"
+      name: "Open folder…"
     toggle_comment:
       name: Toggle line comment
     format_query:
@@ -3989,6 +3989,8 @@ palette:
       name: "Show connections view"
     show_scripts_view:
       name: "Show scripts view"
+    go_to_file:
+      name: "Go to file…"
     show_dashboards_view:
       name: "Show dashboards view"
     open_settings:
@@ -4374,7 +4376,7 @@ settings:
       save_query: Save
       save_file_as: Save file as…
       open_script_file: Open script file…
-      add_external_scripts_folder: "Add external scripts folder…"
+      add_external_scripts_folder: "Open folder…"
       toggle_comment: Toggle line comment
       format_query: Format query
       export_results: Export results
@@ -4434,6 +4436,7 @@ settings:
       install_update: "Install update"
       show_connections_view: "Show connections view"
       show_scripts_view: "Show scripts view"
+      go_to_file: "Go to file…"
       show_dashboards_view: "Show dashboards view"
       open_mcp_approvals: Open MCP approvals
       refresh_mcp_governance: Refresh MCP governance
@@ -5162,12 +5165,12 @@ sidebar:
   dialog:
     import_script_title: Import Script
     script_files_filter: Script files
-    add_external_folder_title: Add External Scripts Folder
+    add_external_folder_title: Open Folder
   empty:
     connections_title: No connections yet
     connections_hint: Use + to add a new connection
-    scripts_title: No scripts yet
-    scripts_hint: Use + to create a new script or import an existing file
+    scripts_title: No folder open
+    scripts_hint: Open a folder with Open folder… in the command palette
   error:
     cannot_load_schema_types: Cannot load schema types
     cannot_load_schema_indexes: Cannot load schema indexes
@@ -5176,7 +5179,7 @@ sidebar:
   filter:
     dashboards_placeholder: "Filter dashboards…"
     connections_placeholder: Filter connections and schema
-    scripts_placeholder: Filter scripts…
+    scripts_placeholder: Filter files…
     stream_placeholder: Filter stream names…
   menu:
     open: Open
@@ -5258,7 +5261,7 @@ sidebar:
   tabs:
     dashboards: "Dashboards"
     connections: CONNECTIONS
-    scripts: SCRIPTS
+    scripts: EXPLORER
   task:
     connecting: "Connecting to %{name}"
     disconnecting: "Disconnecting %{name}"
@@ -5535,7 +5538,7 @@ toast:
 workspace:
   rail:
     connections: "Connections"
-    scripts: "Scripts"
+    scripts: "Explorer"
     dashboards: "Dashboards"
     approvals: "MCP approvals"
     audit: "Audit"

@@ -1025,7 +1025,7 @@ pub(super) fn render_tree_item(
                                     .app_state
                                     .read(cx)
                                     .scripts_directory()
-                                    .map(|dir| dir.root_path().to_path_buf());
+                                    .map(|dir| dir.default_root().to_path_buf());
 
                                 let target_path = match target_id.as_ref() {
                                     Some(SchemaNodeId::ScriptsFolder { path: Some(p) })

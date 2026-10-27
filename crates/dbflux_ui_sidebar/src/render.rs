@@ -9,12 +9,19 @@ use dbflux_components::tokens::{
 };
 
 /// Section label of the sidebar header for `tab`, tinted while the sidebar
-/// has keyboard focus.
-fn sidebar_header_label(tab: SidebarTab, focused: bool, tint: Hsla) -> Text {
-    let title = match tab {
-        SidebarTab::Connections => dbflux_i18n::t!("sidebar.tabs.connections"),
-        SidebarTab::Scripts => dbflux_i18n::t!("sidebar.tabs.scripts"),
-        SidebarTab::Dashboards => dbflux_i18n::t!("sidebar.tabs.dashboards"),
+/// has keyboard focus. The Scripts view is titled by its workspace folder
+/// when one is open.
+fn sidebar_header_label(
+    tab: SidebarTab,
+    workspace_name: Option<String>,
+    focused: bool,
+    tint: Hsla,
+) -> Text {
+    let title = match (tab, workspace_name) {
+        (SidebarTab::Connections, _) => dbflux_i18n::t!("sidebar.tabs.connections"),
+        (SidebarTab::Scripts, Some(name)) => name,
+        (SidebarTab::Scripts, None) => dbflux_i18n::t!("sidebar.tabs.scripts"),
+        (SidebarTab::Dashboards, _) => dbflux_i18n::t!("sidebar.tabs.dashboards"),
     };
 
     let label = Text::label(title).font_size(ShellMetrics::SECTION_LABEL_FONT);
@@ -34,6 +41,17 @@ impl Sidebar {
             dbflux_i18n::t!("sidebar.header.add")
         };
         let sidebar_for_filter = cx.entity().clone();
+        let workspace_name = self
+            .app_state
+            .read(cx)
+            .scripts_directory()
+            .and_then(|dir| dir.workspace())
+            .map(|workspace| {
+                workspace.path().file_name().map_or_else(
+                    || workspace.label(),
+                    |name| name.to_string_lossy().to_string(),
+                )
+            });
 
         div()
             .flex()
@@ -50,6 +68,7 @@ impl Sidebar {
                     .truncate()
                     .child(sidebar_header_label(
                         self.active_tab,
+                        workspace_name,
                         self.connections_focused,
                         tint,
                     )),
@@ -583,9 +602,10 @@ mod tests {
     #[test]
     fn header_label_names_the_active_view_as_a_section_label() {
         let connections =
-            sidebar_header_label(SidebarTab::Connections, false, gpui::red()).inspect();
-        let scripts = sidebar_header_label(SidebarTab::Scripts, false, gpui::red()).inspect();
-        let dashboards = sidebar_header_label(SidebarTab::Dashboards, false, gpui::red()).inspect();
+            sidebar_header_label(SidebarTab::Connections, None, false, gpui::red()).inspect();
+        let scripts = sidebar_header_label(SidebarTab::Scripts, None, false, gpui::red()).inspect();
+        let dashboards =
+            sidebar_header_label(SidebarTab::Dashboards, None, false, gpui::red()).inspect();
 
         for inspection in [connections, scripts, dashboards] {
             assert_eq!(inspection.variant, TextVariant::Label);
@@ -599,7 +619,8 @@ mod tests {
 
     #[test]
     fn header_label_takes_the_tint_while_the_sidebar_has_focus() {
-        let focused = sidebar_header_label(SidebarTab::Connections, true, gpui::red()).inspect();
+        let focused =
+            sidebar_header_label(SidebarTab::Connections, None, true, gpui::red()).inspect();
 
         assert!(focused.has_custom_color_override);
     }

@@ -1921,6 +1921,30 @@ impl AppState {
     /// Unregisters an external scripts folder. The folder and its files are
     /// never touched. The stored row goes first, so a failed write keeps the
     /// folder listed rather than reappearing after a restart.
+    /// Makes `path` the workspace: the one external scripts folder the
+    /// sidebar lists, in place of any folder registered before.
+    pub fn open_workspace_folder(
+        &mut self,
+        path: PathBuf,
+    ) -> Result<ExternalScriptRoot, ScriptRootError> {
+        let previous: Vec<Uuid> = self
+            .scripts_directory
+            .as_ref()
+            .map(|dir| {
+                dir.external_roots()
+                    .iter()
+                    .map(dbflux_core::MountedScriptRoot::id)
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        for id in previous {
+            self.remove_external_script_root(id)?;
+        }
+
+        self.add_external_script_root(path)
+    }
+
     pub fn remove_external_script_root(&mut self, id: Uuid) -> Result<(), ScriptRootError> {
         let label = self
             .scripts_directory

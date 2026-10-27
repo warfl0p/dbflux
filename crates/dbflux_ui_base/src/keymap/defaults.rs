@@ -91,11 +91,13 @@ fn vim_normal_layer() -> KeymapLayer {
 fn global_layer() -> KeymapLayer {
     let mut layer = KeymapLayer::new(ContextId::Global);
 
-    // Command palette — Cmd+Shift+P on macOS, Ctrl+Shift+P elsewhere.
+    // Command palette — Cmd+Shift+P on macOS, Ctrl+Shift+P elsewhere — and
+    // Go to File on the primary modifier + P, as in VS Code.
     layer.bind(
         KeyChord::new("p", Modifiers::primary_shift()),
         Command::ToggleCommandPalette,
     );
+    layer.bind(KeyChord::new("p", Modifiers::primary()), Command::GoToFile);
 
     // Connection Manager — Cmd+Shift+N on macOS, Ctrl+Shift+N elsewhere.
     layer.bind(
@@ -431,7 +433,13 @@ fn editor_layer() -> KeymapLayer {
         Command::ToggleHistoryDropdown,
     );
     layer.bind(
-        KeyChord::new("p", Modifiers::primary()),
+        KeyChord::new(
+            "p",
+            Modifiers {
+                alt: true,
+                ..Modifiers::primary()
+            },
+        ),
         Command::OpenSavedQueries,
     );
     layer.bind(KeyChord::new("s", Modifiers::primary()), Command::SaveQuery);

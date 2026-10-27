@@ -436,6 +436,12 @@ impl CodeDocument {
 
         let entity = cx.entity().clone();
         let save_target_override = self.app_state.read(cx).save_target_override();
+        // New files land in the open workspace folder by default.
+        let default_directory = self
+            .app_state
+            .read(cx)
+            .scripts_directory()
+            .map(|dir| dir.default_root().to_path_buf());
 
         self._pending_save = Some(cx.spawn(async move |_this, cx| {
             let outcome = dbflux_ui_base::file_dialog::resolve_save_target(
@@ -446,7 +452,11 @@ impl CodeDocument {
                     default_extension: &default_ext,
                 },
                 async {
-                    let file_handle = rfd::AsyncFileDialog::new()
+                    let mut dialog = rfd::AsyncFileDialog::new();
+                    if let Some(directory) = default_directory {
+                        dialog = dialog.set_directory(directory);
+                    }
+                    let file_handle = dialog
                         .set_title(dbflux_i18n::t!("document.code.file_ops.save_as.title"))
                         .set_file_name(&suggested_name)
                         .add_filter(&language_name, &[&default_ext])

@@ -210,24 +210,23 @@ impl Sidebar {
         .detach();
     }
 
-    /// Asks for a folder and registers it as an external scripts folder.
+    /// Asks for a folder and opens it as the workspace, in place of the
+    /// folder open before.
     ///
     /// The picker and the validation (canonicalizing, overlap checks) run off
     /// the UI thread; the new folder then shows as scanning until the
     /// background scan lands. Nothing is copied.
     pub fn add_external_scripts_folder(&mut self, cx: &mut Context<Self>) {
-        let Some((managed_root, external_roots)) =
-            self.app_state.read(cx).scripts_directory().map(|dir| {
-                let external = dir
-                    .external_roots()
-                    .iter()
-                    .map(|mounted| mounted.path().to_path_buf())
-                    .collect::<Vec<_>>();
-                (dir.root_path().to_path_buf(), external)
-            })
+        let Some(managed_root) = self
+            .app_state
+            .read(cx)
+            .scripts_directory()
+            .map(|dir| dir.root_path().to_path_buf())
         else {
             return;
         };
+        // The folder open now is replaced, so it cannot overlap the new one.
+        let external_roots: Vec<std::path::PathBuf> = Vec::new();
 
         let title = crate::labels::add_external_folder_dialog_title();
         let app_state = self.app_state.clone();
@@ -271,7 +270,7 @@ impl Sidebar {
                 };
 
                 let added = app_state.update(cx, |state, cx| {
-                    let added = state.add_external_script_root(path);
+                    let added = state.open_workspace_folder(path);
                     if added.is_ok() {
                         cx.emit(AppStateChanged);
                     }
@@ -357,7 +356,7 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) {
         let root = match self.app_state.read(cx).scripts_directory() {
-            Some(dir) => dir.root_path().to_path_buf(),
+            Some(dir) => dir.default_root().to_path_buf(),
             None => return,
         };
 
@@ -487,7 +486,7 @@ impl Sidebar {
             .app_state
             .read(cx)
             .scripts_directory()
-            .map(|dir| dir.root_path().to_path_buf());
+            .map(|dir| dir.default_root().to_path_buf());
 
         let target_path = match parse_node_id(&drop_target.item_id) {
             Some(SchemaNodeId::ScriptFile { path }) => Some(std::path::PathBuf::from(path)),
@@ -690,7 +689,7 @@ impl Sidebar {
             None => return format!("untitled.{}", extension),
         };
 
-        let base_dir = parent.unwrap_or_else(|| dir.root_path());
+        let base_dir = parent.unwrap_or_else(|| dir.default_root());
 
         for i in 1u32.. {
             let name = if i == 1 {

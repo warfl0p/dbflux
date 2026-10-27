@@ -343,6 +343,18 @@ impl ScriptsDirectory {
         &self.root
     }
 
+    /// The open workspace folder: the first external root, if any.
+    pub fn workspace(&self) -> Option<&MountedScriptRoot> {
+        self.external.first()
+    }
+
+    /// Where new scripts go and where the sidebar's empty area points: the
+    /// workspace folder when one is open, else the managed root.
+    pub fn default_root(&self) -> &Path {
+        self.workspace()
+            .map_or(self.root.as_path(), MountedScriptRoot::path)
+    }
+
     /// The entries of the managed root.
     pub fn entries(&self) -> &[ScriptEntry] {
         &self.entries
