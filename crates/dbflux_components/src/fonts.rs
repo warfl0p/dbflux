@@ -66,7 +66,7 @@ impl FontSettings {
             resolve_family(&settings.grid_font_family, editor_family.clone(), installed);
         let ui_family = resolve_family(
             &settings.ui_font_family,
-            SharedString::from(AppFonts::INTERFACE),
+            system_ui_family(installed),
             installed,
         );
 
@@ -151,17 +151,10 @@ pub fn ui_family(cx: &App) -> SharedString {
     active(cx).ui_family.clone()
 }
 
-/// Family of the uppercase section labels: the bundled display face while
-/// the interface uses its bundled family, else the chosen interface family,
-/// so a custom interface font is not mixed with the bundled display face.
+/// Family of the uppercase section labels: the interface family, so labels
+/// read like VS Code's section headers rather than in a wide display face.
 pub fn display_family(cx: &App) -> SharedString {
-    let ui_family = &active(cx).ui_family;
-
-    if ui_family.as_ref() == AppFonts::INTERFACE {
-        SharedString::from(AppFonts::DISPLAY)
-    } else {
-        ui_family.clone()
-    }
+    active(cx).ui_family.clone()
 }
 
 /// The active family for a bundled role family: the interface, display and
@@ -268,6 +261,24 @@ fn scaled_grid_height(cx: &App, default_height: f32) -> Pixels {
 }
 
 /// The normalized `family` when the text system can load it, else `fallback`.
+/// Interface families tried, in order, when Settings names none: VS Code's
+/// Linux interface stack (`Ubuntu`, then the desktop sans faces). Only
+/// families shipped as one file per weight are listed: the text system draws
+/// a variable font (Adwaita Sans) in its regular weight only. The bundled
+/// interface face is the last resort.
+// ponytail: fixed list; read the desktop font setting if one is missing.
+const SYSTEM_UI_FAMILIES: &[&str] = &["Ubuntu", "Noto Sans", "Cantarell"];
+
+fn system_ui_family(installed: &[SharedString]) -> SharedString {
+    SYSTEM_UI_FAMILIES
+        .iter()
+        .find(|family| installed.iter().any(|name| name.as_ref() == **family))
+        .map_or_else(
+            || SharedString::from(AppFonts::INTERFACE),
+            |family| SharedString::from(*family),
+        )
+}
+
 fn resolve_family(
     family: &Option<String>,
     fallback: SharedString,
@@ -480,7 +491,7 @@ mod tests {
     #[gpui::test]
     fn bundled_role_families_resolve_to_the_chosen_families(cx: &mut TestAppContext) {
         cx.update(|cx| {
-            assert_eq!(display_family(cx), SharedString::from(AppFonts::DISPLAY));
+            assert_eq!(display_family(cx), SharedString::from(AppFonts::INTERFACE));
             assert_eq!(
                 family_for(cx, AppFonts::MONO),
                 SharedString::from(AppFonts::MONO)

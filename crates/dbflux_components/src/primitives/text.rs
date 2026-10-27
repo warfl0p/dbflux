@@ -9,7 +9,7 @@ use crate::tokens::{ChromeColors, FontSizes};
 use crate::typography::AppFonts;
 
 /// Tracking of the uppercase `Label` role, in em.
-const LABEL_TRACKING_EM: f32 = 0.14;
+const LABEL_TRACKING_EM: f32 = 0.04;
 
 /// The eight text roles of the design system (DSFoundations, DSAppPlan).
 ///
@@ -343,7 +343,7 @@ impl TextVariant {
                 family: AppFonts::DISPLAY,
                 fallbacks: INTERFACE,
                 size: FontSizes::LABEL.into(),
-                weight: FontWeight::EXTRA_BOLD,
+                weight: FontWeight::BOLD,
                 color: TextDefaultColor::MutedForeground,
             },
             Self::Caption => TextRoleContract {
@@ -446,7 +446,7 @@ mod tests {
 
         let label = TextVariant::Label.role_contract();
         assert_eq!(label.size, FontSizes::LABEL.into());
-        assert_eq!(label.weight, FontWeight::EXTRA_BOLD);
+        assert_eq!(label.weight, FontWeight::BOLD);
     }
 
     #[test]
@@ -471,7 +471,7 @@ mod tests {
     #[test]
     fn label_role_uppercases_and_tracks_its_text() {
         assert!(TextVariant::Label.is_uppercase());
-        assert_eq!(TextVariant::Label.letter_spacing_em(), 0.14);
+        assert_eq!(TextVariant::Label.letter_spacing_em(), 0.04);
 
         for role in ALL_ROLES
             .into_iter()
@@ -500,7 +500,7 @@ mod tests {
             );
             assert_eq!(
                 TextVariant::Label.resolved_font(cx).family.as_ref(),
-                AppFonts::DISPLAY
+                AppFonts::INTERFACE
             );
 
             crate::fonts::init(
