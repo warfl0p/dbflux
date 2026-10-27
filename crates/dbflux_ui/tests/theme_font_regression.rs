@@ -153,9 +153,23 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         assert_eq!(theme.foreground, rgb_to_hsla(0xCCCCCF));
         assert_eq!(theme.muted_foreground, rgb_to_hsla(0x9A9B9F));
         assert_eq!(theme.primary, rgb_to_hsla(0x7AA2F7));
-        assert_eq!(theme.primary_hover, rgb_to_hsla(0x89B4FA));
-        assert_eq!(theme.primary_active, rgb_to_hsla(0x3D59A1));
-        assert_eq!(theme.primary_foreground, rgb_to_hsla(0x191A1B));
+        // Hover and pressed shift the accent's lightness by +5 % and -6 %.
+        let accent = rgb_to_hsla(0x7AA2F7);
+        assert_eq!(
+            theme.primary_hover,
+            gpui::Hsla {
+                l: accent.l + 0.05,
+                ..accent
+            }
+        );
+        assert_eq!(
+            theme.primary_active,
+            gpui::Hsla {
+                l: accent.l - 0.06,
+                ..accent
+            }
+        );
+        assert_eq!(theme.primary_foreground, rgb_to_hsla(0x09090B));
         assert_eq!(theme.ring, rgb_to_hsla(0x7AA2F7));
         assert_eq!(theme.caret, rgb_to_hsla(0x7AA2F7));
         assert_eq!(theme.selection, rgb_to_hsla_alpha(0x7AA2F7, 0.25));
@@ -164,11 +178,11 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         assert_eq!(theme.secondary_hover, rgb_to_hsla(0x2B2C2E));
         assert_eq!(theme.secondary_active, rgb_to_hsla(0x3C3D40));
         assert_eq!(theme.input, rgb_to_hsla(0x3C3D40));
-        assert_eq!(theme.danger, rgb_to_hsla(0xF7768E));
-        assert_eq!(theme.danger_foreground, rgb_to_hsla(0x191A1B));
+        assert_eq!(theme.danger, rgb_to_hsla(0xFF6B5E));
+        assert_eq!(theme.danger_foreground, rgb_to_hsla(0x09090B));
         assert_eq!(theme.table_row_border, rgb_to_hsla(0x1F2021));
-        assert_eq!(theme.list_active, rgb_to_hsla_alpha(0x7AA2F7, 0.16));
-        assert_eq!(theme.table_active, rgb_to_hsla_alpha(0x7AA2F7, 0.10));
+        assert_eq!(theme.list_active, rgb_to_hsla_alpha(0x7AA2F7, 0.12));
+        assert_eq!(theme.table_active, rgb_to_hsla_alpha(0x7AA2F7, 0.07));
         assert_eq!(theme.title_bar_border, rgb_to_hsla(0x2B2C2E));
         assert_eq!(theme.window_border, rgb_to_hsla(0x2B2C2E));
         assert_eq!(
