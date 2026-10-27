@@ -507,43 +507,43 @@ impl Palette {
         self
     }
 
-    /// Tokyo Night colors with the `#7AA2F7` blue accent: every pane shares
-    /// one background, as in VS Code.
+    /// Neutral VS Code-style grays with the `#7AA2F7` blue accent: every pane
+    /// shares one background.
     fn dark() -> Self {
         let accent = rgb_to_hsla(0x7AA2F7);
 
         Self {
             mode: ThemeMode::Dark,
 
-            background: rgb_to_hsla(0x1A1B26),
-            panel: rgb_to_hsla(0x1A1B26),
-            raised: rgb_to_hsla(0x24283B),
-            line: rgb_to_hsla(0x292E42),
-            line_strong: rgb_to_hsla(0x3B4261),
-            row_divider: rgb_to_hsla(0x1F2335),
+            background: rgb_to_hsla(0x191A1B),
+            panel: rgb_to_hsla(0x191A1B),
+            raised: rgb_to_hsla(0x232425),
+            line: rgb_to_hsla(0x2B2C2E),
+            line_strong: rgb_to_hsla(0x3C3D40),
+            row_divider: rgb_to_hsla(0x1F2021),
 
-            text_strong: rgb_to_hsla(0xC0CAF5),
-            text_body: rgb_to_hsla(0xA9B1D6),
-            text_muted: rgb_to_hsla(0x8E93B2),
+            text_strong: rgb_to_hsla(0xE4E4E6),
+            text_body: rgb_to_hsla(0xCCCCCF),
+            text_muted: rgb_to_hsla(0x9A9B9F),
 
             byzantine: accent,
             byzantine_hover: rgb_to_hsla(0x89B4FA),
             byzantine_deep: rgb_to_hsla(0x3D59A1),
             tint: accent,
-            ink: rgb_to_hsla(0x1A1B26),
+            ink: rgb_to_hsla(0x191A1B),
 
             success: rgb_to_hsla(0x9ECE6A),
             info: rgb_to_hsla(0x7DCFFF),
             warning: rgb_to_hsla(0xE0AF68),
             danger: rgb_to_hsla(0xF7768E),
             cyan: rgb_to_hsla(0x73DACA),
-            semantic_foreground: rgb_to_hsla(0x1A1B26),
+            semantic_foreground: rgb_to_hsla(0x191A1B),
 
             hover_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.04),
             alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.025),
             selected_row_wash: rgb_to_hsla_alpha(0x7AA2F7, 0.10),
             selected_item_wash: rgb_to_hsla_alpha(0x7AA2F7, 0.16),
-            overlay: rgb_to_hsla_alpha(0x101014, 0.62),
+            overlay: rgb_to_hsla_alpha(0x121314, 0.62),
             progress: accent,
 
             syntax: SyntaxColors::dark(),
@@ -967,7 +967,7 @@ mod tests {
         cx.update(|cx| apply_theme(ThemeSetting::Dark, AppStyle::Default, None, cx));
         cx.update(|cx| {
             let theme = Theme::global(cx);
-            assert_eq!(theme.colors.background, rgb_to_hsla(0x1A1B26));
+            assert_eq!(theme.colors.background, rgb_to_hsla(0x191A1B));
             assert_eq!(
                 theme.tokens.button_primary.color,
                 expected_primary(ThemeSetting::Dark)

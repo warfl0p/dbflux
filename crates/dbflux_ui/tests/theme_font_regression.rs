@@ -95,8 +95,8 @@ fn theme_init_and_apply_theme_keep_centralized_fonts_without_changing_base_token
         let theme = Theme::global_mut(cx);
 
         assert_centralized_fonts(theme);
-        assert_eq!(theme.border, rgb_to_hsla(0x292E42));
-        assert_eq!(theme.popover, rgb_to_hsla(0x1A1B26));
+        assert_eq!(theme.border, rgb_to_hsla(0x2B2C2E));
+        assert_eq!(theme.popover, rgb_to_hsla(0x191A1B));
     });
 
     cx.update(|cx| {
@@ -149,31 +149,31 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         let theme = Theme::global_mut(cx);
 
         assert_centralized_fonts(theme);
-        assert_eq!(theme.background, rgb_to_hsla(0x1A1B26));
-        assert_eq!(theme.foreground, rgb_to_hsla(0xA9B1D6));
-        assert_eq!(theme.muted_foreground, rgb_to_hsla(0x8E93B2));
+        assert_eq!(theme.background, rgb_to_hsla(0x191A1B));
+        assert_eq!(theme.foreground, rgb_to_hsla(0xCCCCCF));
+        assert_eq!(theme.muted_foreground, rgb_to_hsla(0x9A9B9F));
         assert_eq!(theme.primary, rgb_to_hsla(0x7AA2F7));
         assert_eq!(theme.primary_hover, rgb_to_hsla(0x89B4FA));
         assert_eq!(theme.primary_active, rgb_to_hsla(0x3D59A1));
-        assert_eq!(theme.primary_foreground, rgb_to_hsla(0x1A1B26));
+        assert_eq!(theme.primary_foreground, rgb_to_hsla(0x191A1B));
         assert_eq!(theme.ring, rgb_to_hsla(0x7AA2F7));
         assert_eq!(theme.caret, rgb_to_hsla(0x7AA2F7));
         assert_eq!(theme.selection, rgb_to_hsla_alpha(0x7AA2F7, 0.25));
-        assert_eq!(theme.popover, rgb_to_hsla(0x1A1B26));
-        assert_eq!(theme.secondary, rgb_to_hsla(0x24283B));
-        assert_eq!(theme.secondary_hover, rgb_to_hsla(0x292E42));
-        assert_eq!(theme.secondary_active, rgb_to_hsla(0x3B4261));
-        assert_eq!(theme.input, rgb_to_hsla(0x3B4261));
+        assert_eq!(theme.popover, rgb_to_hsla(0x191A1B));
+        assert_eq!(theme.secondary, rgb_to_hsla(0x232425));
+        assert_eq!(theme.secondary_hover, rgb_to_hsla(0x2B2C2E));
+        assert_eq!(theme.secondary_active, rgb_to_hsla(0x3C3D40));
+        assert_eq!(theme.input, rgb_to_hsla(0x3C3D40));
         assert_eq!(theme.danger, rgb_to_hsla(0xF7768E));
-        assert_eq!(theme.danger_foreground, rgb_to_hsla(0x1A1B26));
-        assert_eq!(theme.table_row_border, rgb_to_hsla(0x1F2335));
+        assert_eq!(theme.danger_foreground, rgb_to_hsla(0x191A1B));
+        assert_eq!(theme.table_row_border, rgb_to_hsla(0x1F2021));
         assert_eq!(theme.list_active, rgb_to_hsla_alpha(0x7AA2F7, 0.16));
         assert_eq!(theme.table_active, rgb_to_hsla_alpha(0x7AA2F7, 0.10));
-        assert_eq!(theme.title_bar_border, rgb_to_hsla(0x292E42));
-        assert_eq!(theme.window_border, rgb_to_hsla(0x292E42));
+        assert_eq!(theme.title_bar_border, rgb_to_hsla(0x2B2C2E));
+        assert_eq!(theme.window_border, rgb_to_hsla(0x2B2C2E));
         assert_eq!(
             theme.highlight_theme.style.editor_background,
-            Some(rgb_to_hsla(0x1A1B26))
+            Some(rgb_to_hsla(0x191A1B))
         );
         assert_eq!(
             theme.highlight_theme.style.editor_active_line,
@@ -181,11 +181,11 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         );
         assert_eq!(
             theme.highlight_theme.style.editor_line_number,
-            Some(rgb_to_hsla(0x8E93B2))
+            Some(rgb_to_hsla(0x9A9B9F))
         );
         assert_eq!(
             theme.highlight_theme.style.editor_active_line_number,
-            Some(rgb_to_hsla(0xC0CAF5))
+            Some(rgb_to_hsla(0xE4E4E6))
         );
     });
 }
@@ -195,7 +195,7 @@ fn ghost_border_resolves_to_the_palette_line_in_both_variants(cx: &mut TestAppCo
     cx.update(theme::init);
 
     for (setting, line) in [
-        (ThemeSetting::Dark, 0x292E42),
+        (ThemeSetting::Dark, 0x2B2C2E),
         (ThemeSetting::Light, 0xE3DEE6),
     ] {
         cx.update(|cx| {
