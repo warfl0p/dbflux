@@ -103,7 +103,7 @@ impl DataGridPanel {
 
     /// Fetches the next rows when the last loaded one comes into view.
     ///
-    /// ponytail: skipped while an in-memory sort is active, because appended
+    /// Skipped while an in-memory sort is active, because appended
     /// rows would land unsorted below sorted ones; re-sort after appending if
     /// that matters.
     fn request_next_rows(&mut self, cx: &mut Context<Self>) {
@@ -148,7 +148,8 @@ impl DataGridPanel {
         // Rows that changed between the two runs shift the rerun, so its rows
         // past the loaded count are not the next ones; show the rerun whole.
         let loaded = result.rows.len();
-        let combined = if rerun.rows.get(..loaded) == Some(result.rows.as_slice()) {
+        let appended = rerun.rows.get(..loaded) == Some(result.rows.as_slice());
+        let combined = if appended {
             let mut combined = (**result).clone();
             let truncated = rerun.rows_truncated();
             combined.rows.extend(rerun.rows.into_iter().skip(loaded));
@@ -159,7 +160,13 @@ impl DataGridPanel {
         };
         *result = Arc::new(combined.clone());
 
-        self.grid_table.reload = TableReload::Preserve;
+        // A replaced result starts at the top, so its end is not in view and
+        // does not fetch another page on its own.
+        self.grid_table.reload = if appended {
+            TableReload::Preserve
+        } else {
+            TableReload::ResetRows
+        };
         self.set_result(combined, cx);
     }
 
