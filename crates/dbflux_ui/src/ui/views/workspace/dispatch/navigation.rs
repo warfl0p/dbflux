@@ -12,6 +12,10 @@ impl Workspace {
                 self.toggle_command_palette(window, cx);
                 Some(true)
             }
+            Command::GoToFile => {
+                self.open_go_to_file(window, cx);
+                Some(true)
+            }
 
             Command::ToggleTasks => {
                 self.toggle_tasks_panel(cx);

@@ -3989,6 +3989,8 @@ palette:
       name: "연결 보기 표시"
     show_scripts_view:
       name: "스크립트 보기 표시"
+    go_to_file:
+      name: "Go to file…"
     show_dashboards_view:
       name: "대시보드 보기 표시"
     open_settings:
@@ -4434,6 +4436,7 @@ settings:
       install_update: "업데이트 설치"
       show_connections_view: "연결 보기 표시"
       show_scripts_view: "스크립트 보기 표시"
+      go_to_file: "Go to file…"
       show_dashboards_view: "대시보드 보기 표시"
       open_mcp_approvals: MCP 승인 열기
       refresh_mcp_governance: MCP 거버넌스 새로고침

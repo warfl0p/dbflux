@@ -159,14 +159,26 @@ fn test_editor_history_bindings() {
 
     let alt_h = KeyChord::new("h", Modifiers::alt());
     let primary_p = KeyChord::new("p", Modifiers::primary());
+    let primary_alt_p = KeyChord::new(
+        "p",
+        Modifiers {
+            alt: true,
+            ..Modifiers::primary()
+        },
+    );
     let primary_s = KeyChord::new("s", Modifiers::primary());
 
     assert_eq!(
         keymap.resolve(ContextId::Editor, &alt_h),
         Some(Command::ToggleHistoryDropdown)
     );
-    assert_eq!(
+    // Ctrl+P is the palette's file finder everywhere; saved queries moved.
+    assert_ne!(
         keymap.resolve(ContextId::Editor, &primary_p),
+        Some(Command::OpenSavedQueries)
+    );
+    assert_eq!(
+        keymap.resolve(ContextId::Editor, &primary_alt_p),
         Some(Command::OpenSavedQueries)
     );
     assert_eq!(

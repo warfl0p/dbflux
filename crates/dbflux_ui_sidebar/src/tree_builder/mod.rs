@@ -551,8 +551,9 @@ impl Sidebar {
         )
     }
 
-    /// Build the Scripts tab: the managed root's entries at the top level, then
-    /// one node per external folder, all filtered by `query`.
+    /// Build the Scripts tab: the open workspace folder's entries at the top
+    /// level, like a VS Code explorer. Without a workspace, the managed root's
+    /// entries, then one node per external folder, all filtered by `query`.
     pub(super) fn scripts_tree_items(state: &AppStateEntity, query: &str) -> Vec<TreeItem> {
         let Some(dir) = state.scripts_directory() else {
             return Vec::new();
@@ -561,6 +562,13 @@ impl Sidebar {
         // Folders start collapsed, except while filtering, where a collapsed
         // folder would hide the matches it was kept for.
         let expanded = !query.is_empty();
+
+        if let Some(workspace) = dir.workspace() {
+            return Self::build_scripts_tree_items(
+                &dbflux_core::filter_entries(workspace.entries(), query),
+                expanded,
+            );
+        }
 
         let mut items = Self::build_scripts_tree_items(
             &dbflux_core::filter_entries(dir.entries(), query),

@@ -3989,6 +3989,8 @@ palette:
       name: "Mostrar visão de conexões"
     show_scripts_view:
       name: "Mostrar visão de scripts"
+    go_to_file:
+      name: "Go to file…"
     show_dashboards_view:
       name: "Mostrar visão de dashboards"
     open_settings:
@@ -4434,6 +4436,7 @@ settings:
       install_update: "Instalar atualização"
       show_connections_view: "Mostrar visão de conexões"
       show_scripts_view: "Mostrar visão de scripts"
+      go_to_file: "Go to file…"
       show_dashboards_view: "Mostrar visão de dashboards"
       open_mcp_approvals: Abrir aprovações do MCP
       refresh_mcp_governance: Atualizar governança do MCP

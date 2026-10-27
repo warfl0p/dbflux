@@ -79,7 +79,21 @@ impl Sidebar {
             _ => None,
         };
 
+        // An open workspace shows where it lives, like VS Code's title.
+        let workspace_path = match self.active_tab {
+            SidebarTab::Scripts => state
+                .scripts_directory()
+                .and_then(|dir| dir.workspace())
+                .map(|workspace| workspace.path().to_string_lossy().to_string()),
+            _ => None,
+        };
+
         let content = match (external_summary, summary) {
+            _ if workspace_path.is_some() => div()
+                .min_w_0()
+                .truncate()
+                .children(workspace_path)
+                .into_any_element(),
             (Some(external), _) => div()
                 .flex()
                 .items_center()
