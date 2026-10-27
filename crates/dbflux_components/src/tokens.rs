@@ -580,11 +580,11 @@ impl ChromeColors {
     }
 
     /// The desk under the islands: the main window ground and the frame of
-    /// the Settings and Connection Manager windows. `#050507` on dark,
-    /// `#E6E1E9` on light.
+    /// the Settings and Connection Manager windows, showing as the 1 px
+    /// separator between panes. `#16161E` on dark, `#E6E1E9` on light.
     pub fn desk(theme: &gpui_component::Theme) -> Hsla {
         if theme.mode.is_dark() {
-            rgb(0x050507).into()
+            rgb(0x16161E).into()
         } else {
             rgb(0xE6E1E9).into()
         }
@@ -1870,13 +1870,14 @@ impl NotificationMetrics {
 pub struct IslandMetrics;
 
 impl IslandMetrics {
-    /// Cut of the top-left and bottom-right corners of every island. (14 px)
-    pub const CUT: Pixels = ChamferCut::CARD;
+    /// Islands are square, like VS Code's panes.
+    pub const CUT: Pixels = px(0.0);
     /// Space between neighbouring islands and between an island and the
-    /// window's side edges. (8 px)
-    pub const GAP: Pixels = px(8.0);
+    /// window's side edges: 1 px of desk, which reads as the separator line.
+    pub const GAP: Pixels = px(1.0);
     /// Thickness of the hairline along the island outline; zero draws none.
-    pub const EDGE: Pixels = px(1.0);
+    /// The desk between islands already separates them.
+    pub const EDGE: Pixels = px(0.0);
 
     /// Title row of a window whose body is islands (Settings, Connection
     /// Manager): 40 px on the desk, 16 px side padding, no line.
