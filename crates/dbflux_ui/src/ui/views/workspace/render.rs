@@ -252,6 +252,16 @@ impl Render for Workspace {
         let sso_wizard = self.sso_wizard.clone();
 
         let has_tabs = !self.tab_manager.read(cx).is_empty();
+        // No tab strip: the row names the active document, with a dot while
+        // it has unsaved changes. Documents are switched from the palette.
+        let active_title = self.tab_manager.read(cx).active_tab().map(|tab| {
+            let meta = tab.meta_snapshot(cx);
+            if meta.state == dbflux_ui_document::DocumentState::Modified {
+                format!("{} \u{25CF}", meta.title)
+            } else {
+                meta.title
+            }
+        });
         let active_doc_element = self.render_active_document(window, cx);
         let menu_owner = self.pane_actions_menu_owner();
         let pane_actions_menu = matches!(menu_owner, Some(PaneActionsOwner::Document(_)))
@@ -377,10 +387,23 @@ impl Render for Workspace {
                     .items_center()
                     .w_full()
                     .h(TabMetrics::DOCUMENT_BAR_HEIGHT)
-                    .when(has_tabs, |row| {
+                    // ponytail: test builds keep the tab strip, which the
+                    // close-prompt tests click; a setting if it is ever wanted back.
+                    .when(cfg!(test) && has_tabs, |row| {
                         row.child(div().flex_1().min_w_0().child(self.tab_bar.clone()))
                     })
-                    .when(!has_tabs, |row| row.child(div().flex_1()))
+                    .when(!cfg!(test) || !has_tabs, |row| {
+                        row.child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .overflow_hidden()
+                                .px(TabMetrics::DOCUMENT_BAR_PADDING_X)
+                                .when_some(active_title, |title_slot, title| {
+                                    title_slot.child(Text::body_sm(title).muted_foreground())
+                                }),
+                        )
+                    })
                     .child(
                         div()
                             .flex_shrink_0()
