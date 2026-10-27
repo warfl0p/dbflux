@@ -581,10 +581,10 @@ impl ChromeColors {
 
     /// The desk under the islands: the main window ground and the frame of
     /// the Settings and Connection Manager windows, showing as the 1 px
-    /// separator between panes. `#16161E` on dark, `#E6E1E9` on light.
+    /// separator between panes. `#121314` on dark, `#E6E1E9` on light.
     pub fn desk(theme: &gpui_component::Theme) -> Hsla {
         if theme.mode.is_dark() {
-            rgb(0x16161E).into()
+            rgb(0x121314).into()
         } else {
             rgb(0xE6E1E9).into()
         }
