@@ -123,14 +123,14 @@ pub fn island_fill(theme: &gpui_component::Theme) -> Hsla {
 #[cfg(test)]
 mod tests {
     use super::{inspect_island, island_edge_ring};
-    use crate::tokens::{ChamferCut, ChromeColorSlot, ChromeColors, IslandMetrics};
+    use crate::tokens::{ChromeColorSlot, ChromeColors, IslandMetrics};
 
     #[test]
-    fn islands_use_the_panel_fill_and_the_card_cut() {
+    fn islands_are_square_panel_fills() {
         let inspection = inspect_island();
 
         assert_eq!(inspection.fill, ChromeColorSlot::Popover);
-        assert_eq!(inspection.cut, ChamferCut::CARD);
+        assert_eq!(inspection.cut, gpui::Pixels::ZERO);
         assert_eq!(inspection.edge, IslandMetrics::EDGE);
     }
 
@@ -155,13 +155,10 @@ mod tests {
     }
 
     #[test]
-    fn the_hairline_stays_inside_the_outline_and_never_waits_for_focus() {
+    fn islands_draw_no_hairline_because_the_desk_separates_them() {
         let theme = gpui_component::Theme::default();
-        let ring = island_edge_ring(&theme).expect("islands draw a hairline");
 
-        assert_eq!(ring.thickness, IslandMetrics::EDGE);
-        assert_eq!(ring.offset, -IslandMetrics::EDGE);
-        assert!(!ring.focus_visible);
-        assert_eq!(ring.color, ChromeColors::island_edge(&theme));
+        assert_eq!(IslandMetrics::EDGE, gpui::Pixels::ZERO);
+        assert!(island_edge_ring(&theme).is_none());
     }
 }

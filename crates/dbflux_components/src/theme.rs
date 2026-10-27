@@ -507,43 +507,44 @@ impl Palette {
         self
     }
 
+    /// Tokyo Night colors with the `#7AA2F7` blue accent: every pane shares
+    /// one background, as in VS Code.
     fn dark() -> Self {
-        let tint = rgb_to_hsla(0xD48CC8);
-        let byzantine = rgb_to_hsla(0x702963);
+        let accent = rgb_to_hsla(0x7AA2F7);
 
         Self {
             mode: ThemeMode::Dark,
 
-            background: rgb_to_hsla(0x09090B),
-            panel: rgb_to_hsla(0x100F13),
-            raised: rgb_to_hsla(0x1A181E),
-            line: rgb_to_hsla(0x232128),
-            line_strong: rgb_to_hsla(0x37333D),
-            row_divider: rgb_to_hsla(0x18161B),
+            background: rgb_to_hsla(0x1A1B26),
+            panel: rgb_to_hsla(0x1A1B26),
+            raised: rgb_to_hsla(0x24283B),
+            line: rgb_to_hsla(0x292E42),
+            line_strong: rgb_to_hsla(0x3B4261),
+            row_divider: rgb_to_hsla(0x1F2335),
 
-            text_strong: rgb_to_hsla(0xF7F4F7),
-            text_body: rgb_to_hsla(0xC6C3CC),
-            text_muted: rgb_to_hsla(0x8E8996),
+            text_strong: rgb_to_hsla(0xC0CAF5),
+            text_body: rgb_to_hsla(0xA9B1D6),
+            text_muted: rgb_to_hsla(0x8E93B2),
 
-            byzantine,
-            byzantine_hover: rgb_to_hsla(0x7F3171),
-            byzantine_deep: rgb_to_hsla(0x4A1B41),
-            tint,
-            ink: rgb_to_hsla(0xFFFFFF),
+            byzantine: accent,
+            byzantine_hover: rgb_to_hsla(0x89B4FA),
+            byzantine_deep: rgb_to_hsla(0x3D59A1),
+            tint: accent,
+            ink: rgb_to_hsla(0x1A1B26),
 
-            success: rgb_to_hsla(0x7BE0A0),
-            info: rgb_to_hsla(0x6EA8FF),
-            warning: rgb_to_hsla(0xFFC23D),
-            danger: rgb_to_hsla(0xFF6B5E),
-            cyan: rgb_to_hsla(0x6FD3D8),
-            semantic_foreground: rgb_to_hsla(0x09090B),
+            success: rgb_to_hsla(0x9ECE6A),
+            info: rgb_to_hsla(0x7DCFFF),
+            warning: rgb_to_hsla(0xE0AF68),
+            danger: rgb_to_hsla(0xF7768E),
+            cyan: rgb_to_hsla(0x73DACA),
+            semantic_foreground: rgb_to_hsla(0x1A1B26),
 
             hover_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.04),
-            alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.035),
-            selected_row_wash: rgb_to_hsla_alpha(0xD48CC8, 0.07),
-            selected_item_wash: rgb_to_hsla_alpha(0xD48CC8, 0.12),
-            overlay: rgb_to_hsla_alpha(0x050507, 0.62),
-            progress: tint,
+            alternating_row_wash: rgb_to_hsla_alpha(0xFFFFFF, 0.025),
+            selected_row_wash: rgb_to_hsla_alpha(0x7AA2F7, 0.10),
+            selected_item_wash: rgb_to_hsla_alpha(0x7AA2F7, 0.16),
+            overlay: rgb_to_hsla_alpha(0x101014, 0.62),
+            progress: accent,
 
             syntax: SyntaxColors::dark(),
         }
@@ -815,8 +816,11 @@ mod tests {
     use gpui::TestAppContext;
 
     /// Byzantine is the primary fill of both variants.
-    fn expected_primary() -> Hsla {
-        rgb_to_hsla(0x702963)
+    fn expected_primary(setting: ThemeSetting) -> Hsla {
+        match setting {
+            ThemeSetting::Light => rgb_to_hsla(0x702963),
+            ThemeSetting::Dark | ThemeSetting::System => rgb_to_hsla(0x7AA2F7),
+        }
     }
 
     /// Primary buttons fill from `tokens.button_primary` and checked
@@ -835,7 +839,12 @@ mod tests {
             cx.update(|cx| apply_theme(setting, AppStyle::Default, None, cx));
             cx.update(|cx| {
                 let theme = Theme::global(cx);
-                let expected = expected_primary();
+                // System follows the test platform's appearance.
+                let expected = expected_primary(if theme.mode.is_dark() {
+                    ThemeSetting::Dark
+                } else {
+                    ThemeSetting::Light
+                });
 
                 assert_eq!(
                     theme.tokens.primary.color, expected,
@@ -944,18 +953,30 @@ mod tests {
         cx.update(|cx| {
             let theme = Theme::global(cx);
             assert_eq!(theme.colors.background, rgb_to_hsla(0xF6F4F7));
-            assert_eq!(theme.tokens.button_primary.color, expected_primary());
-            assert_eq!(theme.tokens.primary.color, expected_primary());
+            assert_eq!(
+                theme.tokens.button_primary.color,
+                expected_primary(ThemeSetting::Light)
+            );
+            assert_eq!(
+                theme.tokens.primary.color,
+                expected_primary(ThemeSetting::Light)
+            );
             assert_eq!(theme.colors.ring, rgb_to_hsla(0x702963));
         });
 
         cx.update(|cx| apply_theme(ThemeSetting::Dark, AppStyle::Default, None, cx));
         cx.update(|cx| {
             let theme = Theme::global(cx);
-            assert_eq!(theme.colors.background, rgb_to_hsla(0x09090B));
-            assert_eq!(theme.tokens.button_primary.color, expected_primary());
-            assert_eq!(theme.tokens.primary.color, expected_primary());
-            assert_eq!(theme.colors.ring, rgb_to_hsla(0xD48CC8));
+            assert_eq!(theme.colors.background, rgb_to_hsla(0x1A1B26));
+            assert_eq!(
+                theme.tokens.button_primary.color,
+                expected_primary(ThemeSetting::Dark)
+            );
+            assert_eq!(
+                theme.tokens.primary.color,
+                expected_primary(ThemeSetting::Dark)
+            );
+            assert_eq!(theme.colors.ring, rgb_to_hsla(0x7AA2F7));
         });
     }
 
@@ -1053,9 +1074,14 @@ mod tests {
                     );
                 }
 
+                // The dark tint is the blue accent rather than the keyword pink.
+                let expected_tint = match setting {
+                    ThemeSetting::Light => hex_of(expected.keyword),
+                    ThemeSetting::Dark | ThemeSetting::System => hex_of(rgb_to_hsla(0x7AA2F7)),
+                };
                 assert_eq!(
                     hex_of(crate::tokens::ChromeColors::tint(theme)),
-                    hex_of(expected.keyword),
+                    expected_tint,
                     "{setting:?}: tint"
                 );
             });
@@ -1149,11 +1175,11 @@ mod tests {
             assert_eq!(theme.colors.ring.h, accent.h);
             assert_eq!(
                 theme.colors.table_active,
-                with_alpha(theme.colors.ring, 0.07)
+                with_alpha(theme.colors.ring, 0.10)
             );
             assert_eq!(
                 theme.colors.list_active,
-                with_alpha(theme.colors.ring, 0.12)
+                with_alpha(theme.colors.ring, 0.16)
             );
             assert_eq!(accent_tint(cx), Some(theme.colors.ring));
             assert_eq!(
@@ -1181,7 +1207,7 @@ mod tests {
         cx.update(|cx| {
             let theme = Theme::global(cx);
             assert_eq!(theme.colors.primary, default_accent(ThemeSetting::Dark));
-            assert_eq!(theme.colors.ring, rgb_to_hsla(0xD48CC8));
+            assert_eq!(theme.colors.ring, rgb_to_hsla(0x7AA2F7));
             assert_eq!(accent_tint(cx), None);
         });
     }

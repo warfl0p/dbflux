@@ -1571,11 +1571,11 @@ mod tests {
             section.reload_syntax_inputs(window, cx);
             assert_eq!(
                 section.accent_input.read(cx).value().to_string(),
-                "#702963",
+                "#7AA2F7",
                 "the field shows the default accent"
             );
 
-            section.set_accent_override("#702963".to_string());
+            section.set_accent_override("#7AA2F7".to_string());
             assert_eq!(
                 section.general_change_count(cx),
                 0,
