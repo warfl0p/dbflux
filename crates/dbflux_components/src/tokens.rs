@@ -1096,6 +1096,9 @@ impl PaletteMetrics {
     pub const SELECTION_BAR: Pixels = px(2.0);
     /// Space under the last result row. (8 px)
     pub const LIST_PADDING_BOTTOM: Pixels = px(8.0);
+    /// Scrollbar thumb along the list's right edge: 4 px wide, 3 px in.
+    pub const SCROLLBAR_WIDTH: Pixels = px(4.0);
+    pub const SCROLLBAR_INSET: Pixels = px(3.0);
 
     /// Footer hints: 38 px tall, 14 px between every keycap and label, 12 px
     /// text.

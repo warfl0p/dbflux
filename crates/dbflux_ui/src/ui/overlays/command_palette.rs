@@ -743,6 +743,9 @@ pub struct CommandPalette {
     matcher: SkimMatcherV2,
     /// The typed query without its scope prefix, for the match highlight.
     match_query: String,
+    /// Opened as Go to file: a query without a `>` or `@` prefix searches
+    /// only scripts.
+    files_by_default: bool,
 }
 
 /// Event emitted when the user selects a palette item.
@@ -825,6 +828,7 @@ impl CommandPalette {
             input_state,
             matcher: SkimMatcherV2::default(),
             match_query: String::new(),
+            files_by_default: false,
         }
     }
 
@@ -836,6 +840,7 @@ impl CommandPalette {
         cx: &mut Context<Self>,
     ) {
         self.items = items;
+        self.files_by_default = false;
         self.filtered = self
             .items
             .iter()
@@ -855,6 +860,19 @@ impl CommandPalette {
         });
 
         cx.notify();
+    }
+
+    /// Opens as Go to file: every item is loaded so `>` and `@` still reach
+    /// commands and tables, but an unprefixed query lists only scripts.
+    pub fn open_files(
+        &mut self,
+        items: Vec<PaletteItem>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_with_items(items, window, cx);
+        self.files_by_default = true;
+        self.update_filter("", cx);
     }
 
     pub fn register_commands(&mut self, _commands: Vec<PaletteCommand>) {
@@ -897,7 +915,17 @@ impl CommandPalette {
     }
 
     fn update_filter(&mut self, query: &str, cx: &mut Context<Self>) {
-        let filtered = filter_items(&self.items, &self.matcher, query);
+        let mut filtered = filter_items(&self.items, &self.matcher, query);
+
+        if self.files_by_default && PaletteScope::parse(query).0 == PaletteScope::All {
+            #[expect(
+                clippy::indexing_slicing,
+                reason = "`filter_items` pairs each index with `.enumerate()` over \
+                          `self.items`, so `item.index` stays below its length"
+            )]
+            filtered.retain(|item| matches!(self.items[item.index], PaletteItem::Script { .. }));
+        }
+
         self.filtered = arrange_results(&self.items, filtered, query);
         self.match_query = PaletteScope::parse(query).1.to_string();
 
@@ -1280,6 +1308,21 @@ impl Render for CommandPalette {
 
         let theme = cx.theme();
 
+        // The list shows a window of VISIBLE_ITEMS rows; the thumb shows
+        // where that window sits in the whole result.
+        // ponytail: display only; drag it if wheel and arrow keys fall short.
+        let total = self.filtered.len();
+        let scrollbar_thumb = (total > VISIBLE_ITEMS).then(|| {
+            div()
+                .absolute()
+                .right(PaletteMetrics::SCROLLBAR_INSET)
+                .w(PaletteMetrics::SCROLLBAR_WIDTH)
+                .top(relative(self.scroll_offset as f32 / total as f32))
+                .h(relative(VISIBLE_ITEMS as f32 / total as f32))
+                .rounded_full()
+                .bg(theme.scrollbar_thumb)
+        });
+
         // Build the windowed list (scroll_offset..+VISIBLE_ITEMS) then group
         // the resulting items by section. Section headers are interleaved
         // before the first item of each section but are NOT counted in the
@@ -1417,6 +1460,7 @@ impl Render for CommandPalette {
                     .child(
                         div()
                             .id("command-palette-list")
+                            .relative()
                             .flex()
                             .flex_col()
                             .flex_1()
@@ -1434,6 +1478,7 @@ impl Render for CommandPalette {
                                 },
                             ))
                             .children(list_rows)
+                            .children(scrollbar_thumb)
                             .when(self.filtered.is_empty(), |list| {
                                 list.child(
                                     div()
