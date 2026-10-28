@@ -198,6 +198,13 @@ async fn resolve_open_target_with(
     }
 }
 
+/// Set as a global by tests: open pickers then return `None` as if the user
+/// cancelled, without polling the native picker, so a test that runs a command
+/// does not open a real file chooser on the developer's desktop.
+pub struct NativeFileDialogsDisabled;
+
+impl gpui::Global for NativeFileDialogsDisabled {}
+
 /// Asks the user for an existing file through `native`.
 ///
 /// Returns `None` when the user cancels. When no native picker is available
@@ -206,6 +213,10 @@ pub async fn pick_existing_file(
     cx: &AsyncApp,
     native: impl std::future::Future<Output = Option<PathBuf>>,
 ) -> Option<PathBuf> {
+    if cx.has_global::<NativeFileDialogsDisabled>() {
+        return None;
+    }
+
     picked_path_or_report(
         resolve_open_target(native).await,
         cx,
@@ -221,6 +232,10 @@ pub async fn pick_existing_folder(
     cx: &AsyncApp,
     native: impl std::future::Future<Output = Option<PathBuf>>,
 ) -> Option<PathBuf> {
+    if cx.has_global::<NativeFileDialogsDisabled>() {
+        return None;
+    }
+
     picked_path_or_report(
         resolve_open_target(native).await,
         cx,
@@ -263,7 +278,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{
-        OpenTargetOutcome, file_picker_unavailable_error, folder_picker_unavailable_error,
+        NativeFileDialogsDisabled, OpenTargetOutcome, file_picker_unavailable_error,
+        folder_picker_unavailable_error, pick_existing_file, pick_existing_folder,
         resolve_open_target_with,
     };
     use crate::user_error::ErrorKind;
@@ -297,6 +313,28 @@ mod tests {
         .await;
 
         assert_eq!(outcome, OpenTargetOutcome::Unavailable);
+        assert!(!polled.get());
+    }
+
+    #[gpui::test]
+    async fn disabled_pickers_cancel_without_showing_the_native_one(cx: &mut gpui::TestAppContext) {
+        cx.update(|cx| cx.set_global(NativeFileDialogsDisabled));
+        let async_cx = cx.to_async();
+        let polled = Cell::new(false);
+
+        let file = pick_existing_file(&async_cx, async {
+            polled.set(true);
+            Some(PathBuf::from("/tmp/ignored.sql"))
+        })
+        .await;
+        let folder = pick_existing_folder(&async_cx, async {
+            polled.set(true);
+            Some(PathBuf::from("/tmp/ignored"))
+        })
+        .await;
+
+        assert_eq!(file, None);
+        assert_eq!(folder, None);
         assert!(!polled.get());
     }
 

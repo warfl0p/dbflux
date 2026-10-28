@@ -12,6 +12,8 @@ fn init(cx: &mut TestAppContext) -> Entity<AppStateEntity> {
     cx.update(gpui_component::init);
     cx.update(dbflux_components::theme::init);
     cx.update(dbflux_ui_base::keymap::init_keymap);
+    // Open folder…, Open script file… and the other picker commands run here.
+    cx.update(|cx| cx.set_global(dbflux_ui_base::file_dialog::NativeFileDialogsDisabled));
 
     cx.update(|cx| {
         cx.new(|_| {
