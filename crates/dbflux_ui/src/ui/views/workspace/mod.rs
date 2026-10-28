@@ -225,6 +225,9 @@ pub(super) fn map_item_to_selection(item: &PaletteItem) -> Option<PaletteSelecti
             Some(PaletteSelection::OpenSavedChart { chart_id: *id })
         }
         PaletteItem::ImportDashboard => Some(PaletteSelection::ImportDashboard),
+        PaletteItem::Folder { path, .. } => {
+            Some(PaletteSelection::OpenFolder { path: path.clone() })
+        }
     }
 }
 
@@ -844,6 +847,11 @@ impl Workspace {
                 PaletteSelection::ImportDashboard => {
                     this.modal_import_dashboard.update(cx, |modal, cx| {
                         modal.open(window, cx);
+                    });
+                }
+                PaletteSelection::OpenFolder { path } => {
+                    this.sidebar.update(cx, |sidebar, cx| {
+                        sidebar.open_workspace_folder(Some(path.clone()), cx);
                     });
                 }
             },
@@ -2053,6 +2061,11 @@ impl Workspace {
                 dbflux_i18n::t!("palette.category.view"),
             ),
             PaletteCommand::new(
+                "open_recent_folder",
+                dbflux_i18n::t!("palette.command.open_recent_folder.name"),
+                dbflux_i18n::t!("palette.category.view"),
+            ),
+            PaletteCommand::new(
                 "show_dashboards_view",
                 dbflux_i18n::t!("palette.command.show_dashboards_view.name"),
                 dbflux_i18n::t!("palette.category.view"),
@@ -2337,6 +2350,45 @@ impl Workspace {
     /// Opens the palette as VS Code's Go to File: it lists the scripts (the
     /// workspace files when a workspace is open), and `>` or `@` still
     /// switch to commands or tables.
+    /// Opens the palette on the recent workspace folders, the open one left out.
+    pub fn open_recent_folder(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let state = self.app_state.read(cx);
+        let current = state
+            .scripts_directory()
+            .and_then(|dir| dir.workspace())
+            .map(|workspace| workspace.path().to_path_buf());
+        let home = std::env::var_os("HOME").map(PathBuf::from);
+        let items: Vec<PaletteItem> = state
+            .recent_folders()
+            .iter()
+            .filter(|folder| Some(&folder.path) != current.as_ref())
+            .map(|folder| {
+                let path = folder.path.clone();
+                let name = path
+                    .file_name()
+                    .map_or_else(|| path.to_string_lossy(), |name| name.to_string_lossy())
+                    .to_string();
+                let parent = path.parent().unwrap_or(&path);
+                let parent = match home
+                    .as_deref()
+                    .and_then(|home| parent.strip_prefix(home).ok())
+                {
+                    Some(relative) => std::path::Path::new("~").join(relative),
+                    None => parent.to_path_buf(),
+                };
+                PaletteItem::Folder {
+                    name,
+                    parent: parent.to_string_lossy().to_string(),
+                    path,
+                }
+            })
+            .collect();
+
+        self.command_palette.update(cx, |palette, cx| {
+            palette.open_with_items(items, window, cx);
+        });
+    }
+
     pub fn open_go_to_file(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let items = self.build_palette_items(cx);
 

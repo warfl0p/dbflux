@@ -3907,8 +3907,10 @@ palette:
     charts: Gráficos
     tables: Tablas y colecciones
     scripts: Scripts
+    folders: Carpetas recientes
   kind:
     connection: Conexión
+    folder: Carpeta
     chart: Gráfico
     table: Tabla
     collection: Colección
@@ -3991,6 +3993,8 @@ palette:
       name: "Mostrar la vista de scripts"
     go_to_file:
       name: "Go to file…"
+    open_recent_folder:
+      name: "Abrir carpeta reciente…"
     show_dashboards_view:
       name: "Mostrar la vista de dashboards"
     open_settings:
@@ -4437,6 +4441,7 @@ settings:
       show_connections_view: "Mostrar la vista de conexiones"
       show_scripts_view: "Mostrar la vista de scripts"
       go_to_file: "Go to file…"
+      open_recent_folder: "Abrir carpeta reciente…"
       show_dashboards_view: "Mostrar la vista de dashboards"
       open_mcp_approvals: Abrir aprobaciones de MCP
       refresh_mcp_governance: Actualizar gobernanza de MCP

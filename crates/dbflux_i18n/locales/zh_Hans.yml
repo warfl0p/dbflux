@@ -3907,8 +3907,10 @@ palette:
     charts: 图表
     tables: 表和集合
     scripts: 脚本
+    folders: 最近的文件夹
   kind:
     connection: 连接
+    folder: 文件夹
     chart: 图表
     table: 表
     collection: 集合
@@ -3991,6 +3993,8 @@ palette:
       name: "显示脚本视图"
     go_to_file:
       name: "Go to file…"
+    open_recent_folder:
+      name: "打开最近的文件夹…"
     show_dashboards_view:
       name: "显示仪表盘视图"
     open_settings:
@@ -4437,6 +4441,7 @@ settings:
       show_connections_view: "显示连接视图"
       show_scripts_view: "显示脚本视图"
       go_to_file: "Go to file…"
+      open_recent_folder: "打开最近的文件夹…"
       show_dashboards_view: "显示仪表盘视图"
       open_mcp_approvals: 打开 MCP 审批
       refresh_mcp_governance: 刷新 MCP 治理

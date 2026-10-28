@@ -221,7 +221,7 @@ impl Sidebar {
     }
 
     /// Makes `folder` the workspace, or the folder the user picks when `None`.
-    pub(crate) fn open_workspace_folder(
+    pub fn open_workspace_folder(
         &mut self,
         folder: Option<std::path::PathBuf>,
         cx: &mut Context<Self>,

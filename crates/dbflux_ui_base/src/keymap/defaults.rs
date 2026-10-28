@@ -98,6 +98,11 @@ fn global_layer() -> KeymapLayer {
         Command::ToggleCommandPalette,
     );
     layer.bind(KeyChord::new("p", Modifiers::primary()), Command::GoToFile);
+    // Open Recent, as in VS Code.
+    layer.bind(
+        KeyChord::new("r", Modifiers::primary()),
+        Command::OpenRecentFolder,
+    );
 
     // Connection Manager — Cmd+Shift+N on macOS, Ctrl+Shift+N elsewhere.
     layer.bind(

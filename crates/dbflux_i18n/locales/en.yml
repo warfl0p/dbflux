@@ -3907,8 +3907,10 @@ palette:
     charts: Charts
     tables: Tables and collections
     scripts: Scripts
+    folders: Recent folders
   kind:
     connection: Connection
+    folder: Folder
     chart: Chart
     table: Table
     collection: Collection
@@ -3991,6 +3993,8 @@ palette:
       name: "Show scripts view"
     go_to_file:
       name: "Go to file…"
+    open_recent_folder:
+      name: "Open recent folder…"
     show_dashboards_view:
       name: "Show dashboards view"
     open_settings:
@@ -4437,6 +4441,7 @@ settings:
       show_connections_view: "Show connections view"
       show_scripts_view: "Show scripts view"
       go_to_file: "Go to file…"
+      open_recent_folder: "Open recent folder…"
       show_dashboards_view: "Show dashboards view"
       open_mcp_approvals: Open MCP approvals
       refresh_mcp_governance: Refresh MCP governance
