@@ -3902,6 +3902,7 @@ palette:
     placeholder: 명령, 연결, 테이블, 스크립트 검색…
   empty: 일치하는 항목이 없습니다
   section:
+    workspaces: "Workspaces"
     connections: 연결
     commands: 명령
     charts: 차트
@@ -3991,6 +3992,18 @@ palette:
       name: "스크립트 보기 표시"
     go_to_file:
       name: "Go to file…"
+    open_recent:
+      name: "Open recent…"
+    open_workspace_from_file:
+      name: "Open workspace from file…"
+    add_folder_to_workspace:
+      name: "Add folder to workspace…"
+    remove_folder_from_workspace:
+      name: "Remove folder from workspace…"
+    save_workspace_as:
+      name: "Save workspace as…"
+    close_workspace:
+      name: "Close workspace"
     show_dashboards_view:
       name: "대시보드 보기 표시"
     open_settings:
@@ -4017,7 +4030,10 @@ palette:
       name: "패널 작업 열기…"
     analyze_dump_file:
       name: "데이터베이스 덤프 분석…"
+  workspace:
+    no_recent: "No recent workspaces"
   category:
+    workspaces: "Workspaces"
     editor: 편집기
     tabs: 탭
     results: 결과
@@ -4437,6 +4453,12 @@ settings:
       show_connections_view: "연결 보기 표시"
       show_scripts_view: "스크립트 보기 표시"
       go_to_file: "Go to file…"
+      open_recent: "Open recent…"
+      open_workspace_from_file: "Open workspace from file…"
+      add_folder_to_workspace: "Add folder to workspace…"
+      remove_folder_from_workspace: "Remove folder from workspace…"
+      save_workspace_as: "Save workspace as…"
+      close_workspace: "Close workspace"
       show_dashboards_view: "대시보드 보기 표시"
       open_mcp_approvals: MCP 승인 열기
       refresh_mcp_governance: MCP 거버넌스 새로고침
@@ -5162,6 +5184,9 @@ sidebar:
       one: 1개 항목
       many: "%{count}개 항목"
   dialog:
+    open_workspace_file_title: "Open Workspace from File"
+    save_workspace_title: "Save Workspace As"
+    workspace_file_filter: "DBFlux workspace"
     import_script_title: 스크립트 가져오기
     script_files_filter: 스크립트 파일
     add_external_folder_title: 외부 스크립트 폴더 추가
@@ -5293,6 +5318,8 @@ sidebar:
         fetching_schema: "파이프라인: 스키마 가져오는 중"
     listing_secret_paths: "시크릿 경로 나열 중: %{name}"
   toast:
+    workspace_file_failed: "Could not use the workspace file: %{error}"
+    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "'%{name}'이(가) 업데이트되었습니다"
     edit_reconnect_body: 변경 사항을 라이브 세션에 적용하려면 다시 연결하세요.
     edit_reconnect_now: 지금 다시 연결

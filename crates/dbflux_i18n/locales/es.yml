@@ -3902,6 +3902,7 @@ palette:
     placeholder: Buscar comandos, conexiones, tablas, scripts…
   empty: No hay coincidencias
   section:
+    workspaces: "Workspaces"
     connections: Conexiones
     commands: Comandos
     charts: Gráficos
@@ -3991,6 +3992,18 @@ palette:
       name: "Mostrar la vista de scripts"
     go_to_file:
       name: "Go to file…"
+    open_recent:
+      name: "Open recent…"
+    open_workspace_from_file:
+      name: "Open workspace from file…"
+    add_folder_to_workspace:
+      name: "Add folder to workspace…"
+    remove_folder_from_workspace:
+      name: "Remove folder from workspace…"
+    save_workspace_as:
+      name: "Save workspace as…"
+    close_workspace:
+      name: "Close workspace"
     show_dashboards_view:
       name: "Mostrar la vista de dashboards"
     open_settings:
@@ -4017,7 +4030,10 @@ palette:
       name: "Abrir acciones del panel…"
     analyze_dump_file:
       name: "Analizar volcado de base de datos…"
+  workspace:
+    no_recent: "No recent workspaces"
   category:
+    workspaces: "Workspaces"
     editor: Editor
     tabs: Pestañas
     results: Resultados
@@ -4437,6 +4453,12 @@ settings:
       show_connections_view: "Mostrar la vista de conexiones"
       show_scripts_view: "Mostrar la vista de scripts"
       go_to_file: "Go to file…"
+      open_recent: "Open recent…"
+      open_workspace_from_file: "Open workspace from file…"
+      add_folder_to_workspace: "Add folder to workspace…"
+      remove_folder_from_workspace: "Remove folder from workspace…"
+      save_workspace_as: "Save workspace as…"
+      close_workspace: "Close workspace"
       show_dashboards_view: "Mostrar la vista de dashboards"
       open_mcp_approvals: Abrir aprobaciones de MCP
       refresh_mcp_governance: Actualizar gobernanza de MCP
@@ -5163,6 +5185,9 @@ sidebar:
       one: 1 elemento
       many: "%{count} elementos"
   dialog:
+    open_workspace_file_title: "Open Workspace from File"
+    save_workspace_title: "Save Workspace As"
+    workspace_file_filter: "DBFlux workspace"
     import_script_title: Importar script
     script_files_filter: Archivos de script
     add_external_folder_title: Agregar carpeta externa de scripts
@@ -5294,6 +5319,8 @@ sidebar:
         fetching_schema: "Pipeline: obteniendo el esquema"
     listing_secret_paths: "Listando rutas de secretos: %{name}"
   toast:
+    workspace_file_failed: "Could not use the workspace file: %{error}"
+    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "'%{name}' actualizado"
     edit_reconnect_body: Reconecta para aplicar los cambios a la sesión activa.
     edit_reconnect_now: Reconectar ahora

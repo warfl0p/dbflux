@@ -42,7 +42,7 @@ use dbflux_ui_base::keymap::{RunCommand, run_command};
 use crate::ui::icons::AppIcon;
 use crate::ui::overlays::command_palette::{
     CommandPalette, CommandPaletteClosed, PaletteCommand, PaletteItem, PaletteSelection,
-    ResourceItem,
+    ResourceItem, WorkspaceAction,
 };
 use crate::ui::overlays::login_modal::{LoginModal, LoginModalEvent};
 use crate::ui::overlays::shutdown_overlay::ShutdownOverlay;
@@ -225,6 +225,7 @@ pub(super) fn map_item_to_selection(item: &PaletteItem) -> Option<PaletteSelecti
             Some(PaletteSelection::OpenSavedChart { chart_id: *id })
         }
         PaletteItem::ImportDashboard => Some(PaletteSelection::ImportDashboard),
+        PaletteItem::Workspace { action, .. } => Some(PaletteSelection::Workspace(action.clone())),
     }
 }
 
@@ -845,6 +846,9 @@ impl Workspace {
                     this.modal_import_dashboard.update(cx, |modal, cx| {
                         modal.open(window, cx);
                     });
+                }
+                PaletteSelection::Workspace(action) => {
+                    this.run_workspace_action(action.clone(), cx);
                 }
             },
         )
@@ -1899,7 +1903,37 @@ impl Workspace {
             PaletteCommand::new(
                 "add_external_scripts_folder",
                 dbflux_i18n::t!("palette.command.add_external_scripts_folder.name"),
-                dbflux_i18n::t!("palette.category.editor"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
+                "open_recent",
+                dbflux_i18n::t!("palette.command.open_recent.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
+                "open_workspace_from_file",
+                dbflux_i18n::t!("palette.command.open_workspace_from_file.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
+                "add_folder_to_workspace",
+                dbflux_i18n::t!("palette.command.add_folder_to_workspace.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
+                "remove_folder_from_workspace",
+                dbflux_i18n::t!("palette.command.remove_folder_from_workspace.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
+                "save_workspace_as",
+                dbflux_i18n::t!("palette.command.save_workspace_as.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
+                "close_workspace",
+                dbflux_i18n::t!("palette.command.close_workspace.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
             ),
             PaletteCommand::new(
                 "toggle_comment",
@@ -2334,6 +2368,71 @@ impl Workspace {
         }
     }
 
+    /// Opens the palette listing recent workspaces, as VS Code's Open Recent.
+    pub fn open_recent_workspaces(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let items: Vec<PaletteItem> = self
+            .app_state
+            .read(cx)
+            .recent_workspaces()
+            .into_iter()
+            .map(|recent| PaletteItem::Workspace {
+                name: recent.name(),
+                detail: recent.detail(),
+                action: WorkspaceAction::OpenRecent(recent),
+            })
+            .collect();
+
+        self.open_workspace_picker(items, "palette.workspace.no_recent", window, cx);
+    }
+
+    /// Opens the palette listing the workspace folders, to remove one.
+    pub fn open_remove_workspace_folder(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let items: Vec<PaletteItem> = self
+            .app_state
+            .read(cx)
+            .workspace_folders()
+            .into_iter()
+            .map(|folder| PaletteItem::Workspace {
+                name: folder
+                    .file_name()
+                    .unwrap_or(folder.as_os_str())
+                    .to_string_lossy()
+                    .to_string(),
+                detail: folder.to_string_lossy().to_string(),
+                action: WorkspaceAction::RemoveFolder(folder),
+            })
+            .collect();
+
+        self.open_workspace_picker(items, "sidebar.toast.no_workspace_open", window, cx);
+    }
+
+    fn open_workspace_picker(
+        &mut self,
+        items: Vec<PaletteItem>,
+        empty_message_key: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if items.is_empty() {
+            Toast::info(dbflux_i18n::t!(empty_message_key))
+                .meta_right(now_hms())
+                .push(cx);
+            return;
+        }
+
+        self.command_palette.update(cx, |palette, cx| {
+            palette.open_with_items(items, window, cx);
+        });
+    }
+
+    fn run_workspace_action(&mut self, action: WorkspaceAction, cx: &mut Context<Self>) {
+        self.reveal_sidebar_view(SidebarTab::Scripts, cx);
+        self.sidebar.update(cx, |sidebar, cx| match action {
+            WorkspaceAction::OpenRecent(recent) => sidebar.open_recent_workspace(recent, cx),
+            WorkspaceAction::RemoveFolder(folder) => sidebar.remove_workspace_folder(&folder, cx),
+        });
+    }
+
     /// Opens the palette as VS Code's Go to File: it lists the scripts (the
     /// workspace files when a workspace is open), and `>` or `@` still
     /// switch to commands or tables.
@@ -2386,14 +2485,34 @@ impl Workspace {
             }
         }
 
-        if let Some(workspace) = app_state
-            .scripts_directory()
-            .and_then(|dir| dir.workspace())
-        {
-            // A workspace stands alone, its files named relative to it.
-            Self::flatten_script_entries(workspace.entries(), workspace.path(), None, &mut items);
-        } else if let Some(dir) = app_state.scripts_directory() {
-            Self::flatten_script_entries(dir.entries(), dir.root_path(), None, &mut items);
+        // A workspace stands alone, its files named relative to their folder,
+        // and prefixed by the folder's name in a multi-root workspace.
+        if let Some(dir) = app_state.scripts_directory() {
+            match dir.external_roots() {
+                [] => {
+                    Self::flatten_script_entries(dir.entries(), dir.root_path(), None, &mut items)
+                }
+                [workspace] => Self::flatten_script_entries(
+                    workspace.entries(),
+                    workspace.path(),
+                    None,
+                    &mut items,
+                ),
+                roots => {
+                    for root in roots {
+                        let name = root.path().file_name().map_or_else(
+                            || root.label().to_string(),
+                            |name| name.to_string_lossy().to_string(),
+                        );
+                        Self::flatten_script_entries(
+                            root.entries(),
+                            root.path(),
+                            Some(&name),
+                            &mut items,
+                        );
+                    }
+                }
+            }
         }
 
         // Add the "Import Dashboard from JSON" entry only when the active

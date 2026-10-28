@@ -59,6 +59,21 @@ pub enum PaletteItem {
     /// "Import Dashboard from JSON" action (shown only when the active connection
     /// has the `DASHBOARD_IMPORT` capability).
     ImportDashboard,
+    /// A recent workspace (Open recent…) or an open workspace folder
+    /// (Remove folder from workspace…).
+    Workspace {
+        name: String,
+        /// Full path(s), shown muted after the name.
+        detail: String,
+        action: WorkspaceAction,
+    },
+}
+
+/// What selecting a [`PaletteItem::Workspace`] row does.
+#[derive(Clone)]
+pub enum WorkspaceAction {
+    OpenRecent(dbflux_core::RecentWorkspace),
+    RemoveFolder(PathBuf),
 }
 
 /// Schema resource variants surfaced by connected profiles.
@@ -204,6 +219,7 @@ impl PaletteItem {
                     dbflux_i18n::t!("palette.import_dashboard.name")
                 )
             }
+            Self::Workspace { name, detail, .. } => format!("{name} {detail}"),
         }
     }
 
@@ -249,6 +265,9 @@ impl PaletteItem {
                 dbflux_i18n::t!("palette.section.charts"),
                 dbflux_i18n::t!("palette.import_dashboard.name"),
             ),
+            Self::Workspace { name, .. } => {
+                (dbflux_i18n::t!("palette.section.workspaces"), name.clone())
+            }
         }
     }
 
@@ -260,7 +279,7 @@ impl PaletteItem {
             Self::SavedChart { .. } => 2,
             Self::ImportDashboard => 2,
             Self::Resource(_) => 3,
-            Self::Script { .. } => 4,
+            Self::Script { .. } | Self::Workspace { .. } => 4,
         }
     }
 
@@ -325,6 +344,7 @@ impl PaletteItem {
             Self::Script { .. } => (AppIcon::FileCode, None),
             Self::SavedChart { .. } => (AppIcon::ChartSpline, None),
             Self::ImportDashboard => (AppIcon::Download, None),
+            Self::Workspace { .. } => (AppIcon::Folder, None),
         }
     }
 
@@ -338,6 +358,7 @@ impl PaletteItem {
                 .map(|folder| folder.to_string_lossy().to_string())
                 .filter(|folder| !folder.is_empty())
                 .map(SharedString::from),
+            Self::Workspace { detail, .. } => Some(SharedString::from(detail.clone())),
             _ => None,
         }
     }
@@ -348,8 +369,14 @@ fn command_icon(id: &str) -> AppIcon {
     match id {
         "new_query_tab" => AppIcon::Plus,
         "run_query" | "run_query_in_new_tab" => AppIcon::Play,
-        "save_query" | "save_file_as" => AppIcon::Save,
-        "open_script_file" | "add_external_scripts_folder" => AppIcon::Folder,
+        "save_query" | "save_file_as" | "save_workspace_as" => AppIcon::Save,
+        "open_script_file"
+        | "add_external_scripts_folder"
+        | "open_recent"
+        | "open_workspace_from_file"
+        | "add_folder_to_workspace"
+        | "remove_folder_from_workspace"
+        | "close_workspace" => AppIcon::Folder,
         "toggle_comment" | "focus_editor" => AppIcon::Code,
         "format_query" => AppIcon::Zap,
         "open_history" => AppIcon::History,
@@ -439,15 +466,17 @@ enum PaletteSection {
     Charts,
     Tables,
     Scripts,
+    Workspaces,
 }
 
 impl PaletteSection {
-    const ORDER: [PaletteSection; 5] = [
+    const ORDER: [PaletteSection; 6] = [
         Self::Commands,
         Self::Connections,
         Self::Charts,
         Self::Tables,
         Self::Scripts,
+        Self::Workspaces,
     ];
 
     fn label(self) -> String {
@@ -457,6 +486,7 @@ impl PaletteSection {
             Self::Charts => dbflux_i18n::t!("palette.section.charts"),
             Self::Tables => dbflux_i18n::t!("palette.section.tables"),
             Self::Scripts => dbflux_i18n::t!("palette.section.scripts"),
+            Self::Workspaces => dbflux_i18n::t!("palette.section.workspaces"),
         }
     }
 
@@ -467,6 +497,7 @@ impl PaletteSection {
             PaletteItem::SavedChart { .. } | PaletteItem::ImportDashboard => Self::Charts,
             PaletteItem::Resource(_) => Self::Tables,
             PaletteItem::Script { .. } => Self::Scripts,
+            PaletteItem::Workspace { .. } => Self::Workspaces,
         }
     }
 
@@ -784,6 +815,7 @@ pub enum PaletteSelection {
     },
     /// The user selected the "Import Dashboard from JSON" entry.
     ImportDashboard,
+    Workspace(WorkspaceAction),
 }
 
 pub struct CommandPaletteClosed;
@@ -1060,6 +1092,9 @@ impl CommandPalette {
                     PaletteSelection::OpenSavedChart { chart_id: *id }
                 }
                 PaletteItem::ImportDashboard => PaletteSelection::ImportDashboard,
+                PaletteItem::Workspace { action, .. } => {
+                    PaletteSelection::Workspace(action.clone())
+                }
             };
 
             self.visible = false;

@@ -162,7 +162,7 @@ impl Sidebar {
                 "add-external-scripts-folder",
                 AppIcon::HardDrive,
                 dbflux_i18n::t!("sidebar.overlay.add_external_folder"),
-                |this, cx| this.add_external_scripts_folder(cx),
+                |this, cx| this.add_folder_to_workspace(cx),
                 cx,
             ),
         ]

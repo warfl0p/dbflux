@@ -270,6 +270,12 @@ impl Workspace {
             return;
         }
 
+        self.reveal_sidebar_view(tab, cx);
+    }
+
+    /// Shows `tab` in the sidebar, expanding it, without the rail's toggle:
+    /// for commands that act on the view, which must never hide it.
+    pub(super) fn reveal_sidebar_view(&mut self, tab: SidebarTab, cx: &mut Context<Self>) {
         self.sidebar.update(cx, |sidebar, cx| {
             sidebar.set_active_tab(tab, cx);
         });

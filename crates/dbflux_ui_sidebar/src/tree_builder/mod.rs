@@ -551,9 +551,10 @@ impl Sidebar {
         )
     }
 
-    /// Build the Scripts tab: the open workspace folder's entries at the top
-    /// level, like a VS Code explorer. Without a workspace, the managed root's
-    /// entries, then one node per external folder, all filtered by `query`.
+    /// Build the Scripts tab like a VS Code explorer: a one-folder workspace
+    /// lists that folder's entries at the top level, a multi-root workspace
+    /// one node per folder. Without a workspace, the managed root's entries.
+    /// All filtered by `query`.
     pub(super) fn scripts_tree_items(state: &AppStateEntity, query: &str) -> Vec<TreeItem> {
         let Some(dir) = state.scripts_directory() else {
             return Vec::new();
@@ -563,25 +564,20 @@ impl Sidebar {
         // folder would hide the matches it was kept for.
         let expanded = !query.is_empty();
 
-        if let Some(workspace) = dir.workspace() {
-            return Self::build_scripts_tree_items(
+        match dir.external_roots() {
+            [] => Self::build_scripts_tree_items(
+                &dbflux_core::filter_entries(dir.entries(), query),
+                expanded,
+            ),
+            [workspace] => Self::build_scripts_tree_items(
                 &dbflux_core::filter_entries(workspace.entries(), query),
                 expanded,
-            );
-        }
-
-        let mut items = Self::build_scripts_tree_items(
-            &dbflux_core::filter_entries(dir.entries(), query),
-            expanded,
-        );
-
-        items.extend(
-            dir.external_roots()
+            ),
+            roots => roots
                 .iter()
-                .filter_map(|mounted| Self::external_root_tree_item(mounted, query)),
-        );
-
-        items
+                .filter_map(|mounted| Self::external_root_tree_item(mounted, query))
+                .collect(),
+        }
     }
 
     /// The node of an external folder. A folder that is still scanning or
@@ -593,23 +589,25 @@ impl Sidebar {
         query: &str,
     ) -> Option<TreeItem> {
         let children = dbflux_core::filter_entries(mounted.entries(), query);
+        // Named by the folder, as a VS Code multi-root workspace names it.
+        let name = mounted.path().file_name().map_or_else(
+            || mounted.label().to_string(),
+            |name| name.to_string_lossy().to_string(),
+        );
 
-        let label_matches = mounted
-            .label()
-            .to_lowercase()
-            .contains(&query.to_lowercase());
+        let label_matches = name.to_lowercase().contains(&query.to_lowercase());
 
         if !query.is_empty() && !label_matches && children.is_empty() {
             return None;
         }
 
         let label = match mounted.availability() {
-            dbflux_core::ScriptRootAvailability::Available => mounted.label().to_string(),
+            dbflux_core::ScriptRootAvailability::Available => name,
             dbflux_core::ScriptRootAvailability::Pending => {
-                crate::labels::scripts_root_scanning_label(&mounted.label())
+                crate::labels::scripts_root_scanning_label(&name)
             }
             dbflux_core::ScriptRootAvailability::Unavailable { .. } => {
-                crate::labels::scripts_root_unavailable_label(&mounted.label())
+                crate::labels::scripts_root_unavailable_label(&name)
             }
         };
 
