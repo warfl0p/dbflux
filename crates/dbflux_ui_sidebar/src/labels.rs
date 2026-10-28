@@ -614,7 +614,10 @@ pub(crate) fn open_folder_failed_label(error: &str) -> String {
 
 /// Translated toast reported when a folder cannot leave the workspace.
 pub(crate) fn remove_workspace_folder_failed_label(error: &str) -> String {
-    dbflux_i18n::t!("sidebar.toast.remove_workspace_folder_failed", error = error)
+    dbflux_i18n::t!(
+        "sidebar.toast.remove_workspace_folder_failed",
+        error = error
+    )
 }
 
 /// Translated toast reported when the workspace cannot be closed.

@@ -20,9 +20,7 @@ impl Workspace {
                 self.open_remove_workspace_folder(window, cx);
                 Some(true)
             }
-            Command::OpenFolder
-            | Command::AddFolderToWorkspace
-            | Command::CloseWorkspace => {
+            Command::OpenFolder | Command::AddFolderToWorkspace | Command::CloseWorkspace => {
                 self.reveal_sidebar_view(SidebarTab::Scripts, cx);
                 self.sidebar.update(cx, |sidebar, cx| match cmd {
                     Command::AddFolderToWorkspace => sidebar.add_folder_to_workspace(cx),
