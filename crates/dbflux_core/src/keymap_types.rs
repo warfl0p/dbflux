@@ -175,6 +175,8 @@ pub enum Command {
     ShowScriptsView,
     /// Opens the palette listing only the workspace files (VS Code's Go to File).
     GoToFile,
+    /// Opens the palette listing the recent workspace folders.
+    OpenRecentFolder,
     /// Show the Dashboards view of the sidebar, as its activity rail entry does.
     ShowDashboardsView,
     #[cfg(feature = "mcp")]
@@ -330,6 +332,7 @@ impl Command {
             "show_connections_view" => Some(Command::ShowConnectionsView),
             "show_scripts_view" => Some(Command::ShowScriptsView),
             "go_to_file" => Some(Command::GoToFile),
+            "open_recent_folder" => Some(Command::OpenRecentFolder),
             "add_external_scripts_folder" => Some(Command::AddExternalScriptsFolder),
             "show_dashboards_view" => Some(Command::ShowDashboardsView),
             #[cfg(feature = "mcp")]
@@ -470,6 +473,7 @@ impl Command {
             Command::ShowConnectionsView => "Show connections view",
             Command::ShowScriptsView => "Show scripts view",
             Command::GoToFile => "Go to file…",
+            Command::OpenRecentFolder => "Open recent folder…",
             Command::ShowDashboardsView => "Show dashboards view",
             #[cfg(feature = "mcp")]
             Command::OpenMcpApprovals => "Open MCP approvals",
@@ -675,6 +679,7 @@ impl Command {
             Command::ShowConnectionsView => "show_connections_view",
             Command::ShowScriptsView => "show_scripts_view",
             Command::GoToFile => "go_to_file",
+            Command::OpenRecentFolder => "open_recent_folder",
             Command::ShowDashboardsView => "show_dashboards_view",
             #[cfg(feature = "mcp")]
             Command::OpenMcpApprovals => "open_mcp_approvals",
@@ -895,6 +900,7 @@ impl Command {
             Command::ShowConnectionsView,
             Command::ShowScriptsView,
             Command::GoToFile,
+            Command::OpenRecentFolder,
             Command::ShowDashboardsView,
             Command::OpenSavedChart,
             Command::ImportDashboard,
@@ -1094,6 +1100,7 @@ impl Command {
             | Command::ShowConnectionsView
             | Command::ShowScriptsView
             | Command::GoToFile
+            | Command::OpenRecentFolder
             | Command::ShowDashboardsView => "View",
 
             #[cfg(feature = "mcp")]
@@ -1216,6 +1223,7 @@ impl Command {
                 | Command::ShowConnectionsView
                 | Command::ShowScriptsView
                 | Command::GoToFile
+                | Command::OpenRecentFolder
                 | Command::ShowDashboardsView
         ) || {
             #[cfg(feature = "mcp")]
@@ -1833,6 +1841,7 @@ mod tests {
             Command::ShowConnectionsView,
             Command::ShowScriptsView,
             Command::GoToFile,
+            Command::OpenRecentFolder,
             Command::ShowDashboardsView,
             Command::AddExternalScriptsFolder,
         ] {
