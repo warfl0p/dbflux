@@ -1273,7 +1273,9 @@ impl Render for CodeDocument {
             self.set_content(&body, window, cx);
         }
 
-        let context_bar = self.render_context_bar(cx).into_any_element();
+        // The workspace draws the context bar in its top row (see
+        // `title_bar_actions` in pane.rs); test builds keep it in place.
+        let context_bar = cfg!(test).then(|| self.render_context_bar(cx));
         let production_banner = self.render_production_banner(cx);
 
         let editor_view = if self.routine_definition_pending {
@@ -1308,7 +1310,7 @@ impl Render for CodeDocument {
             .min_h_0()
             .bg(bg)
             .track_focus(&self.focus_handle)
-            .child(context_bar)
+            .children(context_bar)
             .when_some(production_banner, |el, banner| el.child(banner))
             .child(
                 div()

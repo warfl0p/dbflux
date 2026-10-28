@@ -280,6 +280,11 @@ impl Render for Workspace {
         let document_side_panels = self
             .tab_manager
             .update(cx, |mgr, cx| mgr.active_side_panels(window, cx));
+        // The active document's toolbar (the code editor's connection and
+        // database selectors) shares the top row with its title.
+        let document_actions = self
+            .tab_manager
+            .update(cx, |mgr, cx| mgr.active_title_bar_actions(window, cx));
         let inspector_open = self.workspace_inspector.read(cx).is_open();
         let inspector_resizing = self.workspace_inspector.read(cx).is_resizing();
         let inspector_entity = self.workspace_inspector.clone();
@@ -374,6 +379,11 @@ impl Render for Workspace {
 
         // The document island: the tab row (only while a tab is open) over
         // the documents and, when expanded, the background tasks panel.
+        let focus_document_on_press = cx.listener(|this, _: &MouseDownEvent, window, cx| {
+            if this.focus_target != FocusTarget::Document {
+                this.set_focus(FocusTarget::Document, window, cx);
+            }
+        });
         let notification_bell = self.render_notification_bell(cx);
         let document_island = Island::new()
             .flex_1()
@@ -386,16 +396,18 @@ impl Render for Workspace {
                     .flex_shrink_0()
                     .items_center()
                     .w_full()
-                    .h(TabMetrics::DOCUMENT_BAR_HEIGHT)
+                    .min_h(TabMetrics::DOCUMENT_BAR_HEIGHT)
                     // ponytail: test builds keep the tab strip, which the
                     // close-prompt tests click; a setting if it is ever wanted back.
                     .when(cfg!(test) && has_tabs, |row| {
                         row.child(div().flex_1().min_w_0().child(self.tab_bar.clone()))
                     })
                     .when(!cfg!(test) || !has_tabs, |row| {
+                        let has_actions = document_actions.is_some();
                         row.child(
                             div()
-                                .flex_1()
+                                .when(has_actions, |title_slot| title_slot.flex_none())
+                                .when(!has_actions, |title_slot| title_slot.flex_1())
                                 .min_w_0()
                                 .overflow_hidden()
                                 .px(TabMetrics::DOCUMENT_BAR_PADDING_X)
@@ -403,6 +415,15 @@ impl Render for Workspace {
                                     title_slot.child(Text::body_sm(title).muted_foreground())
                                 }),
                         )
+                        .when_some(document_actions, |row, actions| {
+                            row.child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .on_mouse_down(MouseButton::Left, focus_document_on_press)
+                                    .child(actions),
+                            )
+                        })
                     })
                     .child(
                         div()

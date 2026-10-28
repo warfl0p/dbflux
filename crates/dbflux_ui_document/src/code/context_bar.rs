@@ -1684,7 +1684,6 @@ impl CodeDocument {
     /// pane-actions button, so the bar still has a keyboard stop and the
     /// editor's actions a menu entry point, then the run summary.
     fn render_script_context_bar(&self, cx: &mut Context<Self>) -> AnyElement {
-        let theme = cx.theme();
         let focused = context_slot_is_keyboard_focused(
             self.focus_mode,
             self.context_bar_slot,
@@ -1720,9 +1719,6 @@ impl CodeDocument {
             .min_h(EditorMetrics::BAR_HEIGHT)
             .px(EditorMetrics::BAR_PADDING_X)
             .py(Spacing::XS)
-            .border_b_1()
-            .border_color(theme.border)
-            .bg(theme.popover)
             .gap(EditorMetrics::CONTEXT_GAP)
             .child(button)
             .child(self.render_context_bar_trailing(cx))
@@ -2014,9 +2010,6 @@ impl CodeDocument {
             .min_h(EditorMetrics::BAR_HEIGHT)
             .px(EditorMetrics::BAR_PADDING_X)
             .py(Spacing::XS)
-            .border_b_1()
-            .border_color(theme.border)
-            .bg(theme.popover)
             .child(main_row)
             // Custom date-range second row — only visible when Custom is active.
             // This avoids overflowing the single-line bar with the date picker,

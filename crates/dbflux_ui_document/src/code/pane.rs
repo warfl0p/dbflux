@@ -296,6 +296,11 @@ impl CodeDocument {
             Box::new(move |_window, cx| e.update(cx, |d, cx| d.side_panels(cx)))
         });
 
+        handle.title_bar_actions = Some({
+            let e = entity.clone();
+            Box::new(move |_window, cx| e.update(cx, |d, cx| d.render_context_bar(cx)))
+        });
+
         handle.pane_actions = Some({
             let e = entity.clone();
             Box::new(move |cx| e.read(cx).pane_actions(&e, cx))

@@ -89,10 +89,6 @@ pub(crate) const SIDEBAR_HEADER: SurfaceRegistry = SurfaceRegistry {
     name: "sidebar header",
     contexts: &[ContextId::Sidebar],
     entries: &[
-        (
-            "sidebar-filter",
-            KeyboardPath::Command(Command::FocusSearch),
-        ),
         // The add menu offers new folders, connections and scripts; the item
         // menu (`m`) lists the same entries for the selected folder.
         ("sidebar-add", KeyboardPath::Command(Command::OpenItemMenu)),

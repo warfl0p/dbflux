@@ -42,6 +42,7 @@ crates/dbflux_ui/src/ui/views/workspace/notifications.rs:render_notifications_po
 crates/dbflux_ui/src/ui/views/workspace/render.rs:document_side_island: focus on press
 crates/dbflux_ui/src/ui/views/workspace/render.rs:render: focus on press
 crates/dbflux_ui/src/ui/views/workspace/render.rs:render: focus on press
+crates/dbflux_ui/src/ui/views/workspace/render.rs:render: focus on press
 crates/dbflux_ui/src/ui/views/workspace/render.rs:render_tasks_panel: focus on press
 crates/dbflux_ui_base/src/platform.rs:csd_drag_area: drag start
 crates/dbflux_ui_sidebar/src/render_overlays.rs:render_add_menu: outside-press dismiss

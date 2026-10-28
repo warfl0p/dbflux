@@ -31,7 +31,7 @@ fn sidebar_header_label(
 
 impl Sidebar {
     /// Header of the active view (AppByzTable): its section label, then the
-    /// add menu and the filter buttons.
+    /// add menu button.
     fn render_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let tint = ChromeColors::tint(cx.theme());
         let sidebar_for_add = cx.entity().clone();
@@ -40,7 +40,6 @@ impl Sidebar {
         } else {
             dbflux_i18n::t!("sidebar.header.add")
         };
-        let sidebar_for_filter = cx.entity().clone();
         let workspace_name = self
             .app_state
             .read(cx)
@@ -86,18 +85,6 @@ impl Sidebar {
                             } else {
                                 this.toggle_add_menu(cx);
                             }
-                        });
-                    }),
-            )
-            .child(
-                Button::new("sidebar-filter", dbflux_i18n::t!("sidebar.header.filter"))
-                    .icon(AppIcon::ListFilter)
-                    .icon_size(ShellMetrics::SIDEBAR_FILTER_ICON)
-                    .icon_only()
-                    .tab_stop(false)
-                    .on_click(move |_, window, cx| {
-                        sidebar_for_filter.update(cx, |this, cx| {
-                            this.focus_active_search(window, cx);
                         });
                     }),
             )
@@ -574,7 +561,7 @@ impl Render for Sidebar {
                             }
                         });
                     })
-                    .child(self.render_footer(cx)),
+                    .children(self.render_footer(cx)),
             )
             .when(self.add_menu_open, |el| el.child(self.render_add_menu(cx)))
     }
