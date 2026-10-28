@@ -1940,6 +1940,9 @@ impl AppState {
     /// `ScriptsDirectory::validate_external_root_against` returns it, and
     /// records it in Open Recent.
     pub fn open_workspace(&mut self, folders: Vec<PathBuf>) -> Result<(), ScriptRootError> {
+        // The workspace being replaced is recorded too, so one restored from
+        // `script_roots` before Open Recent existed can be reopened from the list.
+        self.record_recent_workspace();
         self.close_workspace()?;
 
         for folder in folders {
