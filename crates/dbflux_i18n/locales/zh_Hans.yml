@@ -5248,6 +5248,7 @@ sidebar:
       one: 跳过了 1 张活动配置 / 数据库之外的表
       many: "跳过了 %{count} 张活动配置 / 数据库之外的表"
     add_external_folder: 添加外部文件夹
+    recent_folders: 最近的文件夹
   status:
     connected: "%{count} 个已连接"
     idle: "%{count} 个空闲"

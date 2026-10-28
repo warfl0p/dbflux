@@ -1,10 +1,14 @@
 use super::*;
-use dbflux_components::composites::{ListRow, MenuItem, menu_frame, menu_row};
+use dbflux_components::composites::{
+    ListRow, MenuItem, menu_frame, menu_row, render_menu_header, render_separator,
+};
 use dbflux_components::primitives::Icon;
 use dbflux_components::primitives::Text;
 
 /// Minimum width of the sidebar's add menu.
 const ADD_MENU_MIN_WIDTH: Pixels = px(200.0);
+/// Recent folder paths are truncated past this width.
+const ADD_MENU_MAX_WIDTH: Pixels = px(280.0);
 use gpui_component::scroll::ScrollableElement;
 
 fn format_child_timestamp(timestamp_ms: Option<i64>) -> String {
@@ -91,6 +95,7 @@ impl Sidebar {
                     .top(dbflux_components::tokens::ShellMetrics::SIDEBAR_HEADER_HEIGHT)
                     .right(Spacing::XS)
                     .min_w(ADD_MENU_MIN_WIDTH)
+                    .max_w(ADD_MENU_MAX_WIDTH)
                     .children(items),
             )
     }
@@ -136,7 +141,7 @@ impl Sidebar {
     }
 
     fn add_scripts_menu_items(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        vec![
+        let mut items = vec![
             self.add_menu_row(
                 "add-script-file",
                 AppIcon::ScrollText,
@@ -165,7 +170,67 @@ impl Sidebar {
                 |this, cx| this.add_external_scripts_folder(cx),
                 cx,
             ),
-        ]
+        ];
+
+        let state = self.app_state.read(cx);
+        let current = state
+            .scripts_directory()
+            .and_then(|dir| dir.workspace())
+            .map(|workspace| workspace.path().to_path_buf());
+        // ponytail: the ten latest; a "More…" picker if that ever runs short.
+        let recent: Vec<std::path::PathBuf> = state
+            .recent_folders()
+            .iter()
+            .map(|folder| folder.path.clone())
+            .filter(|path| Some(path) != current.as_ref())
+            .take(10)
+            .collect();
+
+        if !recent.is_empty() {
+            items.push(render_separator(cx).into_any_element());
+            items.push(
+                render_menu_header(
+                    &MenuItem::header(dbflux_i18n::t!("sidebar.overlay.recent_folders")),
+                    cx,
+                )
+                .into_any_element(),
+            );
+        }
+
+        let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+        let sidebar = cx.entity().clone();
+        for (index, path) in recent.into_iter().enumerate() {
+            let name = path
+                .file_name()
+                .map_or_else(|| path.to_string_lossy(), |name| name.to_string_lossy())
+                .to_string();
+            let parent = path.parent().unwrap_or(&path);
+            let detail = match home
+                .as_deref()
+                .and_then(|home| parent.strip_prefix(home).ok())
+            {
+                Some(relative) => std::path::Path::new("~").join(relative),
+                None => parent.to_path_buf(),
+            };
+            let item = MenuItem::new(name)
+                .icon(AppIcon::Folder)
+                .detail(detail.to_string_lossy().to_string());
+            let sidebar = sidebar.clone();
+
+            items.push(
+                menu_row(("recent-folder", index), &item, false, cx)
+                    .on_click(move |_, _, cx| {
+                        let path = path.clone();
+                        sidebar.update(cx, |this, cx| {
+                            this.close_add_menu(cx);
+                            this.open_workspace_folder(Some(path), cx);
+                        });
+                    })
+                    .into_any_element(),
+            );
+        }
+
+        items
     }
 
     pub(super) fn open_child_picker_modal(

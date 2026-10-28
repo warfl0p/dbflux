@@ -217,6 +217,15 @@ impl Sidebar {
     /// the UI thread; the new folder then shows as scanning until the
     /// background scan lands. Nothing is copied.
     pub fn add_external_scripts_folder(&mut self, cx: &mut Context<Self>) {
+        self.open_workspace_folder(None, cx);
+    }
+
+    /// Makes `folder` the workspace, or the folder the user picks when `None`.
+    pub(crate) fn open_workspace_folder(
+        &mut self,
+        folder: Option<std::path::PathBuf>,
+        cx: &mut Context<Self>,
+    ) {
         let Some(managed_root) = self
             .app_state
             .read(cx)
@@ -232,16 +241,22 @@ impl Sidebar {
         let app_state = self.app_state.clone();
 
         cx.spawn(async move |_this, cx| {
-            let Some(picked) = file_dialog::pick_existing_folder(cx, async {
-                rfd::AsyncFileDialog::new()
-                    .set_title(title.as_str())
-                    .pick_folder()
+            let picked = match folder {
+                Some(folder) => folder,
+                None => {
+                    let Some(picked) = file_dialog::pick_existing_folder(cx, async {
+                        rfd::AsyncFileDialog::new()
+                            .set_title(title.as_str())
+                            .pick_folder()
+                            .await
+                            .map(|handle| handle.path().to_path_buf())
+                    })
                     .await
-                    .map(|handle| handle.path().to_path_buf())
-            })
-            .await
-            else {
-                return;
+                    else {
+                        return;
+                    };
+                    picked
+                }
             };
             let validated = cx
                 .background_executor()

@@ -5250,6 +5250,7 @@ sidebar:
       one: 1 tabela fora do perfil/banco de dados ativo foi ignorada
       many: "%{count} tabelas fora do perfil/banco de dados ativo foram ignoradas"
     add_external_folder: Adicionar pasta externa
+    recent_folders: Pastas recentes
   status:
     connected: "%{count} conectadas"
     idle: "%{count} ociosas"

@@ -5250,6 +5250,7 @@ sidebar:
       one: 1 table outside the active profile/database was skipped
       many: "%{count} tables outside the active profile/database were skipped"
     add_external_folder: Add external folder
+    recent_folders: Recent folders
   status:
     connected: "%{count} connected"
     idle: "%{count} idle"

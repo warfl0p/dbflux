@@ -1851,6 +1851,11 @@ impl AppState {
         self.history_manager.record_recent_file(path);
     }
 
+    /// Folders opened as the workspace, most recent first.
+    pub fn recent_folders(&self) -> &[dbflux_core::RecentFile] {
+        self.history_manager.recent_folders_entries()
+    }
+
     #[allow(dead_code)]
     pub fn remove_recent_file(&mut self, path: &PathBuf) {
         self.history_manager.remove_recent_file(path);
@@ -1927,6 +1932,17 @@ impl AppState {
         &mut self,
         path: PathBuf,
     ) -> Result<ExternalScriptRoot, ScriptRootError> {
+        // The folder being replaced is recorded too, so the workspace that was
+        // open before recent folders existed can be reopened from the list.
+        if let Some(previous) = self
+            .scripts_directory
+            .as_ref()
+            .and_then(|dir| dir.workspace())
+            .map(|workspace| workspace.path().to_path_buf())
+        {
+            self.history_manager.record_recent_folder(previous);
+        }
+
         let previous: Vec<Uuid> = self
             .scripts_directory
             .as_ref()
@@ -1942,7 +1958,9 @@ impl AppState {
             self.remove_external_script_root(id)?;
         }
 
-        self.add_external_script_root(path)
+        let root = self.add_external_script_root(path)?;
+        self.history_manager.record_recent_folder(root.path.clone());
+        Ok(root)
     }
 
     pub fn remove_external_script_root(&mut self, id: Uuid) -> Result<(), ScriptRootError> {

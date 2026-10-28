@@ -26,6 +26,7 @@ pub struct HistoryManager {
     history_entries: Vec<HistoryEntry>,
     saved_queries: Vec<SavedQuery>,
     recent_files: Vec<RecentFile>,
+    recent_folders: Vec<RecentFile>,
     max_history_entries: usize,
 }
 
@@ -40,7 +41,8 @@ impl HistoryManager {
 
         let history_entries = Self::load_history(&history_repo);
         let saved_queries = Self::load_saved_queries(&saved_queries_repo);
-        let recent_files = Self::load_recent_files(&recent_items_repo);
+        let recent_files = Self::load_recent(&recent_items_repo, "file");
+        let recent_folders = Self::load_recent(&recent_items_repo, "folder");
 
         info!(
             "Loaded {} history entries, {} saved queries, {} recent files from dbflux.db",
@@ -56,6 +58,7 @@ impl HistoryManager {
             history_entries,
             saved_queries,
             recent_files,
+            recent_folders,
             max_history_entries: 1000,
         }
     }
@@ -215,6 +218,33 @@ impl HistoryManager {
     }
 
     pub fn record_recent_file(&mut self, path: std::path::PathBuf) {
+        Self::record_recent(
+            &self.recent_items_repo,
+            &mut self.recent_files,
+            "file",
+            path,
+        );
+    }
+
+    pub fn recent_folders_entries(&self) -> &[RecentFile] {
+        &self.recent_folders
+    }
+
+    pub fn record_recent_folder(&mut self, path: std::path::PathBuf) {
+        Self::record_recent(
+            &self.recent_items_repo,
+            &mut self.recent_folders,
+            "folder",
+            path,
+        );
+    }
+
+    fn record_recent(
+        repo: &RecentItemsRepository,
+        entries: &mut Vec<RecentFile>,
+        kind: &str,
+        path: std::path::PathBuf,
+    ) {
         let path_str = path.to_string_lossy().to_string();
         let stable_id = Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, path_str.as_bytes());
         let title = path
@@ -222,9 +252,9 @@ impl HistoryManager {
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_default();
 
-        self.recent_files.retain(|e| e.path != path);
+        entries.retain(|e| e.path != path);
 
-        self.recent_files.insert(
+        entries.insert(
             0,
             RecentFile {
                 path: path.clone(),
@@ -233,13 +263,14 @@ impl HistoryManager {
         );
 
         const MAX_RECENT: usize = 30;
-        if self.recent_files.len() > MAX_RECENT {
-            self.recent_files.truncate(MAX_RECENT);
+        if entries.len() > MAX_RECENT {
+            entries.truncate(MAX_RECENT);
         }
 
-        let dto = RecentItemDto::file(stable_id, path_str, title);
-        if let Err(e) = self.recent_items_repo.record_access(&dto) {
-            error!("Failed to record recent file: {:?}", e);
+        let mut dto = RecentItemDto::file(stable_id, path_str, title);
+        dto.kind = kind.to_string();
+        if let Err(e) = repo.record_access(&dto) {
+            error!("Failed to record recent {kind}: {:?}", e);
         }
     }
 
@@ -311,10 +342,11 @@ impl HistoryManager {
         }
     }
 
-    fn load_recent_files(repo: &RecentItemsRepository) -> Vec<RecentFile> {
+    fn load_recent(repo: &RecentItemsRepository, kind: &str) -> Vec<RecentFile> {
         match repo.all() {
             Ok(entries) => entries
                 .into_iter()
+                .filter(|dto| dto.kind == kind)
                 .filter_map(|dto| {
                     let path = dto.path.as_ref().map(std::path::PathBuf::from)?;
                     if path.as_os_str().is_empty() {
@@ -327,7 +359,7 @@ impl HistoryManager {
                 })
                 .collect(),
             Err(e) => {
-                log::warn!("Failed to load recent files from dbflux.db: {}", e);
+                log::warn!("Failed to load recent {kind}s from dbflux.db: {}", e);
                 Vec::new()
             }
         }
@@ -383,5 +415,38 @@ fn saved_query_dto_from_query(
         connection_id: query.connection_id.map(|u| u.to_string()),
         created_at: chrono_utc_to_rfc3339(query.created_at),
         last_used_at: chrono_utc_to_rfc3339(query.last_used_at),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::HistoryManager;
+    use dbflux_storage::bootstrap::StorageRuntime;
+
+    #[test]
+    fn recent_folders_are_kept_apart_from_recent_files_and_survive_a_reload() {
+        let runtime = StorageRuntime::in_memory().expect("bootstrap should succeed");
+        let mut manager = HistoryManager::new(&runtime);
+
+        manager.record_recent_file("/work/a/query.sql".into());
+        manager.record_recent_folder("/work/a".into());
+        manager.record_recent_folder("/work/b".into());
+        manager.record_recent_folder("/work/a".into());
+
+        let reloaded = HistoryManager::new(&runtime);
+        let folders: Vec<_> = reloaded
+            .recent_folders_entries()
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
+        let files: Vec<_> = reloaded
+            .recent_files_entries()
+            .iter()
+            .map(|entry| entry.path.clone())
+            .collect();
+
+        assert_eq!(folders.len(), 2);
+        assert!(folders.contains(&"/work/a".into()) && folders.contains(&"/work/b".into()));
+        assert_eq!(files, vec![std::path::PathBuf::from("/work/a/query.sql")]);
     }
 }

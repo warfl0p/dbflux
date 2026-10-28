@@ -5249,6 +5249,7 @@ sidebar:
       one: 활성 프로필/데이터베이스 외부의 1개 테이블을 건너뛰었습니다
       many: "활성 프로필/데이터베이스 외부의 %{count}개 테이블을 건너뛰었습니다"
     add_external_folder: 외부 폴더 추가
+    recent_folders: 최근 폴더
   status:
     connected: "%{count}개 연결됨"
     idle: "%{count}개 유휴"

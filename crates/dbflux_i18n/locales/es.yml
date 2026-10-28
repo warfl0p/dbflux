@@ -5250,6 +5250,7 @@ sidebar:
       one: Se omitió 1 tabla fuera del perfil/base de datos activos
       many: "Se omitieron %{count} tablas fuera del perfil/base de datos activos"
     add_external_folder: Agregar carpeta externa
+    recent_folders: Carpetas recientes
   status:
     connected: "%{count} conectadas"
     idle: "%{count} inactivas"
