@@ -6,8 +6,8 @@ use std::{
 use gpui::{
     Along, AnyElement, App, AppContext, Axis, Bounds, Context, Element, ElementId, Empty, Entity,
     EventEmitter, InteractiveElement as _, IntoElement, IsZero as _, MouseMoveEvent, MouseUpEvent,
-    ParentElement, Pixels, Render, RenderOnce, Style, StyleRefinement, Styled, Window, div,
-    prelude::FluentBuilder, px,
+    ParentElement, Pixels, Render, RenderOnce, Style, StyleRefinement, Styled, Window, div, px,
+    prelude::FluentBuilder,
 };
 
 use crate::{AxisExt, ElementExt, StyledExt as _, h_flex, resizable::PANEL_MIN_SIZE, v_flex};
