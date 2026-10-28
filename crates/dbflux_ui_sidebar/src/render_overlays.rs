@@ -159,9 +159,9 @@ impl Sidebar {
                 cx,
             ),
             self.add_menu_row(
-                "add-external-scripts-folder",
+                "add-folder-to-workspace",
                 AppIcon::HardDrive,
-                dbflux_i18n::t!("sidebar.overlay.add_external_folder"),
+                dbflux_i18n::t!("sidebar.overlay.add_folder_to_workspace"),
                 |this, cx| this.add_folder_to_workspace(cx),
                 cx,
             ),

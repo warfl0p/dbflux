@@ -1174,12 +1174,12 @@ impl Sidebar {
                     ],
                 );
 
-                // Not a danger item: it only forgets the registration.
+                // Not a danger item: the folder stays on disk.
                 Self::append_menu_section(
                     &mut items,
                     [ContextMenuItem::item(
-                        dbflux_i18n::t!("sidebar.menu.remove_external_folder"),
-                        ContextMenuAction::RemoveExternalScriptsFolder,
+                        dbflux_i18n::t!("sidebar.menu.remove_folder_from_workspace"),
+                        ContextMenuAction::RemoveFolderFromWorkspace,
                     )],
                 );
 
@@ -1994,8 +1994,10 @@ impl Sidebar {
             ContextMenuAction::RefreshScripts => {
                 self.rescan_scripts(cx);
             }
-            ContextMenuAction::RemoveExternalScriptsFolder => {
-                self.remove_external_scripts_folder(&item_id, cx);
+            ContextMenuAction::RemoveFolderFromWorkspace => {
+                if let Some(SchemaNodeId::ScriptsRoot { path }) = parse_node_id(&item_id) {
+                    self.remove_workspace_folder(std::path::Path::new(&path), cx);
+                }
             }
             ContextMenuAction::RefreshDatabase => {
                 self.refresh_schema_database(&item_id, cx);

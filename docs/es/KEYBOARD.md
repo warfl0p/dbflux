@@ -30,6 +30,7 @@ foco toma `Enter` y `Space` para sí.
 | `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown`      | Mover la pestaña activa a la izquierda / derecha                  |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9`        | Cambiar a la pestaña N                                            |
 | `Ctrl+o` / `Cmd+o`                               | Abrir archivo de script                                           |
+| `Ctrl+r`                                         | Abrir un área de trabajo reciente; una vista que usa `Ctrl+r` conserva su acción |
 | `Ctrl+Enter` / `Cmd+Enter`                       | Ejecutar query                                                    |
 | `Ctrl+Shift+Enter` / `Cmd+Shift+Enter`           | Ejecutar query en nueva pestaña                                   |
 | `Escape`                                         | Cancelar / cerrar modal                                           |

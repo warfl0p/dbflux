@@ -24,7 +24,6 @@ The user does not want to save a workspace to a file. In VS Code they never have
 - **Open recent…** (Ctrl+R, global): lists earlier folder sets, without the one that is open.
   - Stored as JSON in `st_ui_state` under the key `recent_workspaces`.
   - Opening a workspace records the one it replaces. Add and Remove record the new set.
-  - The Scripts + menu "Recent folders" list reads the same store.
 - **Restart**: the open folders come back without any file, because they live in the `script_roots` table.
 - **Tree**:
   - No external folder: the managed scripts root.
@@ -48,6 +47,36 @@ Checks run after this session's changes:
 - `cargo clippy -p dbflux_ui`: no new warnings.
 
 This session did not check the changes in the running app.
+
+## Session 2026-10-28 (2)
+
+Ran on a VM with no Rust toolchain, no display and no `mold`, so nothing below
+was compiled, tested or checked in the app. Run `python3 scripts/lint.py fmt`,
+clippy and the tests before merging.
+
+1. `open_workspace` records the workspace it replaces again (642d2770).
+2. Old "external scripts folder" wording and ids replaced with VS Code's:
+   - `Command::AddExternalScriptsFolder` / `add_external_scripts_folder` became
+     `Command::OpenFolder` / `open_folder`. Overrides attach to default
+     bindings and the command has none, so no saved id is lost.
+   - Root context menu: "Remove from sidebar" became "Remove folder from
+     workspace" (`ContextMenuAction::RemoveFolderFromWorkspace`).
+   - Open folder and Add folder have their own picker titles; errors name the
+     action (open, remove, close).
+   - The footer says "N folders in workspace". A one-folder workspace also
+     shows "· 1 unavailable" when its folder cannot be read; before, the tree
+     was empty with no reason given.
+   - The i18n keys were renamed in all 5 locales. The renamed ones are
+     translated; the other workspace strings are still English.
+3. Bug: New file, New folder and Import from the Scripts `+` menu with nothing
+   selected wrote into the managed root, which the tree hides while a
+   workspace is open. They now fall back to `default_root()` (the first
+   workspace folder). Ctrl+N new query tabs still go to the managed root, like
+   VS Code's Untitled.
+4. Close workspace records the workspace in Open Recent before closing.
+5. docs/SCHEMA_BROWSER.md "External scripts folders" became "Workspace
+   folders" (en, es, ko, zh_Hans); `Ctrl+r` was added to the Global table in
+   docs/KEYBOARD.md. The old doc said `x` removes a root; it never did.
 
 ## Still to do
 

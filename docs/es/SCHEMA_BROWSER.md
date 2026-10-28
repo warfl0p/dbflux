@@ -65,16 +65,32 @@ el árbol muestra todas las bases de datos. Desactívalo para mostrar solo la
 base de datos escrita en el campo. Si el campo está vacío, o nombra una base de
 datos que el servidor no lista, se siguen mostrando todas.
 
-## Carpetas externas de scripts
+## Carpetas del área de trabajo
 
-La vista Scripts puede listar scripts que están fuera de la carpeta de scripts
-de DBFlux, como un repositorio de archivos SQL compartido entre proyectos, sin
-copiarlos. Elige **Agregar carpeta externa** en el menú `+` de la vista Scripts,
-o ejecuta **Agregar carpeta externa de scripts…** desde la paleta de comandos, y
-selecciona la carpeta.
+La vista Scripts funciona como el explorador de VS Code. Además de la carpeta de
+scripts de DBFlux, puede abrir carpetas que están en otro lugar, como un
+repositorio de archivos SQL compartido entre proyectos, sin copiarlas. Estos
+comandos se ejecutan desde la paleta de comandos (`Ctrl+Shift+P`):
 
-- La carpeta aparece debajo de tus propios scripts, con su nombre como etiqueta.
-  Solo se listan los archivos que abre el editor (`.sql`, `.js`, `.redis`,
+| Comando | Qué hace |
+|---------|----------|
+| **Abrir carpeta…** | Abre la carpeta que elijas como área de trabajo, en lugar de las carpetas abiertas antes |
+| **Abrir reciente…** (`Ctrl+R`) | Vuelve a abrir un conjunto de carpetas que tuviste abierto antes |
+| **Agregar carpeta al área de trabajo…** | Agrega una carpeta junto a las abiertas; el menú `+` de la vista Scripts también lo ofrece |
+| **Quitar carpeta del área de trabajo…** | Lista las carpetas abiertas y quita la que elijas |
+| **Cerrar área de trabajo** | Quita todas las carpetas abiertas y vuelve a los scripts de DBFlux |
+
+- Sin ninguna carpeta abierta, la vista lista los scripts de DBFlux. Con una
+  carpeta abierta, lista su contenido y el pie del panel muestra su ruta. Con dos
+  o más, cada carpeta es un nodo propio, con el nombre de la carpeta.
+- Las carpetas abiertas vuelven cuando DBFlux se reinicia. Un área de trabajo
+  nunca necesita un archivo. **Abrir reciente…** lista cada conjunto de carpetas
+  que abres, amplías o reduces, el más reciente primero.
+- **Nuevo archivo**, **Nueva carpeta** e **Importar archivo** del menú `+`
+  colocan la nueva entrada junto a la seleccionada, o en la primera carpeta
+  abierta si no hay nada seleccionado. Una nueva pestaña de consulta (`Ctrl+n`)
+  se sigue guardando en la carpeta de scripts de DBFlux.
+- Solo se listan los archivos que abre el editor (`.sql`, `.js`, `.redis`,
   `.lua`, `.py`, `.sh` y los demás tipos de script). Se ocultan las subcarpetas
   que solo contienen otros archivos; las vacías se muestran, así que una carpeta
   que acabas de crear sigue visible. Los enlaces simbólicos que salen de la
@@ -83,17 +99,20 @@ selecciona la carpeta.
   sincronizados con la carpeta. Crear, renombrar y eliminar archivos y
   subcarpetas dentro de ella funciona igual que en tu propia carpeta de scripts.
   Mover un archivo entre dos carpetas distintas se rechaza.
-- DBFlux no vigila la carpeta. Pulsa `r` sobre la carpeta, o elige **Actualizar**
-  en su menú, para ver archivos agregados o modificados fuera de DBFlux. Las
-  carpetas también se escanean en segundo plano cada vez que DBFlux arranca.
-- Si la carpeta se mueve, se elimina, se desmonta o no se puede leer, sigue en
-  la lista marcada como **no disponible** hasta que vuelva o la quites. Su menú
-  indica por qué no se pudo leer.
-- **Quitar del panel lateral** (`x`) solo olvida la carpeta. Sus archivos nunca
-  se tocan, y la carpeta en sí no se puede renombrar, mover ni eliminar desde
-  DBFlux.
-- Las carpetas externas no se comparten con clientes de IA: las herramientas MCP
-  de scripts solo ven la carpeta de scripts de DBFlux.
+- DBFlux no vigila las carpetas. Pulsa `r` sobre una carpeta, o elige
+  **Actualizar** en su menú, para ver archivos agregados o modificados fuera de
+  DBFlux. Las carpetas también se escanean en segundo plano cada vez que DBFlux
+  arranca.
+- Si una carpeta se mueve, se elimina, se desmonta o no se puede leer, sigue
+  abierta marcada como **no disponible** hasta que vuelva o la quites, y el pie
+  del panel la cuenta. En un área de trabajo con varias carpetas, su menú indica
+  por qué no se pudo leer.
+- Quitar una carpeta, desde la paleta o con **Quitar carpeta del área de
+  trabajo** en su menú, y cerrar el área de trabajo solo olvidan las carpetas.
+  Sus archivos nunca se tocan, y una carpeta del área de trabajo no se puede
+  renombrar, mover ni eliminar desde DBFlux.
+- Las carpetas del área de trabajo no se comparten con clientes de IA: las
+  herramientas MCP de scripts solo ven la carpeta de scripts de DBFlux.
 
 ## Carga diferida (lazy loading)
 

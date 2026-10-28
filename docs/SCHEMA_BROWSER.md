@@ -59,34 +59,52 @@ tree lists every database. Turn it off to list only the database typed in the
 field. If the field is empty, or names a database the server does not list,
 every database is still shown.
 
-## External scripts folders
+## Workspace folders
 
-The Scripts view can list scripts that live outside DBFlux's own scripts
-folder, such as a repository of SQL files shared across projects, without
-copying them. Choose **Add external folder** from the `+` menu of the Scripts
-view, or run **Add external scripts folder…** from the command palette, and
-pick the folder.
+The Scripts view works like the VS Code explorer. Besides DBFlux's own scripts
+folder, it can open folders that live elsewhere, such as a repository of SQL
+files shared across projects, without copying them. These commands run from
+the command palette (`Ctrl+Shift+P`):
 
-- The folder appears below your own scripts, with its name as the label. Only
-  files the editor opens (`.sql`, `.js`, `.redis`, `.lua`, `.py`, `.sh` and the
-  other script types) are listed. Subfolders that hold only other files are
-  hidden; empty ones are shown, so a folder you just created stays visible.
+| Command | What it does |
+|---------|--------------|
+| **Open folder…** | Opens the folder you pick as the workspace, in place of the folders open before |
+| **Open recent…** (`Ctrl+R`) | Reopens a set of folders you had open before |
+| **Add folder to workspace…** | Adds a folder next to the open ones; the `+` menu of the Scripts view offers it too |
+| **Remove folder from workspace…** | Lists the open folders and removes the one you pick |
+| **Close workspace** | Removes every open folder, back to DBFlux's own scripts |
+
+- With no folder open, the view lists DBFlux's own scripts. With one folder
+  open, it lists that folder's contents and the footer shows its path. With two
+  or more, each folder is a node of its own, named after the folder.
+- The open folders come back when DBFlux restarts. A workspace never needs a
+  file. Every set of folders you open, add to or remove from is listed by
+  **Open recent…**, most recent first.
+- **New file**, **New folder** and **Import file** in the `+` menu put the new
+  entry next to the selected one, or in the first open folder when nothing is
+  selected. A new query tab (`Ctrl+n`) is still saved in DBFlux's own scripts
+  folder.
+- Only files the editor opens (`.sql`, `.js`, `.redis`, `.lua`, `.py`, `.sh`
+  and the other script types) are listed. Subfolders that hold only other files
+  are hidden; empty ones are shown, so a folder you just created stays visible.
   Symbolic links that lead out of the folder are not listed, and nothing is
   written through them.
 - Scripts open and save in place, so the files stay in sync with the folder.
   Creating, renaming and deleting files and subfolders inside it works as in
   your own scripts folder. Moving a file between two different folders is
   refused.
-- DBFlux does not watch the folder. Press `r` on the folder, or choose
+- DBFlux does not watch the folders. Press `r` on a folder, or choose
   **Refresh** from its menu, to pick up files added or changed outside DBFlux.
   The folders are also scanned in the background each time DBFlux starts.
-- If the folder is moved, deleted, unmounted or cannot be read, it stays in the
-  list marked **unavailable** until it comes back or you remove it. Its menu
-  says why it could not be read.
-- **Remove from sidebar** (`x`) only forgets the folder. Its files are never
-  touched, and the folder itself cannot be renamed, moved or deleted from
-  DBFlux.
-- External folders are not shared with AI clients: the MCP script tools only
+- If a folder is moved, deleted, unmounted or cannot be read, it stays open
+  marked **unavailable** until it comes back or you remove it, and the footer
+  counts it. In a multi-folder workspace its menu says why it could not be
+  read.
+- Removing a folder, from the palette or with **Remove folder from workspace**
+  in its menu, and closing the workspace only forget the folders. Their files
+  are never touched, and a workspace folder itself cannot be renamed, moved or
+  deleted from DBFlux.
+- Workspace folders are not shared with AI clients: the MCP script tools only
   see DBFlux's own scripts folder.
 
 ## Lazy loading

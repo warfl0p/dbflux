@@ -1901,8 +1901,8 @@ impl Workspace {
                 dbflux_i18n::t!("palette.category.editor"),
             ),
             PaletteCommand::new(
-                "add_external_scripts_folder",
-                dbflux_i18n::t!("palette.command.add_external_scripts_folder.name"),
+                "open_folder",
+                dbflux_i18n::t!("palette.command.open_folder.name"),
                 dbflux_i18n::t!("palette.category.workspaces"),
             ),
             PaletteCommand::new(

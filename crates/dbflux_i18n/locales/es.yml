@@ -3934,8 +3934,8 @@ palette:
       name: Guardar archivo como…
     open_script_file:
       name: Abrir archivo de script…
-    add_external_scripts_folder:
-      name: "Agregar carpeta externa de scripts…"
+    open_folder:
+      name: "Abrir carpeta…"
     toggle_comment:
       name: Alternar comentario
     format_query:
@@ -4388,7 +4388,7 @@ settings:
       save_query: Guardar
       save_file_as: Guardar archivo como…
       open_script_file: Abrir archivo de script…
-      add_external_scripts_folder: "Agregar carpeta externa de scripts…"
+      open_folder: "Abrir carpeta…"
       toggle_comment: Alternar comentario
       format_query: Formatear consulta
       export_results: Exportar resultados
@@ -5181,7 +5181,8 @@ sidebar:
   dialog:
     import_script_title: Importar script
     script_files_filter: Archivos de script
-    add_external_folder_title: Agregar carpeta externa de scripts
+    open_folder_title: Abrir carpeta
+    add_folder_to_workspace_title: Agregar carpeta al área de trabajo
   empty:
     connections_title: Aún no hay conexiones
     connections_hint: Usa + para agregar una nueva conexión
@@ -5243,7 +5244,7 @@ sidebar:
     rename_ellipsis: Renombrar…
     copy_metric_id: Copiar ID de métrica
     copy_inspector_id: Copiar ID de inspector
-    remove_external_folder: Quitar del panel lateral
+    remove_folder_from_workspace: Quitar carpeta del área de trabajo
     refresh_scripts: Actualizar
     unavailable_reason: "No disponible: %{reason}"
   overlay:
@@ -5265,14 +5266,14 @@ sidebar:
     skipped_tables:
       one: Se omitió 1 tabla fuera del perfil/base de datos activos
       many: "Se omitieron %{count} tablas fuera del perfil/base de datos activos"
-    add_external_folder: Agregar carpeta externa
+    add_folder_to_workspace: "Agregar carpeta al área de trabajo…"
   status:
     connected: "%{count} conectadas"
     idle: "%{count} inactivas"
     no_connections: "Todavía no hay conexiones"
     connection_summary: "%{connected} conectadas · %{idle} inactivas"
     profile_fallback_name: conexión
-    external_folders: "%{count} carpetas externas"
+    workspace_folders: "%{count} carpetas en el área de trabajo"
     unavailable_folders: "%{count} no disponibles"
   tabs:
     dashboards: "Dashboards"
@@ -5355,8 +5356,9 @@ sidebar:
       config: "El driver externo '%{driver_id}' no está disponible porque el servicio '%{socket_id}' tiene una configuración inválida: %{summary}"
       launch: "El driver externo '%{driver_id}' no está disponible porque el servicio '%{socket_id}' no inició: %{summary}"
       probe: "El driver externo '%{driver_id}' no está disponible porque el servicio '%{socket_id}' falló durante la prueba del driver: %{summary}"
-    add_external_folder_failed: "No se pudo agregar la carpeta: %{error}"
-    remove_external_folder_failed: "No se pudo quitar la carpeta: %{error}"
+    open_folder_failed: "No se pudo abrir la carpeta: %{error}"
+    remove_workspace_folder_failed: "No se pudo quitar la carpeta del área de trabajo: %{error}"
+    close_workspace_failed: "No se pudo cerrar el área de trabajo: %{error}"
     script_operation_failed: "La operación sobre el script falló: %{error}"
     list_secret_paths_failed: "No se pudieron listar las rutas de secretos: %{error}"
   tree:

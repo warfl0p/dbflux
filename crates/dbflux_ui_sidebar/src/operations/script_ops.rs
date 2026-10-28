@@ -95,7 +95,7 @@ async fn open_workspace_folders(
             report_error(
                 UserFacingError::new(
                     ErrorKind::User,
-                    crate::labels::add_external_folder_failed_label(&error),
+                    crate::labels::open_folder_failed_label(&error),
                 ),
                 cx,
             );
@@ -122,7 +122,7 @@ async fn open_workspace_folders(
             Err(error) => report_error(
                 UserFacingError::new(
                     script_root_error_kind(&error),
-                    crate::labels::add_external_folder_failed_label(&error.to_string()),
+                    crate::labels::open_folder_failed_label(&error.to_string()),
                 ),
                 cx,
             ),
@@ -141,19 +141,23 @@ fn report_reveal_failure(error: std::io::Error, cx: &mut App) {
 }
 
 impl Sidebar {
+    /// Where a new or imported script goes: next to the selected entry, else
+    /// the open workspace folder, as VS Code's explorer does. Without the
+    /// fallback it would land in the managed root, which the tree hides while
+    /// a workspace is open.
     fn selected_scripts_parent_dir(&self, cx: &App) -> Option<std::path::PathBuf> {
-        let entry = self.scripts_tree_state.read(cx).selected_entry()?;
-        let item_id = entry.item().id.to_string();
-        let node_id = parse_node_id(&item_id)?;
+        let selected = self
+            .scripts_tree_state
+            .read(cx)
+            .selected_entry()
+            .and_then(|entry| Self::parent_dir_from_item_id(entry.item().id.as_ref()));
 
-        match node_id {
-            SchemaNodeId::ScriptsFolder { path: Some(p) }
-            | SchemaNodeId::ScriptsRoot { path: p } => Some(std::path::PathBuf::from(p)),
-            SchemaNodeId::ScriptFile { path } => std::path::Path::new(&path)
-                .parent()
-                .map(|p| p.to_path_buf()),
-            _ => None,
-        }
+        selected.or_else(|| {
+            self.app_state
+                .read(cx)
+                .scripts_directory()
+                .map(|dir| dir.default_root().to_path_buf())
+        })
     }
 
     fn default_script_extension(&self, cx: &App) -> &'static str {
@@ -322,7 +326,10 @@ impl Sidebar {
     }
 
     fn pick_workspace_folder(&mut self, change: WorkspaceChange, cx: &mut Context<Self>) {
-        let title = crate::labels::add_external_folder_dialog_title();
+        let title = match change {
+            WorkspaceChange::Replace => crate::labels::open_folder_dialog_title(),
+            WorkspaceChange::Add => crate::labels::add_folder_to_workspace_dialog_title(),
+        };
         let app_state = self.app_state.clone();
 
         cx.spawn(async move |_this, cx| {
@@ -360,6 +367,9 @@ impl Sidebar {
     /// Closes the workspace. The folders and their files are never touched.
     pub fn close_workspace(&mut self, cx: &mut Context<Self>) {
         let closed = self.app_state.update(cx, |state, cx| {
+            // Recorded first so the closed workspace can be reopened from
+            // Open Recent, as VS Code keeps a closed folder there.
+            state.record_recent_workspace();
             let closed = state.close_workspace();
             cx.emit(AppStateChanged);
             closed
@@ -369,34 +379,21 @@ impl Sidebar {
             report_error(
                 UserFacingError::new(
                     script_root_error_kind(&error),
-                    crate::labels::remove_external_folder_failed_label(&error.to_string()),
+                    crate::labels::close_workspace_failed_label(&error.to_string()),
                 ),
                 cx,
             );
         }
     }
 
-    /// Removes the workspace folder registered at `path`.
+    /// Removes the workspace folder registered at `path`. The folder and its
+    /// files are never touched.
     pub fn remove_workspace_folder(&mut self, path: &std::path::Path, cx: &mut Context<Self>) {
-        let item_id = SchemaNodeId::ScriptsRoot {
-            path: path.to_string_lossy().to_string(),
-        }
-        .to_string();
-        self.remove_external_scripts_folder(&item_id, cx);
-    }
-
-    /// Unregisters the external scripts folder `item_id` names. The folder and
-    /// its files are never touched.
-    pub(crate) fn remove_external_scripts_folder(&mut self, item_id: &str, cx: &mut Context<Self>) {
-        let Some(SchemaNodeId::ScriptsRoot { path }) = parse_node_id(item_id) else {
-            return;
-        };
-
         let Some(id) = self
             .app_state
             .read(cx)
             .scripts_directory()
-            .and_then(|dir| dir.external_root_at(std::path::Path::new(&path)))
+            .and_then(|dir| dir.external_root_at(path))
             .map(dbflux_core::MountedScriptRoot::id)
         else {
             return;
@@ -415,7 +412,7 @@ impl Sidebar {
             report_error(
                 UserFacingError::new(
                     script_root_error_kind(&error),
-                    crate::labels::remove_external_folder_failed_label(&error.to_string()),
+                    crate::labels::remove_workspace_folder_failed_label(&error.to_string()),
                 ),
                 cx,
             );

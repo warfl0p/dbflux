@@ -371,7 +371,7 @@ fn command_icon(id: &str) -> AppIcon {
         "run_query" | "run_query_in_new_tab" => AppIcon::Play,
         "save_query" | "save_file_as" => AppIcon::Save,
         "open_script_file"
-        | "add_external_scripts_folder"
+        | "open_folder"
         | "open_recent"
         | "add_folder_to_workspace"
         | "remove_folder_from_workspace"

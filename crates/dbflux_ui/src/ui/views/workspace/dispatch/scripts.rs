@@ -20,7 +20,7 @@ impl Workspace {
                 self.open_remove_workspace_folder(window, cx);
                 Some(true)
             }
-            Command::AddExternalScriptsFolder
+            Command::OpenFolder
             | Command::AddFolderToWorkspace
             | Command::CloseWorkspace => {
                 self.reveal_sidebar_view(SidebarTab::Scripts, cx);

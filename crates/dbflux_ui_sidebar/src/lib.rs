@@ -578,10 +578,10 @@ pub enum ContextMenuAction {
     NewScriptFolder,
     RevealInFileManager,
     CopyPath,
-    /// Re-scan every scripts root, external folders included, off the UI thread.
+    /// Re-scan every scripts root, workspace folders included, off the UI thread.
     RefreshScripts,
-    /// Unregister an external scripts folder. The folder stays on disk.
-    RemoveExternalScriptsFolder,
+    /// Remove a folder from the workspace. The folder stays on disk.
+    RemoveFolderFromWorkspace,
     // Dashboard actions
     NewDashboard,
     ImportDashboard,
@@ -686,7 +686,7 @@ impl ContextMenuAction {
             Self::Delete
             | Self::DeleteFolder
             | Self::DeleteScript
-            | Self::RemoveExternalScriptsFolder
+            | Self::RemoveFolderFromWorkspace
             | Self::DropTable
             | Self::DropCollection
             | Self::DropDatabase => Some(Command::Delete),
@@ -738,7 +738,7 @@ impl ContextMenuAction {
             Self::RevealInFileManager => Some(AppIcon::Folder),
             Self::CopyPath => None,
             Self::RefreshScripts => Some(AppIcon::RefreshCcw),
-            Self::RemoveExternalScriptsFolder => Some(AppIcon::X),
+            Self::RemoveFolderFromWorkspace => Some(AppIcon::X),
             // Dashboard actions
             Self::NewDashboard => Some(AppIcon::Layers),
             Self::ImportDashboard => Some(AppIcon::Download),
