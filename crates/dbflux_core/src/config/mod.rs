@@ -12,7 +12,7 @@ pub use app::{
 };
 pub use refresh_policy::RefreshPolicy;
 pub use scripts_directory::{
-    ExternalScriptRoot, MountedScriptRoot, ScriptEntry, ScriptRootAvailability, ScriptsDirectory,
-    ScriptsScan, ScriptsScanRequest, all_script_extensions, filter_entries, hook_script_path,
-    is_openable_script,
+    ExternalScriptRoot, MountedScriptRoot, RecentWorkspace, ScriptEntry, ScriptRootAvailability,
+    ScriptsDirectory, ScriptsScan, ScriptsScanRequest, WorkspaceFile, all_script_extensions,
+    filter_entries, hook_script_path, is_openable_script,
 };

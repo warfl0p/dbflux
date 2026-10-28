@@ -80,6 +80,18 @@ pub enum Command {
     /// Register a folder outside the managed scripts directory whose scripts
     /// the sidebar lists in place.
     AddExternalScriptsFolder,
+    /// Lists recent workspaces to reopen (VS Code's Open Recent).
+    OpenRecentWorkspace,
+    /// Opens the folders a saved workspace file lists.
+    OpenWorkspaceFromFile,
+    /// Adds a folder to the open workspace.
+    AddFolderToWorkspace,
+    /// Lists the workspace folders to remove one.
+    RemoveFolderFromWorkspace,
+    /// Writes the open workspace's folders to a workspace file.
+    SaveWorkspaceAs,
+    /// Closes every folder of the open workspace.
+    CloseWorkspace,
     ToggleComment,
     /// Format the selection, or the statement under the cursor.
     FormatQuery,
@@ -175,8 +187,6 @@ pub enum Command {
     ShowScriptsView,
     /// Opens the palette listing only the workspace files (VS Code's Go to File).
     GoToFile,
-    /// Opens the palette listing the recent workspace folders.
-    OpenRecentFolder,
     /// Show the Dashboards view of the sidebar, as its activity rail entry does.
     ShowDashboardsView,
     #[cfg(feature = "mcp")]
@@ -332,8 +342,13 @@ impl Command {
             "show_connections_view" => Some(Command::ShowConnectionsView),
             "show_scripts_view" => Some(Command::ShowScriptsView),
             "go_to_file" => Some(Command::GoToFile),
-            "open_recent_folder" => Some(Command::OpenRecentFolder),
             "add_external_scripts_folder" => Some(Command::AddExternalScriptsFolder),
+            "open_recent" => Some(Command::OpenRecentWorkspace),
+            "open_workspace_from_file" => Some(Command::OpenWorkspaceFromFile),
+            "add_folder_to_workspace" => Some(Command::AddFolderToWorkspace),
+            "remove_folder_from_workspace" => Some(Command::RemoveFolderFromWorkspace),
+            "save_workspace_as" => Some(Command::SaveWorkspaceAs),
+            "close_workspace" => Some(Command::CloseWorkspace),
             "show_dashboards_view" => Some(Command::ShowDashboardsView),
             #[cfg(feature = "mcp")]
             "open_mcp_approvals" => Some(Command::OpenMcpApprovals),
@@ -410,6 +425,12 @@ impl Command {
             Command::SaveFileAs => "Save file as…",
             Command::OpenScriptFile => "Open script file…",
             Command::AddExternalScriptsFolder => "Open folder…",
+            Command::OpenRecentWorkspace => "Open recent…",
+            Command::OpenWorkspaceFromFile => "Open workspace from file…",
+            Command::AddFolderToWorkspace => "Add folder to workspace…",
+            Command::RemoveFolderFromWorkspace => "Remove folder from workspace…",
+            Command::SaveWorkspaceAs => "Save workspace as…",
+            Command::CloseWorkspace => "Close workspace",
             Command::ToggleComment => "Toggle line comment",
             Command::FormatQuery => "Format query",
 
@@ -473,7 +494,6 @@ impl Command {
             Command::ShowConnectionsView => "Show connections view",
             Command::ShowScriptsView => "Show scripts view",
             Command::GoToFile => "Go to file…",
-            Command::OpenRecentFolder => "Open recent folder…",
             Command::ShowDashboardsView => "Show dashboards view",
             #[cfg(feature = "mcp")]
             Command::OpenMcpApprovals => "Open MCP approvals",
@@ -616,6 +636,12 @@ impl Command {
             Command::SaveFileAs => "save_file_as",
             Command::OpenScriptFile => "open_script_file",
             Command::AddExternalScriptsFolder => "add_external_scripts_folder",
+            Command::OpenRecentWorkspace => "open_recent",
+            Command::OpenWorkspaceFromFile => "open_workspace_from_file",
+            Command::AddFolderToWorkspace => "add_folder_to_workspace",
+            Command::RemoveFolderFromWorkspace => "remove_folder_from_workspace",
+            Command::SaveWorkspaceAs => "save_workspace_as",
+            Command::CloseWorkspace => "close_workspace",
             Command::ToggleComment => "toggle_comment",
             Command::FormatQuery => "format_query",
 
@@ -679,7 +705,6 @@ impl Command {
             Command::ShowConnectionsView => "show_connections_view",
             Command::ShowScriptsView => "show_scripts_view",
             Command::GoToFile => "go_to_file",
-            Command::OpenRecentFolder => "open_recent_folder",
             Command::ShowDashboardsView => "show_dashboards_view",
             #[cfg(feature = "mcp")]
             Command::OpenMcpApprovals => "open_mcp_approvals",
@@ -840,6 +865,12 @@ impl Command {
             Command::SaveFileAs,
             Command::OpenScriptFile,
             Command::AddExternalScriptsFolder,
+            Command::OpenRecentWorkspace,
+            Command::OpenWorkspaceFromFile,
+            Command::AddFolderToWorkspace,
+            Command::RemoveFolderFromWorkspace,
+            Command::SaveWorkspaceAs,
+            Command::CloseWorkspace,
             Command::ToggleComment,
             Command::FormatQuery,
             Command::ExportResults,
@@ -900,7 +931,6 @@ impl Command {
             Command::ShowConnectionsView,
             Command::ShowScriptsView,
             Command::GoToFile,
-            Command::OpenRecentFolder,
             Command::ShowDashboardsView,
             Command::OpenSavedChart,
             Command::ImportDashboard,
@@ -1040,6 +1070,12 @@ impl Command {
             | Command::SaveFileAs
             | Command::OpenScriptFile
             | Command::AddExternalScriptsFolder
+            | Command::OpenRecentWorkspace
+            | Command::OpenWorkspaceFromFile
+            | Command::AddFolderToWorkspace
+            | Command::RemoveFolderFromWorkspace
+            | Command::SaveWorkspaceAs
+            | Command::CloseWorkspace
             | Command::ToggleComment
             | Command::FormatQuery => "Editor",
 
@@ -1100,7 +1136,6 @@ impl Command {
             | Command::ShowConnectionsView
             | Command::ShowScriptsView
             | Command::GoToFile
-            | Command::OpenRecentFolder
             | Command::ShowDashboardsView => "View",
 
             #[cfg(feature = "mcp")]
@@ -1190,6 +1225,12 @@ impl Command {
                 | Command::NewQueryTab
                 | Command::OpenScriptFile
                 | Command::AddExternalScriptsFolder
+                | Command::OpenRecentWorkspace
+                | Command::OpenWorkspaceFromFile
+                | Command::AddFolderToWorkspace
+                | Command::RemoveFolderFromWorkspace
+                | Command::SaveWorkspaceAs
+                | Command::CloseWorkspace
                 | Command::CloseCurrentTab
                 | Command::NextTab
                 | Command::PrevTab
@@ -1223,7 +1264,6 @@ impl Command {
                 | Command::ShowConnectionsView
                 | Command::ShowScriptsView
                 | Command::GoToFile
-                | Command::OpenRecentFolder
                 | Command::ShowDashboardsView
         ) || {
             #[cfg(feature = "mcp")]
@@ -1841,9 +1881,14 @@ mod tests {
             Command::ShowConnectionsView,
             Command::ShowScriptsView,
             Command::GoToFile,
-            Command::OpenRecentFolder,
             Command::ShowDashboardsView,
             Command::AddExternalScriptsFolder,
+            Command::OpenRecentWorkspace,
+            Command::OpenWorkspaceFromFile,
+            Command::AddFolderToWorkspace,
+            Command::RemoveFolderFromWorkspace,
+            Command::SaveWorkspaceAs,
+            Command::CloseWorkspace,
         ] {
             assert_eq!(Command::from_palette_id(command.id()), Some(command));
             assert!(command.is_global(), "{command:?} is a workspace command");

@@ -3,6 +3,7 @@
 //! This module contains the core `AppState` struct which manages all application-level
 //! state including connections, profiles, settings, and audit services.
 
+use dbflux_core::LogErr;
 use dbflux_core::connection_manager::PrepareFetchError;
 use dbflux_core::observability::actions::{
     CONFIG_CHANGE, CONFIG_CREATE, CONFIG_DELETE, CONFIG_UPDATE,
@@ -15,9 +16,9 @@ use dbflux_core::{
     AuthProfile, CancelToken, Connection, ConnectionHooks, ConnectionProfile, DbDriver, DbError,
     DbSchemaInfo, DriverKey, EffectiveSettings, ExternalScriptRoot, FetchCollectionChildrenParams,
     FetchSchemaColumnsParams, FormValues, GeneralSettings, GlobalOverrides, HistoryEntry,
-    HookContext, HookPhase, SavedQuery, SchemaColumnInfo, SchemaForeignKeyInfo, SchemaIndexInfo,
-    SchemaSnapshot, ScriptsDirectory, SecretStore, SessionFacade, ShutdownPhase, SshTunnelProfile,
-    TaskId, TaskKind, TaskSnapshot,
+    HookContext, HookPhase, RecentWorkspace, SavedQuery, SchemaColumnInfo, SchemaForeignKeyInfo,
+    SchemaIndexInfo, SchemaSnapshot, ScriptsDirectory, SecretStore, SessionFacade, ShutdownPhase,
+    SshTunnelProfile, TaskId, TaskKind, TaskSnapshot,
 };
 use dbflux_storage::bootstrap::StorageRuntime;
 use dbflux_storage::repositories::sch_schema_snapshots::SchemaSnapshotRepo;
@@ -58,6 +59,10 @@ pub use dbflux_core::{
     InstallDatabaseConnectionOutcome, StaleFetchReason, StaleInstallReason, SwitchDatabaseParams,
     TableDetailsPrepareError,
 };
+
+/// `st_ui_state` key of the Open Recent list, a JSON array of
+/// [`RecentWorkspace`].
+const RECENT_WORKSPACES_KEY: &str = "recent_workspaces";
 
 /// Why an external scripts folder could not be added or removed.
 #[derive(Debug)]
@@ -1851,11 +1856,6 @@ impl AppState {
         self.history_manager.record_recent_file(path);
     }
 
-    /// Folders opened as the workspace, most recent first.
-    pub fn recent_folders(&self) -> &[dbflux_core::RecentFile] {
-        self.history_manager.recent_folders_entries()
-    }
-
     #[allow(dead_code)]
     pub fn remove_recent_file(&mut self, path: &PathBuf) {
         self.history_manager.remove_recent_file(path);
@@ -1923,27 +1923,44 @@ impl AppState {
         Ok(root)
     }
 
-    /// Unregisters an external scripts folder. The folder and its files are
-    /// never touched. The stored row goes first, so a failed write keeps the
-    /// folder listed rather than reappearing after a restart.
-    /// Makes `path` the workspace: the one external scripts folder the
-    /// sidebar lists, in place of any folder registered before.
-    pub fn open_workspace_folder(
-        &mut self,
-        path: PathBuf,
-    ) -> Result<ExternalScriptRoot, ScriptRootError> {
-        // The folder being replaced is recorded too, so the workspace that was
-        // open before recent folders existed can be reopened from the list.
-        if let Some(previous) = self
-            .scripts_directory
+    /// The open workspace's folders: every external scripts folder.
+    pub fn workspace_folders(&self) -> Vec<PathBuf> {
+        self.scripts_directory
             .as_ref()
-            .and_then(|dir| dir.workspace())
-            .map(|workspace| workspace.path().to_path_buf())
-        {
-            self.history_manager.record_recent_folder(previous);
+            .map(|dir| {
+                dir.external_roots()
+                    .iter()
+                    .map(|mounted| mounted.path().to_path_buf())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Replaces the open workspace with `folders`, each canonical as
+    /// `ScriptsDirectory::validate_external_root_against` returns it, and
+    /// records it in Open Recent under `file` when it was opened from one.
+    pub fn open_workspace(
+        &mut self,
+        folders: Vec<PathBuf>,
+        file: Option<PathBuf>,
+    ) -> Result<(), ScriptRootError> {
+        // The workspace being replaced is recorded too, so one opened before
+        // Open Recent existed can be reopened from the list.
+        self.record_recent_workspace(None);
+        self.close_workspace()?;
+
+        for folder in folders {
+            self.add_external_script_root(folder)?;
         }
 
-        let previous: Vec<Uuid> = self
+        self.record_recent_workspace(file);
+        Ok(())
+    }
+
+    /// Closes the workspace: unregisters every external scripts folder. The
+    /// folders and their files are never touched.
+    pub fn close_workspace(&mut self) -> Result<(), ScriptRootError> {
+        let ids: Vec<Uuid> = self
             .scripts_directory
             .as_ref()
             .map(|dir| {
@@ -1954,15 +1971,54 @@ impl AppState {
             })
             .unwrap_or_default();
 
-        for id in previous {
+        for id in ids {
             self.remove_external_script_root(id)?;
         }
 
-        let root = self.add_external_script_root(path)?;
-        self.history_manager.record_recent_folder(root.path.clone());
-        Ok(root)
+        Ok(())
     }
 
+    /// Workspaces opened before, most recent first.
+    pub fn recent_workspaces(&self) -> Vec<RecentWorkspace> {
+        self.storage_runtime
+            .ui_state()
+            .get(RECENT_WORKSPACES_KEY)
+            .log_err()
+            .flatten()
+            .and_then(|json| serde_json::from_str(&json).log_err())
+            .unwrap_or_default()
+    }
+
+    /// Puts the open workspace first in Open Recent. A failed write only
+    /// loses the entry, so it is logged rather than reported.
+    pub fn record_recent_workspace(&self, file: Option<PathBuf>) {
+        let folders = self.workspace_folders();
+        if folders.is_empty() {
+            return;
+        }
+
+        let mut recents = self.recent_workspaces();
+        RecentWorkspace::push(&mut recents, RecentWorkspace { folders, file });
+
+        if let Some(json) = serde_json::to_string(&recents).log_err() {
+            self.storage_runtime
+                .ui_state()
+                .set(RECENT_WORKSPACES_KEY, &json)
+                .log_err();
+        }
+    }
+
+    /// Writes the open workspace's folders to `file` and records it in
+    /// Open Recent under that file.
+    pub fn save_workspace_as(&self, file: PathBuf) -> Result<(), Box<DbError>> {
+        dbflux_core::WorkspaceFile::write(&file, &self.workspace_folders()).map_err(Box::new)?;
+        self.record_recent_workspace(Some(file));
+        Ok(())
+    }
+
+    /// Unregisters an external scripts folder. The folder and its files are
+    /// never touched. The stored row goes first, so a failed write keeps the
+    /// folder listed rather than reappearing after a restart.
     pub fn remove_external_script_root(&mut self, id: Uuid) -> Result<(), ScriptRootError> {
         let label = self
             .scripts_directory

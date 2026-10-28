@@ -167,22 +167,18 @@ impl Sidebar {
                 "add-external-scripts-folder",
                 AppIcon::HardDrive,
                 dbflux_i18n::t!("sidebar.overlay.add_external_folder"),
-                |this, cx| this.add_external_scripts_folder(cx),
+                |this, cx| this.add_folder_to_workspace(cx),
                 cx,
             ),
         ];
 
         let state = self.app_state.read(cx);
-        let current = state
-            .scripts_directory()
-            .and_then(|dir| dir.workspace())
-            .map(|workspace| workspace.path().to_path_buf());
-        // ponytail: the ten latest; a "More…" picker if that ever runs short.
-        let recent: Vec<std::path::PathBuf> = state
-            .recent_folders()
-            .iter()
-            .map(|folder| folder.path.clone())
-            .filter(|path| Some(path) != current.as_ref())
+        let open = state.workspace_folders();
+        // ponytail: the ten latest; Open recent… (Ctrl+R) lists them all.
+        let recent: Vec<dbflux_core::RecentWorkspace> = state
+            .recent_workspaces()
+            .into_iter()
+            .filter(|recent| recent.folders != open)
             .take(10)
             .collect();
 
@@ -197,33 +193,20 @@ impl Sidebar {
             );
         }
 
-        let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
         let sidebar = cx.entity().clone();
-        for (index, path) in recent.into_iter().enumerate() {
-            let name = path
-                .file_name()
-                .map_or_else(|| path.to_string_lossy(), |name| name.to_string_lossy())
-                .to_string();
-            let parent = path.parent().unwrap_or(&path);
-            let detail = match home
-                .as_deref()
-                .and_then(|home| parent.strip_prefix(home).ok())
-            {
-                Some(relative) => std::path::Path::new("~").join(relative),
-                None => parent.to_path_buf(),
-            };
-            let item = MenuItem::new(name)
+        for (index, recent) in recent.into_iter().enumerate() {
+            let item = MenuItem::new(recent.name())
                 .icon(AppIcon::Folder)
-                .detail(detail.to_string_lossy().to_string());
+                .detail(recent.detail());
             let sidebar = sidebar.clone();
 
             items.push(
                 menu_row(("recent-folder", index), &item, false, cx)
                     .on_click(move |_, _, cx| {
-                        let path = path.clone();
+                        let recent = recent.clone();
                         sidebar.update(cx, |this, cx| {
                             this.close_add_menu(cx);
-                            this.open_workspace_folder(Some(path), cx);
+                            this.open_recent_workspace(recent, cx);
                         });
                     })
                     .into_any_element(),

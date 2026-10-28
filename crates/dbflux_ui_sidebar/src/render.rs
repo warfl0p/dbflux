@@ -44,7 +44,10 @@ impl Sidebar {
             .app_state
             .read(cx)
             .scripts_directory()
-            .and_then(|dir| dir.workspace())
+            .and_then(|dir| match dir.external_roots() {
+                [workspace] => Some(workspace),
+                _ => None,
+            })
             .map(|workspace| {
                 workspace.path().file_name().map_or_else(
                     || workspace.label(),

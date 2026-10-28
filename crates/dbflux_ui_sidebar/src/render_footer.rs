@@ -56,7 +56,10 @@ impl Sidebar {
         let workspace_path = match self.active_tab {
             SidebarTab::Scripts => state
                 .scripts_directory()
-                .and_then(|dir| dir.workspace())
+                .and_then(|dir| match dir.external_roots() {
+                    [workspace] => Some(workspace),
+                    _ => None,
+                })
                 .map(|workspace| workspace.path().to_string_lossy().to_string()),
             _ => None,
         };

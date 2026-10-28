@@ -151,7 +151,9 @@ impl Render for Workspace {
                     this.focus_handle.focus(window, cx);
                 }
                 this.handle_command(command_id, window, cx);
-                if refocus_parent {
+                // A command can reopen the palette as a picker (Open recent…,
+                // Open chart…), which keeps the focus it took.
+                if refocus_parent && !this.command_palette.read(cx).is_visible() {
                     this.focus_handle.focus(window, cx);
                 }
             });

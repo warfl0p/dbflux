@@ -16,10 +16,6 @@ impl Workspace {
                 self.open_go_to_file(window, cx);
                 Some(true)
             }
-            Command::OpenRecentFolder => {
-                self.open_recent_folder(window, cx);
-                Some(true)
-            }
 
             Command::ToggleTasks => {
                 self.toggle_tasks_panel(cx);
