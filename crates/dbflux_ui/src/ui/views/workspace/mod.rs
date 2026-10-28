@@ -1911,11 +1911,6 @@ impl Workspace {
                 dbflux_i18n::t!("palette.category.workspaces"),
             ),
             PaletteCommand::new(
-                "open_workspace_from_file",
-                dbflux_i18n::t!("palette.command.open_workspace_from_file.name"),
-                dbflux_i18n::t!("palette.category.workspaces"),
-            ),
-            PaletteCommand::new(
                 "add_folder_to_workspace",
                 dbflux_i18n::t!("palette.command.add_folder_to_workspace.name"),
                 dbflux_i18n::t!("palette.category.workspaces"),
@@ -1923,11 +1918,6 @@ impl Workspace {
             PaletteCommand::new(
                 "remove_folder_from_workspace",
                 dbflux_i18n::t!("palette.command.remove_folder_from_workspace.name"),
-                dbflux_i18n::t!("palette.category.workspaces"),
-            ),
-            PaletteCommand::new(
-                "save_workspace_as",
-                dbflux_i18n::t!("palette.command.save_workspace_as.name"),
                 dbflux_i18n::t!("palette.category.workspaces"),
             ),
             PaletteCommand::new(

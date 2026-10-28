@@ -369,11 +369,10 @@ fn command_icon(id: &str) -> AppIcon {
     match id {
         "new_query_tab" => AppIcon::Plus,
         "run_query" | "run_query_in_new_tab" => AppIcon::Play,
-        "save_query" | "save_file_as" | "save_workspace_as" => AppIcon::Save,
+        "save_query" | "save_file_as" => AppIcon::Save,
         "open_script_file"
         | "add_external_scripts_folder"
         | "open_recent"
-        | "open_workspace_from_file"
         | "add_folder_to_workspace"
         | "remove_folder_from_workspace"
         | "close_workspace" => AppIcon::Folder,
@@ -705,8 +704,9 @@ fn filter_items(items: &[PaletteItem], matcher: &SkimMatcherV2, query: &str) -> 
 }
 
 /// Orders `filtered` the way the list shows it: by section, then by score,
-/// then by kind. A mixed query keeps only its best
-/// [`MIXED_QUERY_COMMAND_LIMIT`] commands so every kind it matches shows.
+/// then by kind. A mixed query that also matches something other than a
+/// command keeps only its best [`MIXED_QUERY_COMMAND_LIMIT`] commands so
+/// every kind it matches shows.
 fn arrange_results(
     items: &[PaletteItem],
     mut filtered: Vec<FilteredItem>,
@@ -733,7 +733,15 @@ fn arrange_results(
 
     let (scope, text) = PaletteScope::parse(query);
 
-    if scope == PaletteScope::All && !text.trim().is_empty() {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "every `FilteredItem` index comes from `.enumerate()` over `items`"
+    )]
+    let matches_other_kinds = filtered
+        .iter()
+        .any(|filtered_item| !matches!(items[filtered_item.index], PaletteItem::Action { .. }));
+
+    if scope == PaletteScope::All && !text.trim().is_empty() && matches_other_kinds {
         let mut commands_kept = 0;
 
         #[expect(
@@ -1701,6 +1709,10 @@ mod tests {
 
         let commands_only = arrange_results(&items, filter_items(&items, &matcher, "> or"), "> or");
         assert_eq!(commands_only.len(), 4);
+
+        let only_commands_match =
+            arrange_results(&items, filter_items(&items, &matcher, "results"), "results");
+        assert_eq!(only_commands_match.len(), 4);
 
         let everything = arrange_results(&items, filter_items(&items, &matcher, ""), "");
         assert_eq!(everything.len(), 5);

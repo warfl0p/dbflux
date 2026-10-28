@@ -1588,13 +1588,11 @@ impl<M: InputModeKind> TextElement<M> {
             let statements = state.gutter_statements.clone()?;
             let text_len = state.text.len();
 
-            let active_rows = statements
-                .statement_at(state.cursor())
-                .map(|range| {
-                    let first = state.text.offset_to_point(range.start.min(text_len)).row;
-                    let last = state.text.offset_to_point(range.end.min(text_len)).row;
-                    first..last + 1
-                });
+            let active_rows = statements.statement_at(state.cursor()).map(|range| {
+                let first = state.text.offset_to_point(range.start.min(text_len)).row;
+                let last = state.text.offset_to_point(range.end.min(text_len)).row;
+                first..last + 1
+            });
 
             let start_rows: Vec<(usize, Range<usize>)> = statements
                 .ranges
@@ -2605,7 +2603,11 @@ fn clamp_right_aligned_cursor(
     }
 }
 
-fn block_advance(line: &crate::input::display_map::InputLine, byte_index: usize, space_width: Pixels) -> Pixels {
+fn block_advance(
+    line: &crate::input::display_map::InputLine,
+    byte_index: usize,
+    space_width: Pixels,
+) -> Pixels {
     let next = line
         .text
         .get(byte_index..)
@@ -4756,7 +4758,14 @@ mod tests {
 
     #[test]
     fn block_right_edge_clamps_to_painted_width() {
-        for width in [px(9.), block_advance(&crate::input::display_map::InputLine::from(ShapedLine::default()), 0, px(9.))] {
+        for width in [
+            px(9.),
+            block_advance(
+                &crate::input::display_map::InputLine::from(ShapedLine::default()),
+                0,
+                px(9.),
+            ),
+        ] {
             assert_eq!(
                 clamp_right_aligned_cursor(px(98.), px(100.), width, TextAlign::Right),
                 px(91.)
@@ -4776,7 +4785,14 @@ mod tests {
 
     #[test]
     fn empty_shaped_line_uses_space_advance_for_block() {
-        assert_eq!(block_advance(&crate::input::display_map::InputLine::from(ShapedLine::default()), 0, px(9.)), px(9.));
+        assert_eq!(
+            block_advance(
+                &crate::input::display_map::InputLine::from(ShapedLine::default()),
+                0,
+                px(9.)
+            ),
+            px(9.)
+        );
     }
 
     #[test]

@@ -1938,19 +1938,15 @@ impl AppState {
 
     /// Replaces the open workspace with `folders`, each canonical as
     /// `ScriptsDirectory::validate_external_root_against` returns it, and
-    /// records it in Open Recent under `file` when it was opened from one.
-    pub fn open_workspace(
-        &mut self,
-        folders: Vec<PathBuf>,
-        file: Option<PathBuf>,
-    ) -> Result<(), ScriptRootError> {
+    /// records it in Open Recent.
+    pub fn open_workspace(&mut self, folders: Vec<PathBuf>) -> Result<(), ScriptRootError> {
         self.close_workspace()?;
 
         for folder in folders {
             self.add_external_script_root(folder)?;
         }
 
-        self.record_recent_workspace(file);
+        self.record_recent_workspace();
         Ok(())
     }
 
@@ -1988,14 +1984,14 @@ impl AppState {
 
     /// Puts the open workspace first in Open Recent. A failed write only
     /// loses the entry, so it is logged rather than reported.
-    pub fn record_recent_workspace(&self, file: Option<PathBuf>) {
+    pub fn record_recent_workspace(&self) {
         let folders = self.workspace_folders();
         if folders.is_empty() {
             return;
         }
 
         let mut recents = self.recent_workspaces();
-        RecentWorkspace::push(&mut recents, RecentWorkspace { folders, file });
+        RecentWorkspace::push(&mut recents, RecentWorkspace { folders });
 
         if let Some(json) = serde_json::to_string(&recents).log_err() {
             self.storage_runtime
@@ -2003,14 +1999,6 @@ impl AppState {
                 .set(RECENT_WORKSPACES_KEY, &json)
                 .log_err();
         }
-    }
-
-    /// Writes the open workspace's folders to `file` and records it in
-    /// Open Recent under that file.
-    pub fn save_workspace_as(&self, file: PathBuf) -> Result<(), Box<DbError>> {
-        dbflux_core::WorkspaceFile::write(&file, &self.workspace_folders()).map_err(Box::new)?;
-        self.record_recent_workspace(Some(file));
-        Ok(())
     }
 
     /// Unregisters an external scripts folder. The folder and its files are

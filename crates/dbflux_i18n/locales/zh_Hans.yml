@@ -3994,14 +3994,10 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
-    open_workspace_from_file:
-      name: "Open workspace from file…"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
       name: "Remove folder from workspace…"
-    save_workspace_as:
-      name: "Save workspace as…"
     close_workspace:
       name: "Close workspace"
     show_dashboards_view:
@@ -4454,10 +4450,8 @@ settings:
       show_scripts_view: "显示脚本视图"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
-      open_workspace_from_file: "Open workspace from file…"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
-      save_workspace_as: "Save workspace as…"
       close_workspace: "Close workspace"
       show_dashboards_view: "显示仪表盘视图"
       open_mcp_approvals: 打开 MCP 审批
@@ -5183,9 +5177,6 @@ sidebar:
       one: 1 项
       many: "%{count} 项"
   dialog:
-    open_workspace_file_title: "Open Workspace from File"
-    save_workspace_title: "Save Workspace As"
-    workspace_file_filter: "DBFlux workspace"
     import_script_title: 导入脚本
     script_files_filter: 脚本文件
     add_external_folder_title: 添加外部脚本文件夹
@@ -5317,8 +5308,6 @@ sidebar:
         fetching_schema: "流水线：正在获取 Schema"
     listing_secret_paths: "正在列出密钥路径：%{name}"
   toast:
-    workspace_file_failed: "Could not use the workspace file: %{error}"
-    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "%{name} 已更新"
     edit_reconnect_body: 重新连接以将更改应用到当前会话。
     edit_reconnect_now: 立即重新连接

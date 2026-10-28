@@ -1160,80 +1160,17 @@ impl ScriptsDirectory {
     }
 }
 
-/// A saved workspace: the folders it opens, in the shape VS Code writes to a
-/// `.code-workspace` file, so DBFlux opens those files too.
-#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct WorkspaceFile {
-    pub folders: Vec<WorkspaceFileFolder>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct WorkspaceFileFolder {
-    pub path: String,
-}
-
-impl WorkspaceFile {
-    pub const EXTENSION: &'static str = "dbflux-workspace";
-    /// VS Code's extension, accepted when opening a workspace from a file.
-    pub const VSCODE_EXTENSION: &'static str = "code-workspace";
-
-    pub fn from_folders(folders: &[PathBuf]) -> Self {
-        Self {
-            folders: folders
-                .iter()
-                .map(|folder| WorkspaceFileFolder {
-                    path: folder.to_string_lossy().to_string(),
-                })
-                .collect(),
-        }
-    }
-
-    /// Reads the folders a workspace file lists. Relative paths resolve
-    /// against the file's own folder, as VS Code resolves them.
-    // ponytail: plain JSON only; a `.code-workspace` with comments or trailing
-    // commas fails to parse. Add a JSONC parser if users hit it.
-    pub fn read_folders(file: &Path) -> Result<Vec<PathBuf>, DbError> {
-        let text = fs::read_to_string(file).map_err(DbError::IoError)?;
-        let workspace: Self = serde_json::from_str(&text).map_err(|error| {
-            io_error(format!(
-                "Invalid workspace file {}: {error}",
-                file.display()
-            ))
-        })?;
-        let base = file.parent().unwrap_or(Path::new(""));
-
-        Ok(workspace
-            .folders
-            .into_iter()
-            .map(|folder| base.join(folder.path))
-            .collect())
-    }
-
-    pub fn write(file: &Path, folders: &[PathBuf]) -> Result<(), DbError> {
-        let json = serde_json::to_string_pretty(&Self::from_folders(folders))
-            .map_err(|error| io_error(error.to_string()))?;
-        fs::write(file, json).map_err(DbError::IoError)
-    }
-}
-
-/// A workspace opened before, as Open Recent lists it: its folders and, when
-/// it was saved, the workspace file.
+/// A workspace opened before, as Open Recent lists it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RecentWorkspace {
     pub folders: Vec<PathBuf>,
-    #[serde(default)]
-    pub file: Option<PathBuf>,
 }
 
 impl RecentWorkspace {
     pub const MAX: usize = 20;
 
-    /// The saved file's name, else the folder names.
+    /// The folder names.
     pub fn name(&self) -> String {
-        if let Some(stem) = self.file.as_deref().and_then(Path::file_stem) {
-            return stem.to_string_lossy().to_string();
-        }
-
         self.folders
             .iter()
             .map(|folder| {
@@ -1247,29 +1184,19 @@ impl RecentWorkspace {
             .join(", ")
     }
 
-    /// The saved file, else the folders, as full paths.
+    /// The folders as full paths.
     pub fn detail(&self) -> String {
-        match &self.file {
-            Some(file) => file.to_string_lossy().to_string(),
-            None => self
-                .folders
-                .iter()
-                .map(|folder| folder.to_string_lossy())
-                .collect::<Vec<_>>()
-                .join(", "),
-        }
+        self.folders
+            .iter()
+            .map(|folder| folder.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 
-    /// Puts `entry` first in `recents`, dropping the entry it repeats: the same
-    /// saved file, or the same folders when neither was saved under another
-    /// file. Keeps at most [`Self::MAX`] entries.
+    /// Puts `entry` first in `recents`, dropping the entry with the same
+    /// folders. Keeps at most [`Self::MAX`] entries.
     pub fn push(recents: &mut Vec<RecentWorkspace>, entry: RecentWorkspace) {
-        recents.retain(|recent| {
-            let same_file = recent.file.is_some() && recent.file == entry.file;
-            let same_folders = recent.folders == entry.folders
-                && (recent.file.is_none() || recent.file == entry.file);
-            !(same_file || same_folders)
-        });
+        recents.retain(|recent| recent.folders != entry.folders);
         recents.insert(0, entry);
         recents.truncate(Self::MAX);
     }
@@ -1647,40 +1574,14 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn workspace_file_round_trips_and_resolves_relative_folders() {
-        let dir = TempDir::new().unwrap();
-        let file = dir.path().join("team.dbflux-workspace");
-        let absolute = dir.path().join("queries");
-
-        WorkspaceFile::write(&file, std::slice::from_ref(&absolute)).unwrap();
-        assert_eq!(WorkspaceFile::read_folders(&file).unwrap(), vec![absolute]);
-
-        fs::write(&file, r#"{"folders":[{"path":"sub"}],"settings":{}}"#).unwrap();
-        assert_eq!(
-            WorkspaceFile::read_folders(&file).unwrap(),
-            vec![dir.path().join("sub")]
-        );
-    }
-
-    #[test]
     fn recent_workspaces_move_a_repeat_to_the_front() {
         let folder = |name: &str| RecentWorkspace {
             folders: vec![PathBuf::from(name)],
-            file: None,
         };
         let mut recents = vec![folder("/a"), folder("/b")];
 
         RecentWorkspace::push(&mut recents, folder("/b"));
         assert_eq!(recents, vec![folder("/b"), folder("/a")]);
-
-        // Saving the open folders replaces their unsaved entry.
-        let saved = RecentWorkspace {
-            folders: vec![PathBuf::from("/b")],
-            file: Some(PathBuf::from("/w/team.dbflux-workspace")),
-        };
-        RecentWorkspace::push(&mut recents, saved.clone());
-        assert_eq!(recents, vec![saved.clone(), folder("/a")]);
-        assert_eq!(saved.name(), "team");
 
         for index in 0..30 {
             RecentWorkspace::push(&mut recents, folder(&format!("/{index}")));

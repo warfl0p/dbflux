@@ -603,31 +603,6 @@ pub(crate) fn add_external_folder_dialog_title() -> String {
     dbflux_i18n::t!("sidebar.dialog.add_external_folder_title")
 }
 
-/// Translated title for the picker of a workspace file to open.
-pub(crate) fn open_workspace_file_dialog_title() -> String {
-    dbflux_i18n::t!("sidebar.dialog.open_workspace_file_title")
-}
-
-/// Translated title for the save dialog of Save workspace as….
-pub(crate) fn save_workspace_dialog_title() -> String {
-    dbflux_i18n::t!("sidebar.dialog.save_workspace_title")
-}
-
-/// Translated name of the workspace-file filter in file dialogs.
-pub(crate) fn workspace_file_filter() -> String {
-    dbflux_i18n::t!("sidebar.dialog.workspace_file_filter")
-}
-
-/// Translated toast reported when a workspace file cannot be read or written.
-pub(crate) fn workspace_file_failed_label(error: &str) -> String {
-    dbflux_i18n::t!("sidebar.toast.workspace_file_failed", error = error)
-}
-
-/// Translated toast for a workspace command that needs an open folder.
-pub(crate) fn no_workspace_open_label() -> String {
-    dbflux_i18n::t!("sidebar.toast.no_workspace_open")
-}
-
 /// Translated toast reported when an external scripts folder cannot be added.
 pub(crate) fn add_external_folder_failed_label(error: &str) -> String {
     dbflux_i18n::t!("sidebar.toast.add_external_folder_failed", error = error)

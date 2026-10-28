@@ -41,9 +41,8 @@ pub use config::{
     RecentWorkspace, RefreshPolicy, RefreshPolicySetting, RpcServiceKind, ScriptEntry,
     ScriptRootAvailability, ScriptsDirectory, ScriptsScan, ScriptsScanRequest, ServiceConfig,
     ServiceRpcApiContract, StartupFocus, SyntaxColorOverrides, SyntaxRole, ThemeSetting,
-    ToolPolicyConfig, TrustedClientConfig, WorkspaceFile, all_script_extensions,
-    driver_maps_differ, filter_entries, hook_script_path, is_openable_script, migrate_app_config,
-    parse_hex_color,
+    ToolPolicyConfig, TrustedClientConfig, all_script_extensions, driver_maps_differ,
+    filter_entries, hook_script_path, is_openable_script, migrate_app_config, parse_hex_color,
 };
 
 #[allow(deprecated)]

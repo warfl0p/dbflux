@@ -83,13 +83,11 @@ pub enum Command {
     /// Lists recent workspaces to reopen (VS Code's Open Recent).
     OpenRecentWorkspace,
     /// Opens the folders a saved workspace file lists.
-    OpenWorkspaceFromFile,
     /// Adds a folder to the open workspace.
     AddFolderToWorkspace,
     /// Lists the workspace folders to remove one.
     RemoveFolderFromWorkspace,
     /// Writes the open workspace's folders to a workspace file.
-    SaveWorkspaceAs,
     /// Closes every folder of the open workspace.
     CloseWorkspace,
     ToggleComment,
@@ -344,10 +342,8 @@ impl Command {
             "go_to_file" => Some(Command::GoToFile),
             "add_external_scripts_folder" => Some(Command::AddExternalScriptsFolder),
             "open_recent" => Some(Command::OpenRecentWorkspace),
-            "open_workspace_from_file" => Some(Command::OpenWorkspaceFromFile),
             "add_folder_to_workspace" => Some(Command::AddFolderToWorkspace),
             "remove_folder_from_workspace" => Some(Command::RemoveFolderFromWorkspace),
-            "save_workspace_as" => Some(Command::SaveWorkspaceAs),
             "close_workspace" => Some(Command::CloseWorkspace),
             "show_dashboards_view" => Some(Command::ShowDashboardsView),
             #[cfg(feature = "mcp")]
@@ -426,10 +422,8 @@ impl Command {
             Command::OpenScriptFile => "Open script file…",
             Command::AddExternalScriptsFolder => "Open folder…",
             Command::OpenRecentWorkspace => "Open recent…",
-            Command::OpenWorkspaceFromFile => "Open workspace from file…",
             Command::AddFolderToWorkspace => "Add folder to workspace…",
             Command::RemoveFolderFromWorkspace => "Remove folder from workspace…",
-            Command::SaveWorkspaceAs => "Save workspace as…",
             Command::CloseWorkspace => "Close workspace",
             Command::ToggleComment => "Toggle line comment",
             Command::FormatQuery => "Format query",
@@ -637,10 +631,8 @@ impl Command {
             Command::OpenScriptFile => "open_script_file",
             Command::AddExternalScriptsFolder => "add_external_scripts_folder",
             Command::OpenRecentWorkspace => "open_recent",
-            Command::OpenWorkspaceFromFile => "open_workspace_from_file",
             Command::AddFolderToWorkspace => "add_folder_to_workspace",
             Command::RemoveFolderFromWorkspace => "remove_folder_from_workspace",
-            Command::SaveWorkspaceAs => "save_workspace_as",
             Command::CloseWorkspace => "close_workspace",
             Command::ToggleComment => "toggle_comment",
             Command::FormatQuery => "format_query",
@@ -866,10 +858,8 @@ impl Command {
             Command::OpenScriptFile,
             Command::AddExternalScriptsFolder,
             Command::OpenRecentWorkspace,
-            Command::OpenWorkspaceFromFile,
             Command::AddFolderToWorkspace,
             Command::RemoveFolderFromWorkspace,
-            Command::SaveWorkspaceAs,
             Command::CloseWorkspace,
             Command::ToggleComment,
             Command::FormatQuery,
@@ -1071,10 +1061,8 @@ impl Command {
             | Command::OpenScriptFile
             | Command::AddExternalScriptsFolder
             | Command::OpenRecentWorkspace
-            | Command::OpenWorkspaceFromFile
             | Command::AddFolderToWorkspace
             | Command::RemoveFolderFromWorkspace
-            | Command::SaveWorkspaceAs
             | Command::CloseWorkspace
             | Command::ToggleComment
             | Command::FormatQuery => "Editor",
@@ -1226,10 +1214,8 @@ impl Command {
                 | Command::OpenScriptFile
                 | Command::AddExternalScriptsFolder
                 | Command::OpenRecentWorkspace
-                | Command::OpenWorkspaceFromFile
                 | Command::AddFolderToWorkspace
                 | Command::RemoveFolderFromWorkspace
-                | Command::SaveWorkspaceAs
                 | Command::CloseWorkspace
                 | Command::CloseCurrentTab
                 | Command::NextTab
@@ -1884,10 +1870,8 @@ mod tests {
             Command::ShowDashboardsView,
             Command::AddExternalScriptsFolder,
             Command::OpenRecentWorkspace,
-            Command::OpenWorkspaceFromFile,
             Command::AddFolderToWorkspace,
             Command::RemoveFolderFromWorkspace,
-            Command::SaveWorkspaceAs,
             Command::CloseWorkspace,
         ] {
             assert_eq!(Command::from_palette_id(command.id()), Some(command));

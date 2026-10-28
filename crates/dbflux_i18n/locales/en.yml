@@ -3994,14 +3994,10 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
-    open_workspace_from_file:
-      name: "Open workspace from file…"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
       name: "Remove folder from workspace…"
-    save_workspace_as:
-      name: "Save workspace as…"
     close_workspace:
       name: "Close workspace"
     show_dashboards_view:
@@ -4454,10 +4450,8 @@ settings:
       show_scripts_view: "Show scripts view"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
-      open_workspace_from_file: "Open workspace from file…"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
-      save_workspace_as: "Save workspace as…"
       close_workspace: "Close workspace"
       show_dashboards_view: "Show dashboards view"
       open_mcp_approvals: Open MCP approvals
@@ -5185,9 +5179,6 @@ sidebar:
       one: 1 item
       many: "%{count} items"
   dialog:
-    open_workspace_file_title: "Open Workspace from File"
-    save_workspace_title: "Save Workspace As"
-    workspace_file_filter: "DBFlux workspace"
     import_script_title: Import Script
     script_files_filter: Script files
     add_external_folder_title: Open Folder
@@ -5319,8 +5310,6 @@ sidebar:
         fetching_schema: "Pipeline: Fetching schema"
     listing_secret_paths: "Listing secret paths: %{name}"
   toast:
-    workspace_file_failed: "Could not use the workspace file: %{error}"
-    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "'%{name}' updated"
     edit_reconnect_body: Reconnect to apply the changes to the live session.
     edit_reconnect_now: Reconnect now

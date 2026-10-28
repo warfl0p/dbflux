@@ -21,15 +21,11 @@ impl Workspace {
                 Some(true)
             }
             Command::AddExternalScriptsFolder
-            | Command::OpenWorkspaceFromFile
             | Command::AddFolderToWorkspace
-            | Command::SaveWorkspaceAs
             | Command::CloseWorkspace => {
                 self.reveal_sidebar_view(SidebarTab::Scripts, cx);
                 self.sidebar.update(cx, |sidebar, cx| match cmd {
-                    Command::OpenWorkspaceFromFile => sidebar.open_workspace_from_file(cx),
                     Command::AddFolderToWorkspace => sidebar.add_folder_to_workspace(cx),
-                    Command::SaveWorkspaceAs => sidebar.save_workspace_as(cx),
                     Command::CloseWorkspace => sidebar.close_workspace(cx),
                     _ => sidebar.open_workspace_folder(cx),
                 });
