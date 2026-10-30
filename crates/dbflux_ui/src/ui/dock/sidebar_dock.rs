@@ -348,18 +348,19 @@ impl Render for SidebarDock {
             .when_some(resize_listeners, |el, listeners| el.child(listeners))
             .when(!is_collapsed, |el| {
                 el.child(
-                    Island::new()
-                        .size_full()
-                        .child(
-                            div()
-                                .h_full()
-                                .w_full()
-                                .min_w_0()
-                                .overflow_hidden()
-                                .child(self.sidebar.clone()),
-                        )
-                        .child(self.render_grip(window, cx)),
+                    Island::new().size_full().child(
+                        div()
+                            .h_full()
+                            .w_full()
+                            .min_w_0()
+                            .overflow_hidden()
+                            .child(self.sidebar.clone()),
+                    ),
                 )
+                // Outside the sidebar, so its scrollbar at the right edge
+                // keeps its own drag; deferred, so it paints and hit-tests
+                // above the content panel it overlaps.
+                .child(deferred(self.render_grip(window, cx)))
             })
     }
 }
@@ -373,7 +374,7 @@ impl SidebarDock {
             .absolute()
             .top_0()
             .bottom_0()
-            .right_0()
+            .right(-GRIP_WIDTH)
             .w(GRIP_WIDTH)
             .cursor_col_resize()
             .hover(|el| el.bg(cx.theme().accent.opacity(0.3)))
