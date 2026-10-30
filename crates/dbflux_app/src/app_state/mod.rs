@@ -1967,22 +1967,18 @@ impl AppState {
 
     /// Replaces the open workspace with `folders`, each canonical as
     /// `ScriptsDirectory::validate_external_root_against` returns it, and
-    /// records it in Open Recent under `file` when it was opened from one.
-    pub fn open_workspace(
-        &mut self,
-        folders: Vec<PathBuf>,
-        file: Option<PathBuf>,
-    ) -> Result<(), ScriptRootError> {
-        // The workspace being replaced is recorded too, so one opened before
-        // Open Recent existed can be reopened from the list.
-        self.record_recent_workspace(None);
+    /// records it in Open Recent.
+    pub fn open_workspace(&mut self, folders: Vec<PathBuf>) -> Result<(), ScriptRootError> {
+        // The workspace being replaced is recorded too, so one restored from
+        // `script_roots` before Open Recent existed can be reopened from the list.
+        self.record_recent_workspace();
         self.close_workspace()?;
 
         for folder in folders {
             self.add_external_script_root(folder)?;
         }
 
-        self.record_recent_workspace(file);
+        self.record_recent_workspace();
         Ok(())
     }
 
@@ -2020,29 +2016,43 @@ impl AppState {
 
     /// Puts the open workspace first in Open Recent. A failed write only
     /// loses the entry, so it is logged rather than reported.
-    pub fn record_recent_workspace(&self, file: Option<PathBuf>) {
+    pub fn record_recent_workspace(&self) {
         let folders = self.workspace_folders();
         if folders.is_empty() {
             return;
         }
 
         let mut recents = self.recent_workspaces();
-        RecentWorkspace::push(&mut recents, RecentWorkspace { folders, file });
-
-        if let Some(json) = serde_json::to_string(&recents).log_err() {
-            self.storage_runtime
-                .ui_state()
-                .set(RECENT_WORKSPACES_KEY, &json)
-                .log_err();
-        }
+        RecentWorkspace::push(&mut recents, RecentWorkspace { folders });
+        self.save_recent_workspaces(&recents).log_err();
     }
 
-    /// Writes the open workspace's folders to `file` and records it in
-    /// Open Recent under that file.
-    pub fn save_workspace_as(&self, file: PathBuf) -> Result<(), Box<DbError>> {
-        dbflux_core::WorkspaceFile::write(&file, &self.workspace_folders()).map_err(Box::new)?;
-        self.record_recent_workspace(Some(file));
-        Ok(())
+    /// Drops one entry from Open Recent, as its remove button in VS Code.
+    pub fn remove_recent_workspace(
+        &self,
+        folders: &[PathBuf],
+    ) -> Result<(), dbflux_storage::error::StorageError> {
+        let mut recents = self.recent_workspaces();
+        recents.retain(|recent| recent.folders != folders);
+        self.save_recent_workspaces(&recents)
+    }
+
+    /// Empties Open Recent, as VS Code's Clear Recently Opened.
+    pub fn clear_recent_workspaces(&self) -> Result<(), dbflux_storage::error::StorageError> {
+        self.storage_runtime
+            .ui_state()
+            .delete(RECENT_WORKSPACES_KEY)
+    }
+
+    fn save_recent_workspaces(
+        &self,
+        recents: &[RecentWorkspace],
+    ) -> Result<(), dbflux_storage::error::StorageError> {
+        let json = serde_json::to_string(recents)
+            .map_err(|error| dbflux_storage::error::StorageError::Data(error.to_string()))?;
+        self.storage_runtime
+            .ui_state()
+            .set(RECENT_WORKSPACES_KEY, &json)
     }
 
     /// Unregisters an external scripts folder. The folder and its files are

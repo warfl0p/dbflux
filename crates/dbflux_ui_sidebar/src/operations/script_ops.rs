@@ -32,47 +32,10 @@ fn script_root_error_kind(error: &dbflux_app::app_state::ScriptRootError) -> Err
 
 /// How a workspace change treats the folders open before it.
 enum WorkspaceChange {
-    /// The new folders replace them; `file` is the workspace file they came
-    /// from, recorded in Open Recent.
-    Replace { file: Option<std::path::PathBuf> },
+    /// The new folders replace them.
+    Replace,
     /// The new folders join them.
     Add,
-}
-
-/// Reads the folders `file` lists and opens them as the workspace.
-async fn open_workspace_file(
-    app_state: Entity<AppStateEntity>,
-    file: std::path::PathBuf,
-    cx: &mut gpui::AsyncApp,
-) {
-    let read = cx
-        .background_executor()
-        .spawn({
-            let file = file.clone();
-            async move { dbflux_core::WorkspaceFile::read_folders(&file) }
-        })
-        .await;
-
-    match read {
-        Ok(folders) => {
-            open_workspace_folders(
-                app_state,
-                folders,
-                WorkspaceChange::Replace { file: Some(file) },
-                cx,
-            )
-            .await
-        }
-        Err(error) => cx.update(|cx| {
-            report_error(
-                UserFacingError::new(
-                    ErrorKind::User,
-                    crate::labels::workspace_file_failed_label(&error.to_string()),
-                ),
-                cx,
-            )
-        }),
-    }
 }
 
 /// Validates `folders` off the UI thread (canonicalizing, overlap checks),
@@ -98,7 +61,7 @@ async fn open_workspace_folders(
         return;
     };
     let kept = match change {
-        WorkspaceChange::Replace { .. } => Vec::new(),
+        WorkspaceChange::Replace => Vec::new(),
         WorkspaceChange::Add => open_folders,
     };
 
@@ -132,7 +95,7 @@ async fn open_workspace_folders(
             report_error(
                 UserFacingError::new(
                     ErrorKind::User,
-                    crate::labels::add_external_folder_failed_label(&error),
+                    crate::labels::open_folder_failed_label(&error),
                 ),
                 cx,
             );
@@ -144,11 +107,11 @@ async fn open_workspace_folders(
 
         let opened = app_state.update(cx, |state, cx| {
             let opened = match change {
-                WorkspaceChange::Replace { file } => state.open_workspace(validated, file),
+                WorkspaceChange::Replace => state.open_workspace(validated),
                 WorkspaceChange::Add => validated
                     .into_iter()
                     .try_for_each(|path| state.add_external_script_root(path).map(|_| ()))
-                    .map(|()| state.record_recent_workspace(None)),
+                    .map(|()| state.record_recent_workspace()),
             };
             cx.emit(AppStateChanged);
             opened
@@ -159,7 +122,7 @@ async fn open_workspace_folders(
             Err(error) => report_error(
                 UserFacingError::new(
                     script_root_error_kind(&error),
-                    crate::labels::add_external_folder_failed_label(&error.to_string()),
+                    crate::labels::open_folder_failed_label(&error.to_string()),
                 ),
                 cx,
             ),
@@ -178,19 +141,23 @@ fn report_reveal_failure(error: std::io::Error, cx: &mut App) {
 }
 
 impl Sidebar {
+    /// Where a new or imported script goes: next to the selected entry, else
+    /// the open workspace folder, as VS Code's explorer does. Without the
+    /// fallback it would land in the managed root, which the tree hides while
+    /// a workspace is open.
     fn selected_scripts_parent_dir(&self, cx: &App) -> Option<std::path::PathBuf> {
-        let entry = self.scripts_tree_state.read(cx).selected_entry()?;
-        let item_id = entry.item().id.to_string();
-        let node_id = parse_node_id(&item_id)?;
+        let selected = self
+            .scripts_tree_state
+            .read(cx)
+            .selected_entry()
+            .and_then(|entry| Self::parent_dir_from_item_id(entry.item().id.as_ref()));
 
-        match node_id {
-            SchemaNodeId::ScriptsFolder { path: Some(p) }
-            | SchemaNodeId::ScriptsRoot { path: p } => Some(std::path::PathBuf::from(p)),
-            SchemaNodeId::ScriptFile { path } => std::path::Path::new(&path)
-                .parent()
-                .map(|p| p.to_path_buf()),
-            _ => None,
-        }
+        selected.or_else(|| {
+            self.app_state
+                .read(cx)
+                .scripts_directory()
+                .map(|dir| dir.default_root().to_path_buf())
+        })
     }
 
     fn default_script_extension(&self, cx: &App) -> &'static str {
@@ -350,7 +317,7 @@ impl Sidebar {
     /// Asks for a folder and opens it as the workspace, in place of the
     /// folders open before (VS Code's Open Folder…).
     pub fn open_workspace_folder(&mut self, cx: &mut Context<Self>) {
-        self.pick_workspace_folder(WorkspaceChange::Replace { file: None }, cx);
+        self.pick_workspace_folder(WorkspaceChange::Replace, cx);
     }
 
     /// Asks for a folder and adds it to the open workspace.
@@ -359,7 +326,10 @@ impl Sidebar {
     }
 
     fn pick_workspace_folder(&mut self, change: WorkspaceChange, cx: &mut Context<Self>) {
-        let title = crate::labels::add_external_folder_dialog_title();
+        let title = match change {
+            WorkspaceChange::Replace => crate::labels::open_folder_dialog_title(),
+            WorkspaceChange::Add => crate::labels::add_folder_to_workspace_dialog_title(),
+        };
         let app_state = self.app_state.clone();
 
         cx.spawn(async move |_this, cx| {
@@ -380,40 +350,7 @@ impl Sidebar {
         .detach();
     }
 
-    /// Asks for a `.dbflux-workspace` (or VS Code `.code-workspace`) file and
-    /// opens the folders it lists.
-    pub fn open_workspace_from_file(&mut self, cx: &mut Context<Self>) {
-        let title = crate::labels::open_workspace_file_dialog_title();
-        let filter = crate::labels::workspace_file_filter();
-        let app_state = self.app_state.clone();
-
-        cx.spawn(async move |_this, cx| {
-            let Some(file) = file_dialog::pick_existing_file(cx, async {
-                rfd::AsyncFileDialog::new()
-                    .set_title(title.as_str())
-                    .add_filter(
-                        filter.as_str(),
-                        &[
-                            dbflux_core::WorkspaceFile::EXTENSION,
-                            dbflux_core::WorkspaceFile::VSCODE_EXTENSION,
-                        ],
-                    )
-                    .pick_file()
-                    .await
-                    .map(|handle| handle.path().to_path_buf())
-            })
-            .await
-            else {
-                return;
-            };
-
-            open_workspace_file(app_state, file, cx).await;
-        })
-        .detach();
-    }
-
-    /// Opens a workspace Open Recent lists: its saved file when it has one,
-    /// so later edits to the file are picked up, else its folders.
+    /// Opens a workspace Open Recent lists, in place of the open one.
     pub fn open_recent_workspace(
         &mut self,
         recent: dbflux_core::RecentWorkspace,
@@ -421,69 +358,8 @@ impl Sidebar {
     ) {
         let app_state = self.app_state.clone();
 
-        cx.spawn(async move |_this, cx| match recent.file {
-            Some(file) => open_workspace_file(app_state, file, cx).await,
-            None => {
-                open_workspace_folders(
-                    app_state,
-                    recent.folders,
-                    WorkspaceChange::Replace { file: None },
-                    cx,
-                )
-                .await
-            }
-        })
-        .detach();
-    }
-
-    /// Asks where to save the open workspace and writes its folder list there.
-    pub fn save_workspace_as(&mut self, cx: &mut Context<Self>) {
-        let folders = self.app_state.read(cx).workspace_folders();
-        let Some(first) = folders.first() else {
-            report_error(
-                UserFacingError::new(ErrorKind::User, crate::labels::no_workspace_open_label()),
-                cx,
-            );
-            return;
-        };
-
-        let directory = first.parent().unwrap_or(first).to_path_buf();
-        let suggested_name = format!(
-            "{}.{}",
-            first.file_name().map_or_else(
-                || "workspace".to_string(),
-                |name| name.to_string_lossy().to_string()
-            ),
-            dbflux_core::WorkspaceFile::EXTENSION
-        );
-        let title = crate::labels::save_workspace_dialog_title();
-        let filter = crate::labels::workspace_file_filter();
-        let app_state = self.app_state.clone();
-
         cx.spawn(async move |_this, cx| {
-            let Some(file) = rfd::AsyncFileDialog::new()
-                .set_title(title.as_str())
-                .set_directory(&directory)
-                .set_file_name(&suggested_name)
-                .add_filter(filter.as_str(), &[dbflux_core::WorkspaceFile::EXTENSION])
-                .save_file()
-                .await
-                .map(|handle| handle.path().to_path_buf())
-            else {
-                return;
-            };
-
-            cx.update(|cx| {
-                if let Err(error) = app_state.read(cx).save_workspace_as(file) {
-                    report_error(
-                        UserFacingError::new(
-                            ErrorKind::User,
-                            crate::labels::workspace_file_failed_label(&error.to_string()),
-                        ),
-                        cx,
-                    );
-                }
-            });
+            open_workspace_folders(app_state, recent.folders, WorkspaceChange::Replace, cx).await
         })
         .detach();
     }
@@ -491,6 +367,9 @@ impl Sidebar {
     /// Closes the workspace. The folders and their files are never touched.
     pub fn close_workspace(&mut self, cx: &mut Context<Self>) {
         let closed = self.app_state.update(cx, |state, cx| {
+            // Recorded first so the closed workspace can be reopened from
+            // Open Recent, as VS Code keeps a closed folder there.
+            state.record_recent_workspace();
             let closed = state.close_workspace();
             cx.emit(AppStateChanged);
             closed
@@ -500,34 +379,21 @@ impl Sidebar {
             report_error(
                 UserFacingError::new(
                     script_root_error_kind(&error),
-                    crate::labels::remove_external_folder_failed_label(&error.to_string()),
+                    crate::labels::close_workspace_failed_label(&error.to_string()),
                 ),
                 cx,
             );
         }
     }
 
-    /// Removes the workspace folder registered at `path`.
+    /// Removes the workspace folder registered at `path`. The folder and its
+    /// files are never touched.
     pub fn remove_workspace_folder(&mut self, path: &std::path::Path, cx: &mut Context<Self>) {
-        let item_id = SchemaNodeId::ScriptsRoot {
-            path: path.to_string_lossy().to_string(),
-        }
-        .to_string();
-        self.remove_external_scripts_folder(&item_id, cx);
-    }
-
-    /// Unregisters the external scripts folder `item_id` names. The folder and
-    /// its files are never touched.
-    pub(crate) fn remove_external_scripts_folder(&mut self, item_id: &str, cx: &mut Context<Self>) {
-        let Some(SchemaNodeId::ScriptsRoot { path }) = parse_node_id(item_id) else {
-            return;
-        };
-
         let Some(id) = self
             .app_state
             .read(cx)
             .scripts_directory()
-            .and_then(|dir| dir.external_root_at(std::path::Path::new(&path)))
+            .and_then(|dir| dir.external_root_at(path))
             .map(dbflux_core::MountedScriptRoot::id)
         else {
             return;
@@ -536,7 +402,7 @@ impl Sidebar {
         let removed = self.app_state.update(cx, |state, cx| {
             let removed = state.remove_external_script_root(id);
             if removed.is_ok() {
-                state.record_recent_workspace(None);
+                state.record_recent_workspace();
                 cx.emit(AppStateChanged);
             }
             removed
@@ -546,7 +412,7 @@ impl Sidebar {
             report_error(
                 UserFacingError::new(
                     script_root_error_kind(&error),
-                    crate::labels::remove_external_folder_failed_label(&error.to_string()),
+                    crate::labels::remove_workspace_folder_failed_label(&error.to_string()),
                 ),
                 cx,
             );

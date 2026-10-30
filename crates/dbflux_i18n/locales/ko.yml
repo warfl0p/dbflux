@@ -3898,6 +3898,7 @@ palette:
     navigate: "이동"
     run: "실행"
     open_in_new_tab: "새 탭에서 열기"
+    remove_from_recent: "제거"
     commands_only: "명령만"
     tables_only: "테이블만"
   connection:
@@ -3938,8 +3939,8 @@ palette:
       name: 다른 이름으로 저장…
     open_script_file:
       name: 스크립트 파일 열기…
-    add_external_scripts_folder:
-      name: "외부 스크립트 폴더 추가…"
+    open_folder:
+      name: "폴더 열기…"
     toggle_comment:
       name: 주석 전환
     format_query:
@@ -4000,14 +4001,12 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
-    open_workspace_from_file:
-      name: "Open workspace from file…"
+    clear_recently_opened:
+      name: "최근에 연 항목 지우기"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
       name: "Remove folder from workspace…"
-    save_workspace_as:
-      name: "Save workspace as…"
     close_workspace:
       name: "Close workspace"
     show_dashboards_view:
@@ -4038,6 +4037,8 @@ palette:
       name: "데이터베이스 덤프 분석…"
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "최근에 연 항목을 지웠습니다"
+    recent_update_failed: "최근에 연 항목을 업데이트하지 못했습니다: %{error}"
   category:
     workspaces: "Workspaces"
     editor: 편집기
@@ -4398,7 +4399,7 @@ settings:
       save_query: 저장
       save_file_as: 다른 이름으로 저장…
       open_script_file: 스크립트 파일 열기…
-      add_external_scripts_folder: "외부 스크립트 폴더 추가…"
+      open_folder: "폴더 열기…"
       toggle_comment: 주석 전환
       format_query: 쿼리 서식 지정
       export_results: 결과 내보내기
@@ -4461,10 +4462,9 @@ settings:
       show_scripts_view: "스크립트 보기 표시"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
-      open_workspace_from_file: "Open workspace from file…"
+      clear_recently_opened: "최근에 연 항목 지우기"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
-      save_workspace_as: "Save workspace as…"
       close_workspace: "Close workspace"
       show_dashboards_view: "대시보드 보기 표시"
       open_mcp_approvals: MCP 승인 열기
@@ -5191,12 +5191,10 @@ sidebar:
       one: 1개 항목
       many: "%{count}개 항목"
   dialog:
-    open_workspace_file_title: "Open Workspace from File"
-    save_workspace_title: "Save Workspace As"
-    workspace_file_filter: "DBFlux workspace"
     import_script_title: 스크립트 가져오기
     script_files_filter: 스크립트 파일
-    add_external_folder_title: 외부 스크립트 폴더 추가
+    open_folder_title: 폴더 열기
+    add_folder_to_workspace_title: 작업 영역에 폴더 추가
   empty:
     connections_title: 아직 연결이 없습니다
     connections_hint: +를 눌러 새 연결을 추가하세요
@@ -5258,7 +5256,7 @@ sidebar:
     rename_ellipsis: 이름 바꾸기…
     copy_metric_id: 지표 ID 복사
     copy_inspector_id: 검사기 ID 복사
-    remove_external_folder: 사이드바에서 제거
+    remove_folder_from_workspace: 작업 영역에서 폴더 제거
     refresh_scripts: 새로 고침
     unavailable_reason: "사용할 수 없음: %{reason}"
   overlay:
@@ -5280,7 +5278,7 @@ sidebar:
     skipped_tables:
       one: 활성 프로필/데이터베이스 외부의 1개 테이블을 건너뛰었습니다
       many: "활성 프로필/데이터베이스 외부의 %{count}개 테이블을 건너뛰었습니다"
-    add_external_folder: 외부 폴더 추가
+    add_folder_to_workspace: "작업 영역에 폴더 추가…"
     recent_folders: 최근 폴더
   status:
     connected: "%{count}개 연결됨"
@@ -5288,7 +5286,7 @@ sidebar:
     no_connections: "아직 연결이 없습니다"
     connection_summary: "%{connected} 연결됨 · %{idle} 유휴"
     profile_fallback_name: 연결
-    external_folders: "외부 폴더 %{count}개"
+    workspace_folders: "작업 영역 폴더 %{count}개"
     unavailable_folders: "%{count}개 사용할 수 없음"
   tabs:
     dashboards: "대시보드"
@@ -5326,8 +5324,6 @@ sidebar:
         fetching_schema: "파이프라인: 스키마 가져오는 중"
     listing_secret_paths: "시크릿 경로 나열 중: %{name}"
   toast:
-    workspace_file_failed: "Could not use the workspace file: %{error}"
-    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "'%{name}'이(가) 업데이트되었습니다"
     edit_reconnect_body: 변경 사항을 라이브 세션에 적용하려면 다시 연결하세요.
     edit_reconnect_now: 지금 다시 연결
@@ -5373,8 +5369,9 @@ sidebar:
       config: "외부 드라이버 '%{driver_id}'을(를) 사용할 수 없습니다. 서비스 '%{socket_id}'의 구성이 올바르지 않습니다: %{summary}"
       launch: "외부 드라이버 '%{driver_id}'을(를) 사용할 수 없습니다. 서비스 '%{socket_id}'이(가) 시작되지 않았습니다: %{summary}"
       probe: "외부 드라이버 '%{driver_id}'을(를) 사용할 수 없습니다. 서비스 '%{socket_id}'이(가) 드라이버 프로브 중에 실패했습니다: %{summary}"
-    add_external_folder_failed: "폴더를 추가하지 못했습니다: %{error}"
-    remove_external_folder_failed: "폴더를 제거하지 못했습니다: %{error}"
+    open_folder_failed: "폴더를 열지 못했습니다: %{error}"
+    remove_workspace_folder_failed: "작업 영역에서 폴더를 제거하지 못했습니다: %{error}"
+    close_workspace_failed: "작업 영역을 닫지 못했습니다: %{error}"
     script_operation_failed: "스크립트 작업에 실패했습니다: %{error}"
     list_secret_paths_failed: "시크릿 경로를 나열하지 못했습니다: %{error}"
   tree:

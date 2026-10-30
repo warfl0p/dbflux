@@ -919,6 +919,12 @@ fn command_palette_layer() -> KeymapLayer {
         Command::RunQueryInNewTab,
     );
     layer.bind(KeyChord::new("escape", Modifiers::none()), Command::Cancel);
+    // Removes the selected Open recent… entry. The search input takes Delete,
+    // Shift+Delete and Ctrl+Delete, so the chord adds both modifiers.
+    layer.bind(
+        KeyChord::new("delete", Modifiers::ctrl_shift()),
+        Command::Delete,
+    );
 
     layer
 }

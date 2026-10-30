@@ -3898,6 +3898,7 @@ palette:
     navigate: "move"
     run: "run"
     open_in_new_tab: "open in new tab"
+    remove_from_recent: "remove"
     commands_only: "commands only"
     tables_only: "tables only"
   connection:
@@ -3938,7 +3939,7 @@ palette:
       name: Save file as…
     open_script_file:
       name: Open script file…
-    add_external_scripts_folder:
+    open_folder:
       name: "Open folder…"
     toggle_comment:
       name: Toggle line comment
@@ -4000,14 +4001,12 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
-    open_workspace_from_file:
-      name: "Open workspace from file…"
+    clear_recently_opened:
+      name: "Clear recently opened"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
       name: "Remove folder from workspace…"
-    save_workspace_as:
-      name: "Save workspace as…"
     close_workspace:
       name: "Close workspace"
     show_dashboards_view:
@@ -4038,6 +4037,8 @@ palette:
       name: "Analyze database dump…"
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "Cleared recently opened"
+    recent_update_failed: "Could not update recently opened: %{error}"
   category:
     workspaces: "Workspaces"
     editor: Editor
@@ -4398,7 +4399,7 @@ settings:
       save_query: Save
       save_file_as: Save file as…
       open_script_file: Open script file…
-      add_external_scripts_folder: "Open folder…"
+      open_folder: "Open folder…"
       toggle_comment: Toggle line comment
       format_query: Format query
       export_results: Export results
@@ -4461,10 +4462,9 @@ settings:
       show_scripts_view: "Show scripts view"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
-      open_workspace_from_file: "Open workspace from file…"
+      clear_recently_opened: "Clear recently opened"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
-      save_workspace_as: "Save workspace as…"
       close_workspace: "Close workspace"
       show_dashboards_view: "Show dashboards view"
       open_mcp_approvals: Open MCP approvals
@@ -5192,12 +5192,10 @@ sidebar:
       one: 1 item
       many: "%{count} items"
   dialog:
-    open_workspace_file_title: "Open Workspace from File"
-    save_workspace_title: "Save Workspace As"
-    workspace_file_filter: "DBFlux workspace"
     import_script_title: Import Script
     script_files_filter: Script files
-    add_external_folder_title: Open Folder
+    open_folder_title: Open Folder
+    add_folder_to_workspace_title: Add Folder to Workspace
   empty:
     connections_title: No connections yet
     connections_hint: Use + to add a new connection
@@ -5259,7 +5257,7 @@ sidebar:
     rename_ellipsis: Rename…
     copy_metric_id: Copy metric ID
     copy_inspector_id: Copy inspector ID
-    remove_external_folder: Remove from sidebar
+    remove_folder_from_workspace: Remove folder from workspace
     refresh_scripts: Refresh
     unavailable_reason: "Unavailable: %{reason}"
   overlay:
@@ -5281,7 +5279,7 @@ sidebar:
     skipped_tables:
       one: 1 table outside the active profile/database was skipped
       many: "%{count} tables outside the active profile/database were skipped"
-    add_external_folder: "Add folder to workspace…"
+    add_folder_to_workspace: "Add folder to workspace…"
     recent_folders: Recent folders
   status:
     connected: "%{count} connected"
@@ -5289,7 +5287,7 @@ sidebar:
     no_connections: "No connections yet"
     connection_summary: "%{connected} connected · %{idle} idle"
     profile_fallback_name: connection
-    external_folders: "%{count} external folders"
+    workspace_folders: "%{count} folders in workspace"
     unavailable_folders: "%{count} unavailable"
   tabs:
     dashboards: "Dashboards"
@@ -5327,8 +5325,6 @@ sidebar:
         fetching_schema: "Pipeline: Fetching schema"
     listing_secret_paths: "Listing secret paths: %{name}"
   toast:
-    workspace_file_failed: "Could not use the workspace file: %{error}"
-    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "'%{name}' updated"
     edit_reconnect_body: Reconnect to apply the changes to the live session.
     edit_reconnect_now: Reconnect now
@@ -5374,8 +5370,9 @@ sidebar:
       config: "External driver '%{driver_id}' is unavailable because service '%{socket_id}' has an invalid configuration: %{summary}"
       launch: "External driver '%{driver_id}' is unavailable because service '%{socket_id}' did not start: %{summary}"
       probe: "External driver '%{driver_id}' is unavailable because service '%{socket_id}' failed during driver probe: %{summary}"
-    add_external_folder_failed: "Could not add the folder: %{error}"
-    remove_external_folder_failed: "Could not remove the folder: %{error}"
+    open_folder_failed: "Could not open the folder: %{error}"
+    remove_workspace_folder_failed: "Could not remove the folder from the workspace: %{error}"
+    close_workspace_failed: "Could not close the workspace: %{error}"
     script_operation_failed: "The script operation failed: %{error}"
     list_secret_paths_failed: "Failed to list secret paths: %{error}"
   tree:

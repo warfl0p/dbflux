@@ -16,20 +16,18 @@ impl Workspace {
                 self.open_recent_workspaces(window, cx);
                 Some(true)
             }
+            Command::ClearRecentlyOpened => {
+                self.clear_recently_opened(cx);
+                Some(true)
+            }
             Command::RemoveFolderFromWorkspace => {
                 self.open_remove_workspace_folder(window, cx);
                 Some(true)
             }
-            Command::AddExternalScriptsFolder
-            | Command::OpenWorkspaceFromFile
-            | Command::AddFolderToWorkspace
-            | Command::SaveWorkspaceAs
-            | Command::CloseWorkspace => {
+            Command::OpenFolder | Command::AddFolderToWorkspace | Command::CloseWorkspace => {
                 self.reveal_sidebar_view(SidebarTab::Scripts, cx);
                 self.sidebar.update(cx, |sidebar, cx| match cmd {
-                    Command::OpenWorkspaceFromFile => sidebar.open_workspace_from_file(cx),
                     Command::AddFolderToWorkspace => sidebar.add_folder_to_workspace(cx),
-                    Command::SaveWorkspaceAs => sidebar.save_workspace_as(cx),
                     Command::CloseWorkspace => sidebar.close_workspace(cx),
                     _ => sidebar.open_workspace_folder(cx),
                 });

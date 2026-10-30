@@ -28,6 +28,7 @@ DBFlux는 계층화되고 컨텍스트를 인식하는 키맵을 사용합니다
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | 다음 / 이전 탭 |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9` | N번째 탭으로 전환 |
 | `Ctrl+o` / `Cmd+o` | 스크립트 파일 열기 |
+| `Ctrl+r` | 최근 작업 영역 열기. `Ctrl+r`을 직접 쓰는 보기에서는 그 보기의 동작이 우선합니다 |
 | `Ctrl+Enter` / `Cmd+Enter` | 쿼리 실행 |
 | `Ctrl+Shift+Enter` / `Cmd+Shift+Enter` | 새 탭에서 쿼리 실행 |
 | `Escape` | 취소 / 모달 닫기 |

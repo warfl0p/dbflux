@@ -29,6 +29,7 @@ the next click. A focused button, checkbox or list row takes `Enter` and
 | `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` | Move the active tab left / right |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9` | Switch to tab N |
 | `Ctrl+o` / `Cmd+o` | Open script file |
+| `Ctrl+r` | Open a recent workspace; a view that binds `Ctrl+r` itself keeps it |
 | `Ctrl+Enter` / `Cmd+Enter` | Run query |
 | `Ctrl+Shift+Enter` / `Cmd+Shift+Enter` | Run query in new tab |
 | `Escape` | Cancel / close modal |

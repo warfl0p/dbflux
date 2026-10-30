@@ -107,6 +107,17 @@ pub enum ResourceItem {
 }
 
 impl PaletteItem {
+    /// An Open recent… entry, which the user can remove from the list.
+    fn is_recent_workspace(&self) -> bool {
+        matches!(
+            self,
+            Self::Workspace {
+                action: WorkspaceAction::OpenRecent(_),
+                ..
+            }
+        )
+    }
+
     /// Text searched by `SkimMatcherV2`.
     ///
     /// Each kind arm embeds the English proxy word (so the filter always
@@ -369,11 +380,11 @@ fn command_icon(id: &str) -> AppIcon {
     match id {
         "new_query_tab" => AppIcon::Plus,
         "run_query" | "run_query_in_new_tab" => AppIcon::Play,
-        "save_query" | "save_file_as" | "save_workspace_as" => AppIcon::Save,
+        "save_query" | "save_file_as" => AppIcon::Save,
         "open_script_file"
-        | "add_external_scripts_folder"
+        | "open_folder"
         | "open_recent"
-        | "open_workspace_from_file"
+        | "clear_recently_opened"
         | "add_folder_to_workspace"
         | "remove_folder_from_workspace"
         | "close_workspace" => AppIcon::Folder,
@@ -453,6 +464,9 @@ const VISIBLE_ITEMS: usize = 8;
 /// Most commands a mixed query (no `>` or `@` prefix) keeps, so the
 /// connections and tables it also matches stay on screen (P1Palette).
 const MIXED_QUERY_COMMAND_LIMIT: usize = 3;
+
+/// Group name of a palette row, so its remove button can show on hover.
+const PALETTE_ROW_GROUP: &str = "palette-row";
 
 /// Section grouping for the rendered palette list.
 ///
@@ -705,8 +719,9 @@ fn filter_items(items: &[PaletteItem], matcher: &SkimMatcherV2, query: &str) -> 
 }
 
 /// Orders `filtered` the way the list shows it: by section, then by score,
-/// then by kind. A mixed query keeps only its best
-/// [`MIXED_QUERY_COMMAND_LIMIT`] commands so every kind it matches shows.
+/// then by kind. A mixed query that also matches something other than a
+/// command keeps only its best [`MIXED_QUERY_COMMAND_LIMIT`] commands so
+/// every kind it matches shows.
 fn arrange_results(
     items: &[PaletteItem],
     mut filtered: Vec<FilteredItem>,
@@ -733,7 +748,15 @@ fn arrange_results(
 
     let (scope, text) = PaletteScope::parse(query);
 
-    if scope == PaletteScope::All && !text.trim().is_empty() {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "every `FilteredItem` index comes from `.enumerate()` over `items`"
+    )]
+    let matches_other_kinds = filtered
+        .iter()
+        .any(|filtered_item| !matches!(items[filtered_item.index], PaletteItem::Action { .. }));
+
+    if scope == PaletteScope::All && !text.trim().is_empty() && matches_other_kinds {
         let mut commands_kept = 0;
 
         #[expect(
@@ -819,6 +842,10 @@ pub enum PaletteSelection {
 }
 
 pub struct CommandPaletteClosed;
+
+/// The user removed an entry from the Open recent… list. The palette has
+/// already dropped the row; the workspace forgets the entry.
+pub struct RecentWorkspaceRemoved(pub dbflux_core::RecentWorkspace);
 
 impl CommandPalette {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -966,6 +993,37 @@ impl CommandPalette {
         cx.notify();
     }
 
+    /// Removes the selected Open recent… row, as the remove button of a
+    /// VS Code recent entry. The palette stays open on the next row.
+    fn remove_selected_recent(&mut self, cx: &mut Context<Self>) {
+        let Some(index) = self
+            .filtered
+            .get(self.selected_index)
+            .map(|filtered| filtered.index)
+        else {
+            return;
+        };
+
+        let Some(PaletteItem::Workspace {
+            action: WorkspaceAction::OpenRecent(recent),
+            ..
+        }) = self.items.get(index)
+        else {
+            return;
+        };
+
+        let removed = recent.clone();
+        self.items.remove(index);
+
+        let selected = self.selected_index;
+        let query = self.input_state.read(cx).value().to_string();
+        self.update_filter(&query, cx);
+        self.selected_index = selected.min(self.filtered.len().saturating_sub(1));
+        self.ensure_selected_visible();
+
+        cx.emit(RecentWorkspaceRemoved(removed));
+    }
+
     pub fn select_next(&mut self, cx: &mut Context<Self>) {
         if !self.filtered.is_empty() {
             self.selected_index = (self.selected_index + 1) % self.filtered.len();
@@ -1108,7 +1166,7 @@ impl CommandPalette {
         display_idx: usize,
         item: &PaletteItem,
         is_selected: bool,
-        cx: &App,
+        cx: &Context<Self>,
     ) -> Stateful<Div> {
         let theme = cx.theme();
         let tint = ChromeColors::tint(theme);
@@ -1152,8 +1210,36 @@ impl CommandPalette {
 
         let wash = tint.opacity(PaletteMetrics::SELECTED_ALPHA);
 
+        // Shown on the selected row and on hover, as VS Code's remove button.
+        // Transparent rather than invisible elsewhere, so a click on its spot
+        // still removes the entry instead of opening it.
+        let remove_button = item.is_recent_workspace().then(|| {
+            div()
+                .id(("palette-remove-recent", display_idx))
+                .flex_shrink_0()
+                .rounded_sm()
+                .p(px(2.0))
+                .when(!is_selected, |button| {
+                    button
+                        .opacity(0.0)
+                        .group_hover(PALETTE_ROW_GROUP, |button| button.opacity(1.0))
+                })
+                .hover(|button| button.bg(theme.list_hover))
+                .child(
+                    Icon::new(AppIcon::X)
+                        .size(PaletteMetrics::ROW_ICON)
+                        .color(theme.muted_foreground),
+                )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    cx.stop_propagation();
+                    this.selected_index = display_idx;
+                    this.remove_selected_recent(cx);
+                }))
+        });
+
         div()
             .id(("cmd", display_idx))
+            .group(PALETTE_ROW_GROUP)
             .relative()
             .flex()
             .flex_shrink_0()
@@ -1216,6 +1302,7 @@ impl CommandPalette {
                 )
             })
             .children(keycaps)
+            .children(remove_button)
     }
 
     fn render_search_row(&self, cx: &App) -> Div {
@@ -1257,7 +1344,9 @@ impl CommandPalette {
             })
     }
 
-    fn render_footer(cx: &App) -> Div {
+    /// `removable` adds the remove-from-recent key hint, for the Open
+    /// recent… list.
+    fn render_footer(removable: bool, cx: &App) -> Div {
         let theme = cx.theme();
         let navigate_keys = palette_navigate_label(
             palette_shortcut(Command::SelectPrev),
@@ -1287,12 +1376,22 @@ impl CommandPalette {
                     .child(Kbd::new(footer_key_label(&label)))
                     .child(hint(dbflux_i18n::t!("palette.footer.run")))
             })
+            // Open recent… has nothing to open in a new tab; its remove hint
+            // takes that place so the footer still fits.
             .when_some(
-                palette_shortcut(Command::RunQueryInNewTab),
+                palette_shortcut(Command::RunQueryInNewTab).filter(|_| !removable),
                 |footer, label| {
                     footer
                         .child(Kbd::new(label))
                         .child(hint(dbflux_i18n::t!("palette.footer.open_in_new_tab")))
+                },
+            )
+            .when_some(
+                palette_shortcut(Command::Delete).filter(|_| removable),
+                |footer, label| {
+                    footer
+                        .child(Kbd::new(label))
+                        .child(hint(dbflux_i18n::t!("palette.footer.remove_from_recent")))
                 },
             )
             .child(div().flex_1())
@@ -1334,6 +1433,7 @@ fn footer_key_label(label: &str) -> SharedString {
 
 impl EventEmitter<PaletteSelection> for CommandPalette {}
 impl EventEmitter<CommandPaletteClosed> for CommandPalette {}
+impl EventEmitter<RecentWorkspaceRemoved> for CommandPalette {}
 
 impl Render for CommandPalette {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1342,6 +1442,7 @@ impl Render for CommandPalette {
         }
 
         let theme = cx.theme();
+        let removable = self.items.iter().any(PaletteItem::is_recent_workspace);
 
         // The list shows a window of VISIBLE_ITEMS rows; the thumb shows
         // where that window sits in the whole result.
@@ -1468,6 +1569,7 @@ impl Render for CommandPalette {
                     Some(Command::SelectPrev) => this.select_prev(cx),
                     Some(Command::SelectNext) => this.select_next(cx),
                     Some(Command::Cancel) => this.hide(cx),
+                    Some(Command::Delete) => this.remove_selected_recent(cx),
                     Some(Command::Execute) => {
                         this.execute_selected(OpenPlacement::ReuseTab, window, cx)
                     }
@@ -1528,7 +1630,7 @@ impl Render for CommandPalette {
                                 )
                             }),
                     )
-                    .child(Self::render_footer(cx)),
+                    .child(Self::render_footer(removable, cx)),
             )
             .into_any_element()
     }
@@ -1701,6 +1803,10 @@ mod tests {
 
         let commands_only = arrange_results(&items, filter_items(&items, &matcher, "> or"), "> or");
         assert_eq!(commands_only.len(), 4);
+
+        let only_commands_match =
+            arrange_results(&items, filter_items(&items, &matcher, "results"), "results");
+        assert_eq!(only_commands_match.len(), 4);
 
         let everything = arrange_results(&items, filter_items(&items, &matcher, ""), "");
         assert_eq!(everything.len(), 5);

@@ -597,46 +597,32 @@ pub(crate) fn script_operation_failed_label(error: &str) -> String {
     dbflux_i18n::t!("sidebar.toast.script_operation_failed", error = error)
 }
 
-/// Translated title for the folder picker that registers an external scripts
-/// folder.
-pub(crate) fn add_external_folder_dialog_title() -> String {
-    dbflux_i18n::t!("sidebar.dialog.add_external_folder_title")
+/// Translated title for the folder picker of Open folder…
+pub(crate) fn open_folder_dialog_title() -> String {
+    dbflux_i18n::t!("sidebar.dialog.open_folder_title")
 }
 
-/// Translated title for the picker of a workspace file to open.
-pub(crate) fn open_workspace_file_dialog_title() -> String {
-    dbflux_i18n::t!("sidebar.dialog.open_workspace_file_title")
+/// Translated title for the folder picker of Add folder to workspace…
+pub(crate) fn add_folder_to_workspace_dialog_title() -> String {
+    dbflux_i18n::t!("sidebar.dialog.add_folder_to_workspace_title")
 }
 
-/// Translated title for the save dialog of Save workspace as….
-pub(crate) fn save_workspace_dialog_title() -> String {
-    dbflux_i18n::t!("sidebar.dialog.save_workspace_title")
+/// Translated toast reported when a picked folder cannot join the workspace.
+pub(crate) fn open_folder_failed_label(error: &str) -> String {
+    dbflux_i18n::t!("sidebar.toast.open_folder_failed", error = error)
 }
 
-/// Translated name of the workspace-file filter in file dialogs.
-pub(crate) fn workspace_file_filter() -> String {
-    dbflux_i18n::t!("sidebar.dialog.workspace_file_filter")
+/// Translated toast reported when a folder cannot leave the workspace.
+pub(crate) fn remove_workspace_folder_failed_label(error: &str) -> String {
+    dbflux_i18n::t!(
+        "sidebar.toast.remove_workspace_folder_failed",
+        error = error
+    )
 }
 
-/// Translated toast reported when a workspace file cannot be read or written.
-pub(crate) fn workspace_file_failed_label(error: &str) -> String {
-    dbflux_i18n::t!("sidebar.toast.workspace_file_failed", error = error)
-}
-
-/// Translated toast for a workspace command that needs an open folder.
-pub(crate) fn no_workspace_open_label() -> String {
-    dbflux_i18n::t!("sidebar.toast.no_workspace_open")
-}
-
-/// Translated toast reported when an external scripts folder cannot be added.
-pub(crate) fn add_external_folder_failed_label(error: &str) -> String {
-    dbflux_i18n::t!("sidebar.toast.add_external_folder_failed", error = error)
-}
-
-/// Translated toast reported when an external scripts folder cannot be
-/// unregistered.
-pub(crate) fn remove_external_folder_failed_label(error: &str) -> String {
-    dbflux_i18n::t!("sidebar.toast.remove_external_folder_failed", error = error)
+/// Translated toast reported when the workspace cannot be closed.
+pub(crate) fn close_workspace_failed_label(error: &str) -> String {
+    dbflux_i18n::t!("sidebar.toast.close_workspace_failed", error = error)
 }
 
 /// Sidebar label of an external scripts folder that has not been scanned yet.
@@ -1672,17 +1658,19 @@ mod tests {
         "sidebar.toast.schema_snapshot_failed",
     ];
 
-    const SCRIPT_ROOT_KEYS: [&str; 13] = [
+    const SCRIPT_ROOT_KEYS: [&str; 15] = [
         "sidebar.menu.unavailable_reason",
         "sidebar.toast.script_operation_failed",
-        "sidebar.status.external_folders",
+        "sidebar.status.workspace_folders",
         "sidebar.status.unavailable_folders",
-        "sidebar.dialog.add_external_folder_title",
-        "sidebar.overlay.add_external_folder",
-        "sidebar.menu.remove_external_folder",
+        "sidebar.dialog.open_folder_title",
+        "sidebar.dialog.add_folder_to_workspace_title",
+        "sidebar.overlay.add_folder_to_workspace",
+        "sidebar.menu.remove_folder_from_workspace",
         "sidebar.menu.refresh_scripts",
-        "sidebar.toast.add_external_folder_failed",
-        "sidebar.toast.remove_external_folder_failed",
+        "sidebar.toast.open_folder_failed",
+        "sidebar.toast.remove_workspace_folder_failed",
+        "sidebar.toast.close_workspace_failed",
         "sidebar.tree.scripts_root_scanning",
         "sidebar.tree.scripts_root_unavailable",
         "sidebar.overlay.import_file",

@@ -19,6 +19,7 @@ DBFlux 使用分层、随上下文变化的键位映射。当前生效的层取�
 | `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown`      | 将当前标签页向左 / 向右移动          |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9`        | 切换到标签页 N                       |
 | `Ctrl+o` / `Cmd+o`                               | 打开脚本文件                         |
+| `Ctrl+r`                                         | 打开最近的工作区；自身绑定了 `Ctrl+r` 的视图保留其原有功能 |
 | `Ctrl+Enter` / `Cmd+Enter`                       | 执行查询                             |
 | `Ctrl+Shift+Enter` / `Cmd+Shift+Enter`           | 在新标签页中执行查询                 |
 | `Escape`                                         | 取消 / 关闭模态框                    |

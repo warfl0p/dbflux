@@ -3898,6 +3898,7 @@ palette:
     navigate: "mover"
     run: "ejecutar"
     open_in_new_tab: "abrir en una pestaña nueva"
+    remove_from_recent: "quitar"
     commands_only: "solo comandos"
     tables_only: "solo tablas"
   connection:
@@ -3938,8 +3939,8 @@ palette:
       name: Guardar archivo como…
     open_script_file:
       name: Abrir archivo de script…
-    add_external_scripts_folder:
-      name: "Agregar carpeta externa de scripts…"
+    open_folder:
+      name: "Abrir carpeta…"
     toggle_comment:
       name: Alternar comentario
     format_query:
@@ -4000,14 +4001,12 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
-    open_workspace_from_file:
-      name: "Open workspace from file…"
+    clear_recently_opened:
+      name: "Borrar abiertos recientemente"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
       name: "Remove folder from workspace…"
-    save_workspace_as:
-      name: "Save workspace as…"
     close_workspace:
       name: "Close workspace"
     show_dashboards_view:
@@ -4038,6 +4037,8 @@ palette:
       name: "Analizar volcado de base de datos…"
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "Se borraron los abiertos recientemente"
+    recent_update_failed: "No se pudo actualizar la lista de abiertos recientemente: %{error}"
   category:
     workspaces: "Workspaces"
     editor: Editor
@@ -4398,7 +4399,7 @@ settings:
       save_query: Guardar
       save_file_as: Guardar archivo como…
       open_script_file: Abrir archivo de script…
-      add_external_scripts_folder: "Agregar carpeta externa de scripts…"
+      open_folder: "Abrir carpeta…"
       toggle_comment: Alternar comentario
       format_query: Formatear consulta
       export_results: Exportar resultados
@@ -4461,10 +4462,9 @@ settings:
       show_scripts_view: "Mostrar la vista de scripts"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
-      open_workspace_from_file: "Open workspace from file…"
+      clear_recently_opened: "Borrar abiertos recientemente"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
-      save_workspace_as: "Save workspace as…"
       close_workspace: "Close workspace"
       show_dashboards_view: "Mostrar la vista de dashboards"
       open_mcp_approvals: Abrir aprobaciones de MCP
@@ -5192,12 +5192,10 @@ sidebar:
       one: 1 elemento
       many: "%{count} elementos"
   dialog:
-    open_workspace_file_title: "Open Workspace from File"
-    save_workspace_title: "Save Workspace As"
-    workspace_file_filter: "DBFlux workspace"
     import_script_title: Importar script
     script_files_filter: Archivos de script
-    add_external_folder_title: Agregar carpeta externa de scripts
+    open_folder_title: Abrir carpeta
+    add_folder_to_workspace_title: Agregar carpeta al área de trabajo
   empty:
     connections_title: Aún no hay conexiones
     connections_hint: Usa + para agregar una nueva conexión
@@ -5259,7 +5257,7 @@ sidebar:
     rename_ellipsis: Renombrar…
     copy_metric_id: Copiar ID de métrica
     copy_inspector_id: Copiar ID de inspector
-    remove_external_folder: Quitar del panel lateral
+    remove_folder_from_workspace: Quitar carpeta del área de trabajo
     refresh_scripts: Actualizar
     unavailable_reason: "No disponible: %{reason}"
   overlay:
@@ -5281,7 +5279,7 @@ sidebar:
     skipped_tables:
       one: Se omitió 1 tabla fuera del perfil/base de datos activos
       many: "Se omitieron %{count} tablas fuera del perfil/base de datos activos"
-    add_external_folder: Agregar carpeta externa
+    add_folder_to_workspace: "Agregar carpeta al área de trabajo…"
     recent_folders: Carpetas recientes
   status:
     connected: "%{count} conectadas"
@@ -5289,7 +5287,7 @@ sidebar:
     no_connections: "Todavía no hay conexiones"
     connection_summary: "%{connected} conectadas · %{idle} inactivas"
     profile_fallback_name: conexión
-    external_folders: "%{count} carpetas externas"
+    workspace_folders: "%{count} carpetas en el área de trabajo"
     unavailable_folders: "%{count} no disponibles"
   tabs:
     dashboards: "Dashboards"
@@ -5327,8 +5325,6 @@ sidebar:
         fetching_schema: "Pipeline: obteniendo el esquema"
     listing_secret_paths: "Listando rutas de secretos: %{name}"
   toast:
-    workspace_file_failed: "Could not use the workspace file: %{error}"
-    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "'%{name}' actualizado"
     edit_reconnect_body: Reconecta para aplicar los cambios a la sesión activa.
     edit_reconnect_now: Reconectar ahora
@@ -5374,8 +5370,9 @@ sidebar:
       config: "El driver externo '%{driver_id}' no está disponible porque el servicio '%{socket_id}' tiene una configuración inválida: %{summary}"
       launch: "El driver externo '%{driver_id}' no está disponible porque el servicio '%{socket_id}' no inició: %{summary}"
       probe: "El driver externo '%{driver_id}' no está disponible porque el servicio '%{socket_id}' falló durante la prueba del driver: %{summary}"
-    add_external_folder_failed: "No se pudo agregar la carpeta: %{error}"
-    remove_external_folder_failed: "No se pudo quitar la carpeta: %{error}"
+    open_folder_failed: "No se pudo abrir la carpeta: %{error}"
+    remove_workspace_folder_failed: "No se pudo quitar la carpeta del área de trabajo: %{error}"
+    close_workspace_failed: "No se pudo cerrar el área de trabajo: %{error}"
     script_operation_failed: "La operación sobre el script falló: %{error}"
     list_secret_paths_failed: "No se pudieron listar las rutas de secretos: %{error}"
   tree:

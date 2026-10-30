@@ -3898,6 +3898,7 @@ palette:
     navigate: "移动"
     run: "运行"
     open_in_new_tab: "在新标签页中打开"
+    remove_from_recent: "移除"
     commands_only: "仅命令"
     tables_only: "仅表"
   connection:
@@ -3938,8 +3939,8 @@ palette:
       name: 文件另存为…
     open_script_file:
       name: 打开脚本文件…
-    add_external_scripts_folder:
-      name: "添加外部脚本文件夹…"
+    open_folder:
+      name: "打开文件夹…"
     toggle_comment:
       name: 切换注释
     format_query:
@@ -4000,14 +4001,12 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
-    open_workspace_from_file:
-      name: "Open workspace from file…"
+    clear_recently_opened:
+      name: "清除最近打开的项目"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
       name: "Remove folder from workspace…"
-    save_workspace_as:
-      name: "Save workspace as…"
     close_workspace:
       name: "Close workspace"
     show_dashboards_view:
@@ -4038,6 +4037,8 @@ palette:
       name: 分析数据库转储…
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "已清除最近打开的项目"
+    recent_update_failed: "无法更新最近打开的项目：%{error}"
   category:
     workspaces: "Workspaces"
     editor: 编辑器
@@ -4398,7 +4399,7 @@ settings:
       save_query: 保存
       save_file_as: 文件另存为…
       open_script_file: 打开脚本文件…
-      add_external_scripts_folder: "添加外部脚本文件夹…"
+      open_folder: "打开文件夹…"
       toggle_comment: 切换注释
       format_query: 格式化查询
       export_results: 导出结果
@@ -4461,10 +4462,9 @@ settings:
       show_scripts_view: "显示脚本视图"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
-      open_workspace_from_file: "Open workspace from file…"
+      clear_recently_opened: "清除最近打开的项目"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
-      save_workspace_as: "Save workspace as…"
       close_workspace: "Close workspace"
       show_dashboards_view: "显示仪表盘视图"
       open_mcp_approvals: 打开 MCP 审批
@@ -5190,12 +5190,10 @@ sidebar:
       one: 1 项
       many: "%{count} 项"
   dialog:
-    open_workspace_file_title: "Open Workspace from File"
-    save_workspace_title: "Save Workspace As"
-    workspace_file_filter: "DBFlux workspace"
     import_script_title: 导入脚本
     script_files_filter: 脚本文件
-    add_external_folder_title: 添加外部脚本文件夹
+    open_folder_title: 打开文件夹
+    add_folder_to_workspace_title: 将文件夹添加到工作区
   empty:
     connections_title: 还没有连接
     connections_hint: 使用 + 添加新连接
@@ -5257,7 +5255,7 @@ sidebar:
     rename_ellipsis: 重命名…
     copy_metric_id: 复制指标 ID
     copy_inspector_id: 复制检查器 ID
-    remove_external_folder: 从侧栏移除
+    remove_folder_from_workspace: 从工作区中移除文件夹
     refresh_scripts: 刷新
     unavailable_reason: "不可用：%{reason}"
   overlay:
@@ -5279,7 +5277,7 @@ sidebar:
     skipped_tables:
       one: 跳过了 1 张活动配置 / 数据库之外的表
       many: "跳过了 %{count} 张活动配置 / 数据库之外的表"
-    add_external_folder: 添加外部文件夹
+    add_folder_to_workspace: "将文件夹添加到工作区…"
     recent_folders: 最近的文件夹
   status:
     connected: "%{count} 个已连接"
@@ -5287,7 +5285,7 @@ sidebar:
     no_connections: "尚无连接"
     connection_summary: "%{connected} 已连接 · %{idle} 空闲"
     profile_fallback_name: 连接
-    external_folders: "%{count} 个外部文件夹"
+    workspace_folders: "工作区中有 %{count} 个文件夹"
     unavailable_folders: "%{count} 个不可用"
   tabs:
     dashboards: "仪表板"
@@ -5325,8 +5323,6 @@ sidebar:
         fetching_schema: "流水线：正在获取 Schema"
     listing_secret_paths: "正在列出密钥路径：%{name}"
   toast:
-    workspace_file_failed: "Could not use the workspace file: %{error}"
-    no_workspace_open: "No folder is open"
     edit_reconnect_updated: "%{name} 已更新"
     edit_reconnect_body: 重新连接以将更改应用到当前会话。
     edit_reconnect_now: 立即重新连接
@@ -5372,8 +5368,9 @@ sidebar:
       config: "外部驱动 %{driver_id} 不可用：服务 %{socket_id} 的配置无效：%{summary}"
       launch: "外部驱动 %{driver_id} 不可用：服务 %{socket_id} 未能启动：%{summary}"
       probe: "外部驱动 %{driver_id} 不可用：服务 %{socket_id} 在驱动探测期间失败：%{summary}"
-    add_external_folder_failed: "无法添加文件夹：%{error}"
-    remove_external_folder_failed: "无法移除文件夹：%{error}"
+    open_folder_failed: "无法打开文件夹：%{error}"
+    remove_workspace_folder_failed: "无法从工作区中移除文件夹：%{error}"
+    close_workspace_failed: "无法关闭工作区：%{error}"
     script_operation_failed: "脚本操作失败：%{error}"
     list_secret_paths_failed: "无法列出密钥路径：%{error}"
   tree:
