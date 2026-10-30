@@ -464,7 +464,7 @@ impl ImportConnectionsPanel {
     }
 
     fn browse_external_file(&mut self, is_secondary: bool, cx: &mut Context<Self>) {
-        if !dbflux_ui_base::file_dialog::is_native_file_dialog_available() {
+        if !dbflux_ui_base::file_dialog::is_native_file_dialog_available(cx.background_executor()) {
             self.native_picker_unavailable = true;
             cx.notify();
             return;
@@ -660,7 +660,7 @@ impl ImportConnectionsPanel {
     }
 
     fn browse_input_path(&mut self, cx: &mut Context<Self>) {
-        if dbflux_ui_base::file_dialog::is_native_file_dialog_available() {
+        if dbflux_ui_base::file_dialog::is_native_file_dialog_available(cx.background_executor()) {
             let this = cx.entity().clone();
             let task = cx.background_executor().spawn(async move {
                 rfd::FileDialog::new()

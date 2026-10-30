@@ -314,7 +314,8 @@ impl ImportWizard {
         };
         let target_database = self.target_database(&connection);
         let supports_truncate = connection.supports(DriverCapabilities::TRUNCATE_TABLE);
-        let dialog_available = dbflux_ui_base::file_dialog::is_native_file_dialog_available();
+        let dialog_available =
+            dbflux_ui_base::file_dialog::is_native_file_dialog_available(cx.background_executor());
 
         self.loading = true;
         cx.notify();

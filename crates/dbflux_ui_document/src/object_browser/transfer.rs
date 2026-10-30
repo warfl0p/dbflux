@@ -122,7 +122,7 @@ impl ObjectBrowserDocument {
         cx.spawn(async move |_this, cx| {
             let destination = match purpose {
                 TransferPurpose::Download => {
-                    match choose_download_path(save_target_override, &suggested_name).await {
+                    match choose_download_path(cx, save_target_override, &suggested_name).await {
                         Ok(Some(path)) => path,
                         // Cancelled picker: the user already knows nothing
                         // happened, so no toast and no audit row.
@@ -226,6 +226,7 @@ impl ObjectBrowserDocument {
 /// picker was cancelled, or the shared export directory when the host has no
 /// working picker at all.
 async fn choose_download_path(
+    cx: &gpui::AsyncApp,
     provider: Option<dbflux_ui_base::SaveTargetProvider>,
     suggested_name: &str,
 ) -> Result<Option<PathBuf>, String> {
@@ -234,6 +235,7 @@ async fn choose_download_path(
         dbflux_i18n::t!("document.object_browser.transfer.dialog_filter_all_files");
 
     let outcome = file_dialog::resolve_save_target(
+        cx.background_executor(),
         provider,
         dbflux_ui_base::SaveTargetRequest {
             suggested_name,

@@ -1759,6 +1759,7 @@ impl AuditDocument {
 
         cx.spawn(async move |this, cx| {
             let outcome = dbflux_ui_base::file_dialog::resolve_save_target(
+                cx.background_executor(),
                 save_target_override,
                 dbflux_ui_base::SaveTargetRequest {
                     suggested_name: &suggested_name,

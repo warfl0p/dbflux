@@ -282,6 +282,7 @@ async fn choose_target_path(
     cx: &mut AsyncApp,
 ) -> Option<PathBuf> {
     let outcome = dbflux_ui_base::file_dialog::resolve_save_target(
+        cx.background_executor(),
         save_target_override,
         SaveTargetRequest {
             suggested_name,

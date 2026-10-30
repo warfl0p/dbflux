@@ -230,6 +230,7 @@ async fn choose_target(
     let directory = original.and_then(Path::parent).map(Path::to_path_buf);
 
     let outcome = dbflux_ui_base::file_dialog::resolve_save_target(
+        cx.background_executor(),
         provider,
         SaveTargetRequest {
             suggested_name,
