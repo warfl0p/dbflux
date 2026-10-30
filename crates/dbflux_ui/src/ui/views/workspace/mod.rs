@@ -2404,12 +2404,11 @@ impl Workspace {
 
     /// Opens the palette listing recent workspaces, as VS Code's Open Recent.
     pub fn open_recent_workspaces(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let state = self.app_state.read(cx);
-        let open = state.workspace_folders();
-        let items: Vec<PaletteItem> = state
+        let items: Vec<PaletteItem> = self
+            .app_state
+            .read(cx)
             .recent_workspaces()
             .into_iter()
-            .filter(|recent| recent.folders != open)
             .map(|recent| PaletteItem::Workspace {
                 name: recent.name(),
                 detail: recent.detail(),
