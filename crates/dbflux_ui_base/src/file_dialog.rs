@@ -4,7 +4,7 @@
 //! distinguish "user cancelled" from "backend failed" (no portal, no zenity/
 //! kdialog). To avoid silent failures on Linux when the host has neither a
 //! working XDG desktop portal nor a zenity/kdialog fallback installed, callers
-//! probe `is_native_file_dialog_available()` before invoking rfd and route to
+//! probe `is_native_file_dialog_available(executor)` before invoking rfd and route to
 //! `fallback_export_dir()` when the probe fails.
 //!
 //! Open pickers have no fallback location, so `pick_existing_file()` and
@@ -12,12 +12,16 @@
 
 use std::path::PathBuf;
 
-use gpui::AsyncApp;
+use gpui::{AsyncApp, BackgroundExecutor};
 
 use crate::app_state_entity::{SaveTargetOutcome, SaveTargetProvider, SaveTargetRequest};
 use crate::user_error::{ErrorKind, UserFacingError, report_error_async};
 
 /// Returns `true` when a native file picker is expected to work on this host.
+///
+/// Always `false` under gpui's test scheduler: rfd would open a real picker
+/// on the desktop running the tests, so a test sees the unavailable path
+/// instead.
 ///
 /// On Windows and macOS this is unconditionally `true` — the native pickers
 /// are part of the OS.
@@ -33,7 +37,11 @@ use crate::user_error::{ErrorKind, UserFacingError, report_error_async};
 /// the active desktop. The Linux user pain we're solving — a missing portal AND
 /// missing zenity, which makes rfd return `None` silently — is reliably caught
 /// by this probe.
-pub fn is_native_file_dialog_available() -> bool {
+pub fn is_native_file_dialog_available(executor: &BackgroundExecutor) -> bool {
+    !executor.is_test() && platform_has_native_file_dialog()
+}
+
+fn platform_has_native_file_dialog() -> bool {
     #[cfg(not(target_os = "linux"))]
     {
         true
@@ -132,9 +140,12 @@ pub fn unique_path_in(dir: &std::path::Path, filename: &str) -> PathBuf {
 /// export path.
 ///
 /// The native future is lazy: when a provider is present, or when no native
-/// dialog is available, it is never polled. That keeps dialog construction at
+/// dialog is available, it is never polled. Under gpui's test scheduler a
+/// request without a provider is cancelled, so a test neither opens a real
+/// dialog nor writes into the user's export directory. That keeps dialog construction at
 /// the call site while centralizing cancellation and fallback semantics here.
 pub async fn resolve_save_target<'a>(
+    executor: &BackgroundExecutor,
     provider: Option<SaveTargetProvider>,
     request: SaveTargetRequest<'a>,
     native: impl std::future::Future<Output = Option<PathBuf>>,
@@ -142,8 +153,11 @@ pub async fn resolve_save_target<'a>(
     if let Some(provider) = provider {
         return provider(request).await;
     }
+    if executor.is_test() {
+        return SaveTargetOutcome::Cancelled;
+    }
 
-    if !is_native_file_dialog_available() {
+    if !platform_has_native_file_dialog() {
         return match fallback_export_dir() {
             Ok(dir) => SaveTargetOutcome::Selected {
                 path: unique_path_in(&dir, request.suggested_name),
@@ -179,9 +193,10 @@ pub enum OpenTargetOutcome {
 /// polled. Dialog construction stays at the call site, the same split as
 /// [`resolve_save_target`].
 pub async fn resolve_open_target(
+    executor: &BackgroundExecutor,
     native: impl std::future::Future<Output = Option<PathBuf>>,
 ) -> OpenTargetOutcome {
-    resolve_open_target_with(is_native_file_dialog_available(), native).await
+    resolve_open_target_with(is_native_file_dialog_available(executor), native).await
 }
 
 async fn resolve_open_target_with(
@@ -207,7 +222,7 @@ pub async fn pick_existing_file(
     native: impl std::future::Future<Output = Option<PathBuf>>,
 ) -> Option<PathBuf> {
     picked_path_or_report(
-        resolve_open_target(native).await,
+        resolve_open_target(cx.background_executor(), native).await,
         cx,
         file_picker_unavailable_error,
     )
@@ -222,7 +237,7 @@ pub async fn pick_existing_folder(
     native: impl std::future::Future<Output = Option<PathBuf>>,
 ) -> Option<PathBuf> {
     picked_path_or_report(
-        resolve_open_target(native).await,
+        resolve_open_target(cx.background_executor(), native).await,
         cx,
         folder_picker_unavailable_error,
     )
@@ -264,7 +279,7 @@ mod tests {
 
     use super::{
         OpenTargetOutcome, file_picker_unavailable_error, folder_picker_unavailable_error,
-        resolve_open_target_with,
+        is_native_file_dialog_available, resolve_open_target_with,
     };
     use crate::user_error::ErrorKind;
 
@@ -298,6 +313,13 @@ mod tests {
 
         assert_eq!(outcome, OpenTargetOutcome::Unavailable);
         assert!(!polled.get());
+    }
+
+    /// A test that reaches a picker must never open a real one on the
+    /// desktop running it.
+    #[gpui::test]
+    fn tests_never_get_a_native_file_dialog(cx: &mut gpui::TestAppContext) {
+        assert!(!is_native_file_dialog_available(&cx.background_executor));
     }
 
     #[test]

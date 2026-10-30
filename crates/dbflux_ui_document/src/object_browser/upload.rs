@@ -26,7 +26,7 @@ impl ObjectBrowserDocument {
     }
 
     fn start_upload_flow(&mut self, cx: &mut Context<Self>) {
-        if !file_dialog::is_native_file_dialog_available() {
+        if !file_dialog::is_native_file_dialog_available(cx.background_executor()) {
             report_error(
                 UserFacingError::new(
                     ErrorKind::Storage,

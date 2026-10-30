@@ -274,7 +274,8 @@ impl ExportWizard {
     /// dialog-availability probe and fallback directory as the original
     /// sidebar action.
     fn choose_folder(&mut self, cx: &mut Context<Self>) {
-        let dialog_available = dbflux_ui_base::file_dialog::is_native_file_dialog_available();
+        let dialog_available =
+            dbflux_ui_base::file_dialog::is_native_file_dialog_available(cx.background_executor());
 
         self.choosing_folder = true;
         self.folder_error = None;

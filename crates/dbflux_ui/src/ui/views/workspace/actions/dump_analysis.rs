@@ -35,7 +35,8 @@ impl Workspace {
             return;
         }
 
-        let dialog_available = dbflux_ui_base::file_dialog::is_native_file_dialog_available();
+        let dialog_available =
+            dbflux_ui_base::file_dialog::is_native_file_dialog_available(cx.background_executor());
 
         if !dialog_available {
             report_error(
