@@ -42,7 +42,7 @@ use dbflux_ui_base::keymap::{RunCommand, run_command};
 use crate::ui::icons::AppIcon;
 use crate::ui::overlays::command_palette::{
     CommandPalette, CommandPaletteClosed, PaletteCommand, PaletteItem, PaletteSelection,
-    ResourceItem, WorkspaceAction,
+    RecentWorkspaceRemoved, ResourceItem, WorkspaceAction,
 };
 use crate::ui::overlays::login_modal::{LoginModal, LoginModalEvent};
 use crate::ui::overlays::shutdown_overlay::ShutdownOverlay;
@@ -849,6 +849,20 @@ impl Workspace {
                 }
                 PaletteSelection::Workspace(action) => {
                     this.run_workspace_action(action.clone(), cx);
+                }
+            },
+        )
+        .detach();
+
+        cx.subscribe(
+            &command_palette,
+            |this, _, event: &RecentWorkspaceRemoved, cx| {
+                let removed = this
+                    .app_state
+                    .read(cx)
+                    .remove_recent_workspace(&event.0.folders);
+                if let Err(error) = removed {
+                    report_error(recent_workspaces_error(error), cx);
                 }
             },
         )
@@ -1911,6 +1925,11 @@ impl Workspace {
                 dbflux_i18n::t!("palette.category.workspaces"),
             ),
             PaletteCommand::new(
+                "clear_recently_opened",
+                dbflux_i18n::t!("palette.command.clear_recently_opened.name"),
+                dbflux_i18n::t!("palette.category.workspaces"),
+            ),
+            PaletteCommand::new(
                 "add_folder_to_workspace",
                 dbflux_i18n::t!("palette.command.add_folder_to_workspace.name"),
                 dbflux_i18n::t!("palette.category.workspaces"),
@@ -2375,6 +2394,16 @@ impl Workspace {
         self.open_workspace_picker(items, "palette.workspace.no_recent", window, cx);
     }
 
+    /// Empties Open Recent, as VS Code's Clear Recently Opened.
+    pub fn clear_recently_opened(&mut self, cx: &mut Context<Self>) {
+        match self.app_state.read(cx).clear_recent_workspaces() {
+            Ok(()) => Toast::info(dbflux_i18n::t!("palette.workspace.recent_cleared"))
+                .meta_right(now_hms())
+                .push(cx),
+            Err(error) => report_error(recent_workspaces_error(error), cx),
+        }
+    }
+
     /// Opens the palette listing the workspace folders, to remove one.
     pub fn open_remove_workspace_folder(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let items: Vec<PaletteItem> = self
@@ -2713,6 +2742,18 @@ impl Workspace {
             candidate
         }
     }
+}
+
+fn recent_workspaces_error(
+    error: dbflux_storage::error::StorageError,
+) -> dbflux_ui_base::UserFacingError {
+    dbflux_ui_base::UserFacingError::new(
+        dbflux_ui_base::ErrorKind::Storage,
+        dbflux_i18n::t!(
+            "palette.workspace.recent_update_failed",
+            error = error.to_string()
+        ),
+    )
 }
 
 #[cfg(test)]

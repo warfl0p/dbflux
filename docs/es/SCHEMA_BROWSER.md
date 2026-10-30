@@ -75,7 +75,8 @@ comandos se ejecutan desde la paleta de comandos (`Ctrl+Shift+P`):
 | Comando | Qué hace |
 |---------|----------|
 | **Abrir carpeta…** | Abre la carpeta que elijas como área de trabajo, en lugar de las carpetas abiertas antes |
-| **Abrir reciente…** (`Ctrl+R`) | Vuelve a abrir un conjunto de carpetas que tuviste abierto antes |
+| **Abrir reciente…** (`Ctrl+R`) | Vuelve a abrir un conjunto de carpetas que tuviste abierto antes. `Ctrl+Shift+Delete` o el botón `×` de la fila quita de la lista la entrada seleccionada |
+| **Borrar abiertos recientemente** | Vacía la lista de **Abrir reciente…** |
 | **Agregar carpeta al área de trabajo…** | Agrega una carpeta junto a las abiertas; el menú `+` de la vista Scripts también lo ofrece |
 | **Quitar carpeta del área de trabajo…** | Lista las carpetas abiertas y quita la que elijas |
 | **Cerrar área de trabajo** | Quita todas las carpetas abiertas y vuelve a los scripts de DBFlux |

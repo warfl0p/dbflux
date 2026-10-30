@@ -16,6 +16,10 @@ impl Workspace {
                 self.open_recent_workspaces(window, cx);
                 Some(true)
             }
+            Command::ClearRecentlyOpened => {
+                self.clear_recently_opened(cx);
+                Some(true)
+            }
             Command::RemoveFolderFromWorkspace => {
                 self.open_remove_workspace_folder(window, cx);
                 Some(true)

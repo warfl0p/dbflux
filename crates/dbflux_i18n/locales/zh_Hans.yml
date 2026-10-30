@@ -3894,6 +3894,7 @@ palette:
     navigate: "移动"
     run: "运行"
     open_in_new_tab: "在新标签页中打开"
+    remove_from_recent: "移除"
     commands_only: "仅命令"
     tables_only: "仅表"
   connection:
@@ -3994,6 +3995,8 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
+    clear_recently_opened:
+      name: "清除最近打开的项目"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
@@ -4028,6 +4031,8 @@ palette:
       name: 分析数据库转储…
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "已清除最近打开的项目"
+    recent_update_failed: "无法更新最近打开的项目：%{error}"
   category:
     workspaces: "Workspaces"
     editor: 编辑器
@@ -4450,6 +4455,7 @@ settings:
       show_scripts_view: "显示脚本视图"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
+      clear_recently_opened: "清除最近打开的项目"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
       close_workspace: "Close workspace"

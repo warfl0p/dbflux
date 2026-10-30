@@ -82,7 +82,8 @@ pub enum Command {
     OpenFolder,
     /// Lists recent workspaces to reopen (VS Code's Open Recent).
     OpenRecentWorkspace,
-    /// Opens the folders a saved workspace file lists.
+    /// Empties the Open Recent list (VS Code's Clear Recently Opened).
+    ClearRecentlyOpened,
     /// Adds a folder to the open workspace.
     AddFolderToWorkspace,
     /// Lists the workspace folders to remove one.
@@ -342,6 +343,7 @@ impl Command {
             "go_to_file" => Some(Command::GoToFile),
             "open_folder" => Some(Command::OpenFolder),
             "open_recent" => Some(Command::OpenRecentWorkspace),
+            "clear_recently_opened" => Some(Command::ClearRecentlyOpened),
             "add_folder_to_workspace" => Some(Command::AddFolderToWorkspace),
             "remove_folder_from_workspace" => Some(Command::RemoveFolderFromWorkspace),
             "close_workspace" => Some(Command::CloseWorkspace),
@@ -422,6 +424,7 @@ impl Command {
             Command::OpenScriptFile => "Open script file…",
             Command::OpenFolder => "Open folder…",
             Command::OpenRecentWorkspace => "Open recent…",
+            Command::ClearRecentlyOpened => "Clear recently opened",
             Command::AddFolderToWorkspace => "Add folder to workspace…",
             Command::RemoveFolderFromWorkspace => "Remove folder from workspace…",
             Command::CloseWorkspace => "Close workspace",
@@ -631,6 +634,7 @@ impl Command {
             Command::OpenScriptFile => "open_script_file",
             Command::OpenFolder => "open_folder",
             Command::OpenRecentWorkspace => "open_recent",
+            Command::ClearRecentlyOpened => "clear_recently_opened",
             Command::AddFolderToWorkspace => "add_folder_to_workspace",
             Command::RemoveFolderFromWorkspace => "remove_folder_from_workspace",
             Command::CloseWorkspace => "close_workspace",
@@ -858,6 +862,7 @@ impl Command {
             Command::OpenScriptFile,
             Command::OpenFolder,
             Command::OpenRecentWorkspace,
+            Command::ClearRecentlyOpened,
             Command::AddFolderToWorkspace,
             Command::RemoveFolderFromWorkspace,
             Command::CloseWorkspace,
@@ -1061,6 +1066,7 @@ impl Command {
             | Command::OpenScriptFile
             | Command::OpenFolder
             | Command::OpenRecentWorkspace
+            | Command::ClearRecentlyOpened
             | Command::AddFolderToWorkspace
             | Command::RemoveFolderFromWorkspace
             | Command::CloseWorkspace
@@ -1214,6 +1220,7 @@ impl Command {
                 | Command::OpenScriptFile
                 | Command::OpenFolder
                 | Command::OpenRecentWorkspace
+                | Command::ClearRecentlyOpened
                 | Command::AddFolderToWorkspace
                 | Command::RemoveFolderFromWorkspace
                 | Command::CloseWorkspace
@@ -1870,6 +1877,7 @@ mod tests {
             Command::ShowDashboardsView,
             Command::OpenFolder,
             Command::OpenRecentWorkspace,
+            Command::ClearRecentlyOpened,
             Command::AddFolderToWorkspace,
             Command::RemoveFolderFromWorkspace,
             Command::CloseWorkspace,

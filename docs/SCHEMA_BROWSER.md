@@ -69,7 +69,8 @@ the command palette (`Ctrl+Shift+P`):
 | Command | What it does |
 |---------|--------------|
 | **Open folder…** | Opens the folder you pick as the workspace, in place of the folders open before |
-| **Open recent…** (`Ctrl+R`) | Reopens a set of folders you had open before |
+| **Open recent…** (`Ctrl+R`) | Reopens a set of folders you had open before. `Ctrl+Shift+Delete` or the row's `×` button removes the selected entry from the list |
+| **Clear recently opened** | Empties the **Open recent…** list |
 | **Add folder to workspace…** | Adds a folder next to the open ones; the `+` menu of the Scripts view offers it too |
 | **Remove folder from workspace…** | Lists the open folders and removes the one you pick |
 | **Close workspace** | Removes every open folder, back to DBFlux's own scripts |

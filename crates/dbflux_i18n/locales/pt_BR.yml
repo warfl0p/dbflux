@@ -3894,6 +3894,7 @@ palette:
     navigate: "mover"
     run: "executar"
     open_in_new_tab: "abrir em nova aba"
+    remove_from_recent: "remover"
     commands_only: "somente comandos"
     tables_only: "somente tabelas"
   connection:
@@ -3994,6 +3995,8 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
+    clear_recently_opened:
+      name: "Limpar abertos recentemente"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
@@ -4028,6 +4031,8 @@ palette:
       name: "Analisar dump de banco de dados…"
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "Abertos recentemente foram limpos"
+    recent_update_failed: "Não foi possível atualizar os abertos recentemente: %{error}"
   category:
     workspaces: "Workspaces"
     editor: Editor
@@ -4450,6 +4455,7 @@ settings:
       show_scripts_view: "Mostrar visão de scripts"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
+      clear_recently_opened: "Limpar abertos recentemente"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
       close_workspace: "Close workspace"

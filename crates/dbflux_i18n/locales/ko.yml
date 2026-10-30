@@ -3894,6 +3894,7 @@ palette:
     navigate: "이동"
     run: "실행"
     open_in_new_tab: "새 탭에서 열기"
+    remove_from_recent: "제거"
     commands_only: "명령만"
     tables_only: "테이블만"
   connection:
@@ -3994,6 +3995,8 @@ palette:
       name: "Go to file…"
     open_recent:
       name: "Open recent…"
+    clear_recently_opened:
+      name: "최근에 연 항목 지우기"
     add_folder_to_workspace:
       name: "Add folder to workspace…"
     remove_folder_from_workspace:
@@ -4028,6 +4031,8 @@ palette:
       name: "데이터베이스 덤프 분석…"
   workspace:
     no_recent: "No recent workspaces"
+    recent_cleared: "최근에 연 항목을 지웠습니다"
+    recent_update_failed: "최근에 연 항목을 업데이트하지 못했습니다: %{error}"
   category:
     workspaces: "Workspaces"
     editor: 편집기
@@ -4450,6 +4455,7 @@ settings:
       show_scripts_view: "스크립트 보기 표시"
       go_to_file: "Go to file…"
       open_recent: "Open recent…"
+      clear_recently_opened: "최근에 연 항목 지우기"
       add_folder_to_workspace: "Add folder to workspace…"
       remove_folder_from_workspace: "Remove folder from workspace…"
       close_workspace: "Close workspace"
