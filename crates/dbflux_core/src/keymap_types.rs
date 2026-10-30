@@ -162,6 +162,7 @@ pub enum Command {
     /// Removes every finished task from the background tasks panel.
     ClearFinishedTasks,
     ToggleSidebar,
+    ToggleFullScreen,
     OpenSettings,
     OpenLoginModal,
     OpenSsoWizard,
@@ -327,6 +328,7 @@ impl Command {
             "focus_results" => Some(Command::FocusResults),
             "focus_tasks" => Some(Command::FocusBackgroundTasks),
             "toggle_sidebar" => Some(Command::ToggleSidebar),
+            "toggle_full_screen" => Some(Command::ToggleFullScreen),
             "toggle_editor" => Some(Command::ToggleEditor),
             "toggle_results" => Some(Command::ToggleResults),
             "toggle_results_position" => Some(Command::ToggleResultsPosition),
@@ -480,6 +482,7 @@ impl Command {
             Command::CancelTask => "Cancel task",
             Command::ClearFinishedTasks => "Clear finished tasks",
             Command::ToggleSidebar => "Toggle sidebar",
+            Command::ToggleFullScreen => "Toggle full screen",
             Command::OpenSettings => "Open settings",
             Command::OpenLoginModal => "Open auth profile login",
             Command::OpenSsoWizard => "Open AWS SSO wizard",
@@ -691,6 +694,7 @@ impl Command {
             Command::CancelTask => "cancel_task",
             Command::ClearFinishedTasks => "clear_finished_tasks",
             Command::ToggleSidebar => "toggle_sidebar",
+            Command::ToggleFullScreen => "toggle_full_screen",
             Command::OpenSettings => "open_settings",
             Command::OpenLoginModal => "open_login_modal",
             Command::OpenSsoWizard => "open_sso_wizard",
@@ -917,6 +921,7 @@ impl Command {
             Command::CancelTask,
             Command::ClearFinishedTasks,
             Command::ToggleSidebar,
+            Command::ToggleFullScreen,
             Command::OpenSettings,
             Command::OpenLoginModal,
             Command::OpenSsoWizard,
@@ -1121,6 +1126,7 @@ impl Command {
             | Command::CancelTask
             | Command::ClearFinishedTasks
             | Command::ToggleSidebar
+            | Command::ToggleFullScreen
             | Command::TogglePanel
             | Command::OpenSettings
             | Command::OpenLoginModal
@@ -1255,6 +1261,7 @@ impl Command {
                 | Command::ToggleResultsPosition
                 | Command::ToggleTasks
                 | Command::ToggleSidebar
+                | Command::ToggleFullScreen
                 | Command::OpenLoginModal
                 | Command::OpenSsoWizard
                 | Command::OpenAuditViewer
@@ -1794,6 +1801,7 @@ mod tests {
             "focus_results",
             "focus_tasks",
             "toggle_sidebar",
+            "toggle_full_screen",
             "toggle_editor",
             "toggle_results",
             "toggle_results_position",

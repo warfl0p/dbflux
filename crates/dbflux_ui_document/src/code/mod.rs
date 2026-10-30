@@ -1191,6 +1191,7 @@ impl CodeDocument {
         );
         let app_state_sub = cx.subscribe(&app_state, |this, _, _: &AppStateChanged, cx| {
             this.invalidate_execution_session_if_context_changed(cx);
+            this.sync_external_query_cancellation(cx);
             this.sync_context_dropdowns(cx);
             this.track_run_after_connect(cx);
             this.try_fetch_pending_routine_definition(cx);

@@ -3448,6 +3448,10 @@ document:
       refresh: "刷新"
     load_more: "加载下一页"
     loading_more: "正在加载下一页…"
+    region:
+      label: "区域"
+      retry: "重试"
+      switch_failed: "无法切换到区域 %{region}：%{error}"
     columns:
       name: "名称"
       description: "描述"
@@ -3974,6 +3978,8 @@ palette:
       name: 聚焦任务面板
     toggle_sidebar:
       name: 切换侧边栏
+    toggle_full_screen:
+      name: 切换全屏
     toggle_editor:
       name: 切换编辑器面板
     toggle_results:
@@ -4439,6 +4445,7 @@ settings:
       cancel_task: 取消任务
       clear_finished_tasks: 清除已完成任务
       toggle_sidebar: 切换侧边栏
+      toggle_full_screen: 切换全屏
       open_settings: 打开设置
       open_login_modal: 打开认证配置文件登录
       open_sso_wizard: 打开 AWS SSO 向导
