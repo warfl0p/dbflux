@@ -78,6 +78,37 @@ const SQL_HIGHLIGHT_FIXES: &str = r#"
   (keyword_then)
   (keyword_else)
 ] @keyword.conditional
+; The grammar captures these as `attribute`, which DBFlux gives no role, so
+; they kept gpui-component's default color instead of the keyword color.
+[
+ (keyword_asc)
+ (keyword_desc)
+ (keyword_terminated)
+ (keyword_escaped)
+ (keyword_unsigned)
+ (keyword_nulls)
+ (keyword_last)
+ (keyword_delimited)
+ (keyword_replication)
+ (keyword_auto_increment)
+ (keyword_default)
+ (keyword_collate)
+ (keyword_concurrently)
+ (keyword_engine)
+ (keyword_always)
+ (keyword_generated)
+ (keyword_preceding)
+ (keyword_following)
+ (keyword_first)
+ (keyword_current_timestamp)
+ (keyword_immutable)
+ (keyword_atomic)
+ (keyword_parallel)
+ (keyword_leakproof)
+ (keyword_safe)
+ (keyword_cost)
+ (keyword_strict)
+] @keyword.modifier
 ; The grammar captures these as `type.qualifier`, which falls back to the
 ; type color.
 [
@@ -446,6 +477,24 @@ mod tests {
         assert_eq!(nulls.len(), 5, "{roles:?}");
         for (token, role) in nulls {
             assert_eq!(role, "keyword", "{token}");
+        }
+    }
+
+    #[test]
+    fn sql_sort_and_column_modifiers_take_the_keyword_role() {
+        let roles = sql_roles(
+            "SELECT a FROM t ORDER BY a ASC, b DESC NULLS LAST;\n\
+             CREATE TABLE u (n text DEFAULT 'x');",
+        );
+        let role_of = |text: &str| {
+            roles
+                .iter()
+                .find(|(token, _)| token == text)
+                .map(|(_, role)| role.as_str())
+        };
+
+        for keyword in ["ASC", "DESC", "NULLS", "LAST", "DEFAULT"] {
+            assert_eq!(role_of(keyword), Some("keyword"), "{keyword}: {roles:?}");
         }
     }
 
