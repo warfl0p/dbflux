@@ -7,6 +7,7 @@ use crate::ui::labels::{
     scripts_filter_spreadsheet_label, scripts_filter_sql_label, scripts_open_dialog_title,
     scripts_read_file_failed_message,
 };
+use dbflux_core::LogErr;
 
 impl Workspace {
     /// Opens a file dialog to pick a script, CSV, TSV, Parquet or spreadsheet
@@ -258,6 +259,17 @@ impl Workspace {
         content: String,
         cx: &mut Context<Self>,
     ) {
+        // We need window access; use pending_open_script pattern
+        self.pending_open_script = Some(self.script_to_open(path, content, cx));
+        cx.notify();
+    }
+
+    fn script_to_open(
+        &mut self,
+        path: std::path::PathBuf,
+        content: String,
+        cx: &mut Context<Self>,
+    ) -> PendingOpenScript {
         use dbflux_core::{ExecutionContext, QueryLanguage};
 
         let language = QueryLanguage::from_path(&path).unwrap_or(QueryLanguage::Sql);
@@ -291,8 +303,7 @@ impl Workspace {
             cx.emit(AppStateChanged);
         });
 
-        // We need window access; use pending_open_script pattern
-        self.pending_open_script = Some(PendingOpenScript {
+        PendingOpenScript {
             title: path
                 .file_name()
                 .and_then(|name| name.to_str())
@@ -304,8 +315,7 @@ impl Workspace {
             language,
             connection_id,
             exec_ctx,
-        });
-        cx.notify();
+        }
     }
 
     pub(in crate::ui::views::workspace) fn finalize_open_script(
@@ -365,5 +375,96 @@ impl Workspace {
         });
 
         self.set_focus(FocusTarget::Document, window, cx);
+    }
+
+    /// Swaps the editors when the workspace changes, as VS Code does: the
+    /// files open in the old workspace are remembered and closed, and the
+    /// ones last open in the new workspace reopen. Adding or removing a
+    /// folder keeps the editors. Tabs outside the workspace folders stay.
+    pub(in crate::ui::views::workspace) fn switch_workspace_editors(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let folders = self.app_state.read(cx).workspace_folders();
+        if folders == self.workspace_folders {
+            return;
+        }
+        let previous = std::mem::replace(&mut self.workspace_folders, folders.clone());
+
+        let contains_all = |outer: &[std::path::PathBuf], inner: &[std::path::PathBuf]| {
+            inner.iter().all(|folder| outer.contains(folder))
+        };
+        if !previous.is_empty()
+            && !folders.is_empty()
+            && (contains_all(&previous, &folders) || contains_all(&folders, &previous))
+        {
+            return;
+        }
+
+        let (ids, open_files) = {
+            let manager = self.tab_manager.read(cx);
+            let active_id = manager.active_id();
+            let mut open: Vec<_> = manager
+                .documents()
+                .iter()
+                .filter_map(|tab| {
+                    let path = tab.session_tab_snapshot(cx)?.file_path?;
+                    previous
+                        .iter()
+                        .any(|folder| path.starts_with(folder))
+                        .then(|| (tab.id(), path))
+                })
+                .collect();
+            // The active file goes last, so it is the one active on reopen.
+            open.sort_by_key(|(id, _)| Some(*id) == active_id);
+            open.into_iter().unzip::<_, _, Vec<_>, Vec<_>>()
+        };
+
+        if !previous.is_empty() {
+            self.app_state
+                .read(cx)
+                .set_workspace_open_files(&previous, open_files);
+        }
+        self.close_tabs(window, cx, ids);
+
+        let to_open = self.app_state.read(cx).workspace_open_files(&folders);
+        if to_open.is_empty() {
+            return;
+        }
+
+        cx.spawn_in(window, async move |this, cx| {
+            // A file deleted since is skipped quietly, as VS Code does.
+            let contents: Vec<_> = cx
+                .background_executor()
+                .spawn(async move {
+                    to_open
+                        .into_iter()
+                        .filter_map(|path| {
+                            let content = std::fs::read_to_string(&path).ok()?;
+                            Some((path, content))
+                        })
+                        .collect()
+                })
+                .await;
+
+            this.update_in(cx, |ws, window, cx| {
+                for (path, content) in contents {
+                    let already_open = ws.tab_manager.read(cx).find_by_key(
+                        &crate::ui::document::DocumentKey::File { path: path.clone() },
+                        cx,
+                    );
+                    match already_open {
+                        Some(id) => ws.tab_manager.update(cx, |mgr, cx| mgr.activate(id, cx)),
+                        None => {
+                            let pending = ws.script_to_open(path, content, cx);
+                            ws.finalize_open_script(pending, window, cx);
+                        }
+                    }
+                }
+            })
+            .log_err();
+        })
+        .detach();
     }
 }

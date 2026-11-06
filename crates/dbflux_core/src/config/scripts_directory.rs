@@ -1164,6 +1164,10 @@ impl ScriptsDirectory {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RecentWorkspace {
     pub folders: Vec<PathBuf>,
+    /// The files open in it when it was last switched away from, the active
+    /// one last, so switching back reopens them as VS Code does.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub open_files: Vec<PathBuf>,
 }
 
 impl RecentWorkspace {
@@ -1194,9 +1198,18 @@ impl RecentWorkspace {
     }
 
     /// Puts `entry` first in `recents`, dropping the entry with the same
-    /// folders. Keeps at most [`Self::MAX`] entries.
-    pub fn push(recents: &mut Vec<RecentWorkspace>, entry: RecentWorkspace) {
-        recents.retain(|recent| recent.folders != entry.folders);
+    /// folders. An entry without open files keeps the dropped entry's. Keeps
+    /// at most [`Self::MAX`] entries.
+    pub fn push(recents: &mut Vec<RecentWorkspace>, mut entry: RecentWorkspace) {
+        if let Some(index) = recents
+            .iter()
+            .position(|recent| recent.folders == entry.folders)
+        {
+            let previous = recents.remove(index);
+            if entry.open_files.is_empty() {
+                entry.open_files = previous.open_files;
+            }
+        }
         recents.insert(0, entry);
         recents.truncate(Self::MAX);
     }
@@ -1577,11 +1590,16 @@ mod tests {
     fn recent_workspaces_move_a_repeat_to_the_front() {
         let folder = |name: &str| RecentWorkspace {
             folders: vec![PathBuf::from(name)],
+            open_files: Vec::new(),
         };
-        let mut recents = vec![folder("/a"), folder("/b")];
+        let with_file = RecentWorkspace {
+            open_files: vec![PathBuf::from("/b/query.sql")],
+            ..folder("/b")
+        };
+        let mut recents = vec![folder("/a"), with_file.clone()];
 
         RecentWorkspace::push(&mut recents, folder("/b"));
-        assert_eq!(recents, vec![folder("/b"), folder("/a")]);
+        assert_eq!(recents, vec![with_file, folder("/a")]);
 
         for index in 0..30 {
             RecentWorkspace::push(&mut recents, folder(&format!("/{index}")));

@@ -736,7 +736,7 @@ impl Workspace {
     /// carrying every one of them: closing a batch must not open a dialog per
     /// tab and overwrite the previous request. None of the asked-about documents
     /// is closed here, and the rest still close through [`Self::close_tab`].
-    fn close_tabs(
+    pub(in crate::ui::views::workspace) fn close_tabs(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
