@@ -37,12 +37,13 @@ pub use auth::{
 pub use config::{
     AccentColorOverrides, AppConfig, AppConfigWarning, AppStyle, DangerousAction, DriverKey,
     EXTERNAL_SERVICES_CONFIG_KEY, EffectiveSettings, ExternalScriptRoot, GeneralSettings,
-    GlobalOverrides, GovernanceSettings, LoadedAppConfig, MountedScriptRoot, PolicyRoleConfig,
-    RecentWorkspace, RefreshPolicy, RefreshPolicySetting, RpcServiceKind, ScriptEntry,
-    ScriptRootAvailability, ScriptsDirectory, ScriptsScan, ScriptsScanRequest, ServiceConfig,
-    ServiceRpcApiContract, StartupFocus, SyntaxColorOverrides, SyntaxRole, ThemeSetting,
-    ToolPolicyConfig, TrustedClientConfig, all_script_extensions, driver_maps_differ,
-    filter_entries, hook_script_path, is_openable_script, migrate_app_config, parse_hex_color,
+    GlobalOverrides, GovernanceSettings, InterfaceSizeChange, LoadedAppConfig, MountedScriptRoot,
+    PolicyRoleConfig, RecentWorkspace, RefreshPolicy, RefreshPolicySetting, RpcServiceKind,
+    ScriptEntry, ScriptRootAvailability, ScriptsDirectory, ScriptsScan, ScriptsScanRequest,
+    ScrollbarVisibility, ServiceConfig, ServiceRpcApiContract, StartupFocus, SyntaxColorOverrides,
+    SyntaxRole, ThemeSetting, ToolPolicyConfig, TrustedClientConfig, all_script_extensions,
+    driver_maps_differ, filter_entries, hook_script_path, is_openable_script, migrate_app_config,
+    parse_hex_color,
 };
 
 #[allow(deprecated)]
@@ -88,10 +89,21 @@ pub use connection::dashboard_import::{
 };
 
 pub use connection::dashboard_source::{DashboardRef, DashboardSource, RemoteDashboard};
+pub use connection::root_section::{
+    LocalizedText, RootItemPresentation, RootSectionAction, RootSectionDef, RootSectionItem,
+    RootSectionPage, RootSectionPresentation, RootSectionSource,
+};
 pub use connection::secret_store::{
-    SecretDetails, SecretListPage, SecretListRequest, SecretPayload, SecretRotation,
+    DEFAULT_RECOVERY_WINDOW_DAYS, MAX_RECOVERY_WINDOW_DAYS, MAX_TAGS, MIN_RECOVERY_WINDOW_DAYS,
+    SecretCreateChoices, SecretCreateRequest, SecretCreated, SecretDeleteRequest, SecretDeletion,
+    SecretDescriptionChange, SecretDescriptionUpdate, SecretDetails, SecretListPage,
+    SecretListRequest, SecretPayload, SecretPutRequest, SecretRollback, SecretRollbackRequest,
+    SecretRotation, SecretRotationChange, SecretRotationStart, SecretRotationUpdate,
     SecretStoreCapabilities, SecretStoreDescriptor, SecretStoreSource, SecretSummary, SecretTag,
-    SecretValue,
+    SecretTagsUpdate, SecretValue, SecretVersionInfo, SecretVersionStage, encode_base64,
+    require_name, scrub_echoed_values, scrub_submitted_payload, validate_rotation_function,
+    validate_rotation_schedule, validate_rotation_window, validate_rotation_window_fits,
+    validate_tag,
 };
 
 pub use connection::dump_analysis::{
@@ -297,7 +309,8 @@ pub use storage::{
     HasSecretRef, HistoryEntry, KeyringSecretStore, NoopSecretStore, RecentFile, SavedQuery,
     SecretManager, SecretStore, SessionManifest, SessionStore, SessionTab, SessionTabKind, UiState,
     UiStateStore, auth_field_secret_ref, connection_secret_ref, create_secret_store,
-    proxy_secret_ref, ssh_tunnel_secret_ref,
+    keyring_password_for_connect, password_lives_in_keyring, proxy_secret_ref,
+    ssh_tunnel_secret_ref,
 };
 
 pub use observability::{

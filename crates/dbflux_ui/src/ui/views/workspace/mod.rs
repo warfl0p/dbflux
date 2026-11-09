@@ -468,6 +468,7 @@ impl Workspace {
         });
         dbflux_ui_base::app_state_entity::publish_vim_setting(&app_state, cx);
         dbflux_ui_base::app_state_entity::publish_font_settings(&app_state, cx);
+        dbflux_ui_base::app_state_entity::publish_scrollbar_setting(&app_state, cx);
         dbflux_ui_base::toast::publish_auto_dismiss_setting(&app_state, &toast_host, cx);
 
         // Subscribed before the startup diagnostics below are reported, so
@@ -861,10 +862,17 @@ impl Workspace {
         cx.subscribe(
             &command_palette,
             |this, _, event: &RecentWorkspaceRemoved, cx| {
+                let PaletteItem::Workspace {
+                    action: WorkspaceAction::OpenRecent(recent),
+                    ..
+                } = &event.0
+                else {
+                    return;
+                };
                 let removed = this
                     .app_state
                     .read(cx)
-                    .remove_recent_workspace(&event.0.folders);
+                    .remove_recent_workspace(&recent.folders);
                 if let Err(error) = removed {
                     report_error(recent_workspaces_error(error), cx);
                 }
@@ -1139,11 +1147,33 @@ impl Workspace {
                 } => {
                     this.open_console_document(*profile_id, Some(database.clone()), window, cx);
                 }
-                SidebarEvent::OpenObjectStoreBuckets { profile_id } => {
-                    this.open_object_store_buckets_document(*profile_id, window, cx);
+                SidebarEvent::OpenRootSection {
+                    profile_id,
+                    section_id,
+                    presentation,
+                } => {
+                    this.open_root_section(*profile_id, section_id, *presentation, window, cx);
                 }
-                SidebarEvent::OpenObjectStoreBucket { profile_id, bucket } => {
-                    this.open_object_browser(*profile_id, bucket.clone(), window, cx);
+                SidebarEvent::OpenRootSectionItem {
+                    profile_id,
+                    item_id,
+                    presentation,
+                    ..
+                } => {
+                    this.open_root_section_item(
+                        *profile_id,
+                        item_id.clone(),
+                        *presentation,
+                        window,
+                        cx,
+                    );
+                }
+                SidebarEvent::RootSectionChanged {
+                    profile_id,
+                    presentation,
+                    ..
+                } => {
+                    this.refresh_root_section_document(*profile_id, *presentation, window, cx);
                 }
                 SidebarEvent::OpenSecretStore {
                     profile_id,
@@ -1551,6 +1581,10 @@ impl Workspace {
                 match event {
                     TabManagerEvent::DocumentRequestedFocus => {
                         this.set_focus(FocusTarget::Document, window, cx);
+                        // The raiser may have queued a secret to open in a tab
+                        // of its own: that is done now, not on a later render,
+                        // so a tab switch in between cannot strand it.
+                        this.open_pending_secret(window, cx);
                     }
                     TabManagerEvent::RequestSqlPreview {
                         context,
@@ -2068,6 +2102,21 @@ impl Workspace {
             PaletteCommand::new(
                 "toggle_full_screen",
                 dbflux_i18n::t!("palette.command.toggle_full_screen.name"),
+                dbflux_i18n::t!("palette.category.view"),
+            ),
+            PaletteCommand::new(
+                "increase_interface_size",
+                dbflux_i18n::t!("palette.command.increase_interface_size.name"),
+                dbflux_i18n::t!("palette.category.view"),
+            ),
+            PaletteCommand::new(
+                "decrease_interface_size",
+                dbflux_i18n::t!("palette.command.decrease_interface_size.name"),
+                dbflux_i18n::t!("palette.category.view"),
+            ),
+            PaletteCommand::new(
+                "reset_interface_size",
+                dbflux_i18n::t!("palette.command.reset_interface_size.name"),
                 dbflux_i18n::t!("palette.category.view"),
             ),
             PaletteCommand::new(
@@ -2731,17 +2780,19 @@ impl Workspace {
 
     /// Persist the inspector width to `GeneralSettings` and save to disk.
     fn persist_inspector_width(&mut self, width: Pixels, cx: &mut Context<Self>) {
-        let runtime = self.app_state.read(cx).storage_runtime();
         let mut settings = self.app_state.read(cx).general_settings().clone();
         settings.workspace_inspector_width_px = Some(f32::from(width));
 
-        if let Err(e) = dbflux_app::config_loader::save_general_settings(runtime, &settings) {
-            log::warn!("Failed to persist inspector width: {}", e);
-        }
-
         self.app_state.update(cx, |state, _cx| {
-            state.update_general_settings(settings);
+            state.update_general_settings(settings.clone());
         });
+
+        dbflux_ui_base::settings_writer::persist_general_settings(
+            &self.app_state,
+            settings,
+            |_saved, _cx| {},
+            cx,
+        );
     }
 
     /// The next area in the Tab cycle, skipping the background tasks while

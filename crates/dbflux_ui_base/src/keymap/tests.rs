@@ -356,6 +356,118 @@ fn results_layer_binds_shift_s_to_find_similar_rows() {
     );
 }
 
+/// A text field inside a results document keeps every printable key the
+/// Results layer binds. A text input binds no printable key of its own, so a
+/// bare letter bound at the window root would take the character before the
+/// field saw it: `r` renames a row and `t` cycles the view, but in a focused
+/// filter, sort, projection or builder-rail field they are typed text. The
+/// keys a field does not consume — F5, the panel chords, the result tabs and
+/// Enter — keep reaching the layer from it.
+#[test]
+fn results_layer_letters_are_typed_in_a_focused_field() {
+    let keymap = native_keymap();
+    let root = root_key_context(WORKSPACE_KEY_CONTEXT, ContextId::Results, &[]);
+    let grid = element_stack(root.clone(), &[]);
+    let field = element_stack(root, &["Input"]);
+
+    for (keys, command) in [
+        ("r", Command::Rename),
+        ("t", Command::CycleDocumentView),
+        ("o", Command::ResultsAddRow),
+        ("y", Command::ResultsCopyRow),
+        ("i", Command::ToggleRecordView),
+        ("v", Command::ToggleValuePanel),
+        ("x", Command::Delete),
+        ("space", Command::ExpandCollapse),
+    ] {
+        let in_grid = top_action(&keymap, keys, &grid)
+            .unwrap_or_else(|| panic!("`{keys}` bound in the results grid"));
+        assert!(
+            runs_command(in_grid.as_ref(), command),
+            "`{keys}` must run {command:?} in the results grid"
+        );
+
+        let in_field = top_action(&keymap, keys, &field);
+        assert!(
+            in_field
+                .as_ref()
+                .is_none_or(|action| !action.as_any().is::<RunCommand>()),
+            "`{keys}` is typed text in a focused results field"
+        );
+    }
+
+    // The keys a field does not consume keep reaching the layer from it. Ctrl+J
+    // and Ctrl+K stay the input's own Down and Up, and Ctrl+Z its undo, which
+    // is why they are not listed here.
+    for (keys, command) in [
+        ("f5", Command::RefreshSchema),
+        ("ctrl-h", Command::FocusLeft),
+        ("ctrl-l", Command::FocusRight),
+        ("alt-h", Command::PrevResultTab),
+        ("alt-l", Command::NextResultTab),
+        ("enter", Command::Execute),
+    ] {
+        let in_field = top_action(&keymap, keys, &field)
+            .unwrap_or_else(|| panic!("`{keys}` bound in a focused results field"));
+        assert!(
+            runs_command(in_field.as_ref(), command),
+            "`{keys}` must run {command:?} from a focused results field"
+        );
+    }
+}
+
+/// The audit log and the side panels hold text fields of their own, so they
+/// get the same gate: a bare printable key a field would receive as typed text
+/// stops matching while that field has the keyboard, and every other key the
+/// layer binds keeps behaving exactly as it does outside a field.
+#[test]
+fn panel_letters_are_typed_in_a_focused_field() {
+    let keymap = native_keymap();
+
+    for context in [ContextId::Audit, ContextId::Inspector] {
+        let root = root_key_context(WORKSPACE_KEY_CONTEXT, context, &[]);
+        let panel = element_stack(root.clone(), &[]);
+        let field = element_stack(root, &["Input"]);
+        let mut gated = 0;
+
+        for letter in 'a'..='z' {
+            let keys = letter.to_string();
+            let Some(in_panel) = top_action(&keymap, &keys, &panel) else {
+                continue;
+            };
+
+            gated += 1;
+            let in_field = top_action(&keymap, &keys, &field);
+            assert!(
+                in_field
+                    .as_ref()
+                    .is_none_or(|action| !action.as_any().is::<RunCommand>()),
+                "`{keys}` is typed text in a focused {context:?} field"
+            );
+            assert!(
+                in_panel.as_any().is::<RunCommand>(),
+                "`{keys}` runs a {context:?} command in the panel"
+            );
+        }
+
+        assert!(gated > 0, "{context:?} binds printable keys");
+
+        for keys in ["f5", "enter", "escape", "down", "up", "pagedown", "ctrl-h"] {
+            let (Some(in_panel), Some(in_field)) = (
+                top_action(&keymap, keys, &panel),
+                top_action(&keymap, keys, &field),
+            ) else {
+                continue;
+            };
+
+            assert!(
+                runs_same_command(in_panel.as_ref(), in_field.as_ref()),
+                "`{keys}` does the same thing from a focused {context:?} field"
+            );
+        }
+    }
+}
+
 /// `space` in the Results layer must resolve to `ExpandCollapse`, matching
 /// the Sidebar layer's binding, so the object browser's "Space
 /// preview"/"Space properties" footer hints are actually live.
@@ -718,6 +830,17 @@ fn runs_command(action: &dyn Action, command: Command) -> bool {
         .as_any()
         .downcast_ref::<RunCommand>()
         .is_some_and(|run| run.command.as_ref() == command.action_id())
+}
+
+/// Whether both actions run the same command.
+fn runs_same_command(left: &dyn Action, right: &dyn Action) -> bool {
+    match (
+        left.as_any().downcast_ref::<RunCommand>(),
+        right.as_any().downcast_ref::<RunCommand>(),
+    ) {
+        (Some(left), Some(right)) => left.command.as_ref() == right.command.as_ref(),
+        _ => false,
+    }
 }
 
 /// The key contexts a window root reports for `context`. The settings
@@ -1536,6 +1659,77 @@ fn toggle_full_screen_reaches_text_roots_and_stops_at_dialogs() {
             top_action(&keymap, chord, std::slice::from_ref(&root)).is_none(),
             "`{chord}` must not fire while {context:?} owns the keyboard"
         );
+    }
+}
+
+/// The interface size chords work wherever the workspace keeps the global
+/// chords, including the schema diagram, which swallows every key it does
+/// not bind, and stop at dialogs.
+#[test]
+fn interface_size_chords_reach_every_workspace_context() {
+    let keymap = native_keymap();
+
+    #[cfg(target_os = "macos")]
+    let chords = [
+        ("cmd-=", Command::IncreaseInterfaceSize),
+        ("cmd-shift-=", Command::IncreaseInterfaceSize),
+        ("cmd-+", Command::IncreaseInterfaceSize),
+        ("cmd--", Command::DecreaseInterfaceSize),
+        ("cmd-0", Command::ResetInterfaceSize),
+    ];
+    #[cfg(not(target_os = "macos"))]
+    let chords = [
+        ("ctrl-=", Command::IncreaseInterfaceSize),
+        ("ctrl-shift-=", Command::IncreaseInterfaceSize),
+        ("ctrl-+", Command::IncreaseInterfaceSize),
+        ("ctrl--", Command::DecreaseInterfaceSize),
+        ("ctrl-0", Command::ResetInterfaceSize),
+    ];
+
+    let stacks = [
+        element_stack(
+            root_key_context(WORKSPACE_KEY_CONTEXT, ContextId::Editor, &[]),
+            &["CodeEditor", "Input"],
+        ),
+        element_stack(
+            root_key_context(WORKSPACE_KEY_CONTEXT, ContextId::TextInput, &[]),
+            &["Input"],
+        ),
+        vec![root_key_context(
+            WORKSPACE_KEY_CONTEXT,
+            ContextId::Sidebar,
+            &[],
+        )],
+        vec![root_key_context(
+            WORKSPACE_KEY_CONTEXT,
+            ContextId::Results,
+            &[],
+        )],
+        vec![root_key_context(
+            WORKSPACE_KEY_CONTEXT,
+            ContextId::SchemaViz,
+            &[],
+        )],
+    ];
+
+    for (chord, command) in chords {
+        for stack in &stacks {
+            let action = top_action(&keymap, chord, stack)
+                .unwrap_or_else(|| panic!("`{chord}` must be bound in {stack:?}"));
+            assert!(
+                runs_command(action.as_ref(), command),
+                "`{chord}` in {stack:?} must run {command:?}, got {}",
+                action.name()
+            );
+        }
+
+        for context in [ContextId::ConfirmModal, ContextId::CommandPalette] {
+            let root = root_key_context(WORKSPACE_KEY_CONTEXT, context, &[]);
+            assert!(
+                top_action(&keymap, chord, std::slice::from_ref(&root)).is_none(),
+                "`{chord}` must not fire while {context:?} owns the keyboard"
+            );
+        }
     }
 }
 
@@ -2869,5 +3063,90 @@ fn test_sidebar_tab_switch_bindings() {
     assert_eq!(
         keymap.resolve(ContextId::Sidebar, &KeyChord::new("e", Modifiers::none())),
         Some(Command::SidebarNextTab)
+    );
+}
+
+/// Users' keybinding overrides store three identifiers per row: the context
+/// name, the command id and the default keys in their storage form. The
+/// keyboard engine now lives in `bolt_keys`; these identifiers must survive
+/// that move byte for byte, so a row saved by an earlier release still
+/// names the same binding.
+#[test]
+fn persisted_identifiers_round_trip_through_their_storage_forms() {
+    let keymap = default_keymap();
+    let slots = dbflux_app::keymap::default_slots(keymap);
+    assert!(!slots.is_empty());
+
+    for slot in &slots {
+        let context_id = slot.context.id();
+        let command_id = slot.command.id();
+        let default_keys = slot.default_keys.to_storage_string();
+
+        assert_eq!(
+            KeySequence::from_storage_string(&default_keys),
+            Ok(slot.default_keys.clone()),
+            "{context_id}/{command_id}: the stored keys parse back unchanged"
+        );
+        assert!(
+            ContextId::all_variants()
+                .iter()
+                .any(|context| context.id() == context_id),
+            "{context_id}: the stored context name still names a context"
+        );
+        assert!(
+            Command::all_variants()
+                .into_iter()
+                .any(|command| command.id() == command_id),
+            "{command_id}: the stored command id still names a command"
+        );
+    }
+
+    // A row in the exact form the overrides have always stored — including
+    // a payload command's family id (`switch_to_tab`, never
+    // `switch_to_tab_3`) — still matches its binding after the move.
+    use dbflux_storage::repositories::keybinding_overrides::KeybindingOverrideDto;
+
+    assert_eq!(ContextId::Global.id(), "global");
+    assert_eq!(Command::SwitchToTab(3).id(), "switch_to_tab");
+    assert_eq!(Command::SwitchToTab(3).action_id(), "switch_to_tab_3");
+
+    let slot = BindingSlot::new(
+        ContextId::Global,
+        Command::NewQueryTab,
+        KeyChord::new("n", Modifiers::ctrl()),
+    );
+    let row = KeybindingOverrideDto {
+        context: "global".to_string(),
+        command_id: "new_query_tab".to_string(),
+        default_keys: "ctrl+n".to_string(),
+        keys: Some("ctrl+t".to_string()),
+        predicate: None,
+    };
+
+    let reloaded = KeymapOverrides::from_dtos(keymap, &[row]);
+    assert_eq!(
+        reloaded.effective_keys(&slot),
+        Some(KeySequence::parse("ctrl+t").expect("valid sequence")),
+        "a stored row keeps rebinding the same binding"
+    );
+}
+
+#[test]
+fn test_results_e_edits_the_value() {
+    let keymap = default_keymap();
+
+    assert_eq!(
+        keymap.resolve(ContextId::Results, &KeyChord::new("e", Modifiers::none())),
+        Some(Command::EditValue)
+    );
+}
+
+#[test]
+fn test_results_b_rolls_the_secret_back() {
+    let keymap = default_keymap();
+
+    assert_eq!(
+        keymap.resolve(ContextId::Results, &KeyChord::new("b", Modifiers::none())),
+        Some(Command::RollBackVersion)
     );
 }

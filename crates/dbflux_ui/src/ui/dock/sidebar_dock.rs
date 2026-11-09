@@ -1,5 +1,5 @@
 use dbflux_components::composites::Island;
-use dbflux_components::tokens::{ChromeColors, ShellMetrics};
+use dbflux_components::tokens::{IslandMetrics, ShellMetrics};
 use dbflux_ui_sidebar::Sidebar;
 use gpui::prelude::FluentBuilder;
 use gpui::*;
@@ -17,7 +17,13 @@ const COLLAPSED_WIDTH: Pixels = px(0.0);
 const DEFAULT_EXPANDED_WIDTH: Pixels = ShellMetrics::SIDEBAR_WIDTH;
 const MIN_WIDTH: Pixels = px(200.0);
 const MAX_WIDTH: Pixels = px(800.0);
+/// Width of the grip, which starts at the island's right edge and reaches
+/// over the desk gutter and the document beside it, so the sidebar's own
+/// scrollbar at that edge keeps its drag.
 const GRIP_WIDTH: Pixels = px(7.0);
+/// Width of the line drawn at the middle of the gutter while the grip is
+/// hovered or dragged.
+const GRIP_LINE_WIDTH: Pixels = px(2.0);
 
 /// The default width at the current interface size: the sidebar's rows and
 /// header grow with the interface font, so its default width grows with them.
@@ -339,6 +345,7 @@ impl Render for SidebarDock {
 
         div()
             .id("sidebar-dock")
+            .debug_selector(|| "sidebar-dock".to_string())
             .relative()
             .h_full()
             .w(self.current_width())
@@ -368,17 +375,34 @@ impl Render for SidebarDock {
 impl EventEmitter<SidebarDockEvent> for SidebarDock {}
 
 impl SidebarDock {
+    /// The seam between the sidebar and the document is the handle: it starts
+    /// at the island's right edge and covers the desk gutter after it. It
+    /// hangs off the dock rather than the island, because the island clips
+    /// what it paints and hit-tests.
     fn render_grip(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let line_color = cx.theme().accent.opacity(0.6);
+        let line_left = (IslandMetrics::GAP - GRIP_LINE_WIDTH) / 2.0;
+        let dragging = self.is_resizing;
+
         div()
             .id("sidebar-grip")
+            .group("sidebar-grip")
             .absolute()
             .top_0()
             .bottom_0()
             .right(-GRIP_WIDTH)
             .w(GRIP_WIDTH)
             .cursor_col_resize()
-            .hover(|el| el.bg(cx.theme().accent.opacity(0.3)))
-            .when(self.is_resizing, |el| el.bg(ChromeColors::tint(cx.theme())))
+            .child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .left(line_left)
+                    .w(GRIP_LINE_WIDTH)
+                    .group_hover("sidebar-grip", move |line| line.bg(line_color))
+                    .when(dragging, move |line| line.bg(line_color)),
+            )
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseDownEvent, _, cx| {

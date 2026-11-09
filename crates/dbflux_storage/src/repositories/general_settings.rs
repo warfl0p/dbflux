@@ -4,7 +4,8 @@
 //! replacing the JSON blob previously stored in app_settings.
 
 use log::info;
-use rusqlite::{Connection, params};
+use rusqlite::types::ValueRef;
+use rusqlite::{Connection, Row, params};
 
 use crate::bootstrap::OwnedConnection;
 use crate::error::StorageError;
@@ -45,7 +46,7 @@ impl GeneralSettingsRepository {
                        syntax_colors_json, accent_color_dark, accent_color_light,
                        table_alias_completion, table_alias_use_as,
                        blank_line_delimits_statements, show_error_toasts,
-                       grid_fk_labels,
+                       grid_fk_labels, scrollbar_visibility, workspace_inspector_width_px,
                        updated_at
                 FROM cfg_general_settings WHERE id = 1
                 "#,
@@ -95,7 +96,9 @@ impl GeneralSettingsRepository {
                 blank_line_delimits_statements: row.get(35)?,
                 show_error_toasts: row.get(36)?,
                 grid_fk_labels: row.get(37)?,
-                updated_at: row.get(38)?,
+                scrollbar_visibility: row.get(38)?,
+                workspace_inspector_width_px: read_inspector_width(row, 39)?,
+                updated_at: row.get(40)?,
             })
         });
 
@@ -129,9 +132,9 @@ impl GeneralSettingsRepository {
                     syntax_colors_json, accent_color_dark, accent_color_light,
                     table_alias_completion, table_alias_use_as,
                     blank_line_delimits_statements, show_error_toasts,
-                    grid_fk_labels,
+                    grid_fk_labels, scrollbar_visibility, workspace_inspector_width_px,
                     updated_at
-                ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, datetime('now'))
+                ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, datetime('now'))
                 ON CONFLICT(id) DO UPDATE SET
                     theme = excluded.theme,
                     restore_session_on_startup = excluded.restore_session_on_startup,
@@ -170,6 +173,8 @@ impl GeneralSettingsRepository {
                     blank_line_delimits_statements = excluded.blank_line_delimits_statements,
                     show_error_toasts = excluded.show_error_toasts,
                     grid_fk_labels = excluded.grid_fk_labels,
+                    scrollbar_visibility = excluded.scrollbar_visibility,
+                    workspace_inspector_width_px = excluded.workspace_inspector_width_px,
                     updated_at = datetime('now')
                 "#,
                 params![
@@ -210,6 +215,8 @@ impl GeneralSettingsRepository {
                     settings.blank_line_delimits_statements,
                     settings.show_error_toasts,
                     settings.grid_fk_labels,
+                    settings.scrollbar_visibility,
+                    settings.workspace_inspector_width_px,
                 ],
             )
             .map_err(|source| StorageError::Sqlite {
@@ -220,6 +227,23 @@ impl GeneralSettingsRepository {
         info!("Upserted general settings");
         Ok(())
     }
+}
+
+/// Reads the inspector width without failing the whole row.
+///
+/// SQLite stores any type in a column, and a value written by hand or by an
+/// older build can be text or a blob. Only the width falls back in that case;
+/// the rest of the row still loads.
+fn read_inspector_width(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<f64>> {
+    Ok(match row.get_ref(index)? {
+        ValueRef::Null => None,
+        ValueRef::Integer(value) => Some(value as f64),
+        ValueRef::Real(value) => Some(value),
+        ValueRef::Text(bytes) => std::str::from_utf8(bytes)
+            .ok()
+            .and_then(|text| text.trim().parse::<f64>().ok()),
+        ValueRef::Blob(_) => None,
+    })
 }
 
 /// DTO for general_settings table.
@@ -299,6 +323,13 @@ pub struct GeneralSettingsDto {
     /// Whether foreign-key grid cells resolve to the referenced row's label:
     /// 1 on, 0 off.
     pub grid_fk_labels: i32,
+    /// Serialized `ScrollbarVisibility` value: `"while_scrolling"`,
+    /// `"on_hover"` or `"always"`. Unknown values fall back to
+    /// `"while_scrolling"` at the loader layer.
+    pub scrollbar_visibility: String,
+    /// Width in pixels the row inspector was last resized to, or `None` to
+    /// open it at its default width.
+    pub workspace_inspector_width_px: Option<f64>,
     pub updated_at: String,
 }
 
@@ -319,6 +350,32 @@ mod tests {
         let _ = std::fs::remove_file(path.with_extension("sqlite-wal"));
         let _ = std::fs::remove_file(path.with_extension("sqlite-shm"));
         path
+    }
+
+    #[test]
+    fn a_non_numeric_inspector_width_only_drops_the_width() {
+        let path = temp_db("width_text");
+        let conn = open_database(&path).expect("should open");
+        MigrationRegistry::new()
+            .run_all(&conn)
+            .expect("migration should run");
+        conn.execute(
+            "UPDATE cfg_general_settings SET theme = 'light', ui_font_size = 15.0, \
+             workspace_inspector_width_px = 'wide' WHERE id = 1",
+            [],
+        )
+        .expect("store text in the width column");
+
+        #[allow(clippy::arc_with_non_send_sync)]
+        let repo = GeneralSettingsRepository::new(Arc::new(conn));
+
+        let fetched = repo
+            .get()
+            .expect("a text width must not fail the row read")
+            .expect("the row exists");
+        assert_eq!(fetched.workspace_inspector_width_px, None);
+        assert_eq!(fetched.theme, "light", "other settings still load");
+        assert_eq!(fetched.ui_font_size, 15.0);
     }
 
     #[test]
@@ -371,6 +428,8 @@ mod tests {
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
             grid_fk_labels: 0,
+            scrollbar_visibility: "while_scrolling".to_string(),
+            workspace_inspector_width_px: None,
             updated_at: String::new(),
         };
 
@@ -438,6 +497,8 @@ mod tests {
                 blank_line_delimits_statements: 0,
                 show_error_toasts: 1,
                 grid_fk_labels: 0,
+                scrollbar_visibility: "while_scrolling".to_string(),
+                workspace_inspector_width_px: None,
                 updated_at: String::new(),
             };
 
@@ -525,6 +586,8 @@ mod tests {
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
             grid_fk_labels: 0,
+            scrollbar_visibility: "while_scrolling".to_string(),
+            workspace_inspector_width_px: None,
             updated_at: String::new(),
         };
 
@@ -630,6 +693,8 @@ mod tests {
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
             grid_fk_labels: 0,
+            scrollbar_visibility: "while_scrolling".to_string(),
+            workspace_inspector_width_px: None,
             updated_at: String::new(),
         };
 
@@ -691,6 +756,8 @@ mod tests {
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
             grid_fk_labels: 0,
+            scrollbar_visibility: "while_scrolling".to_string(),
+            workspace_inspector_width_px: None,
             updated_at: String::new(),
         };
 
@@ -784,6 +851,8 @@ mod tests {
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
             grid_fk_labels: 0,
+            scrollbar_visibility: "while_scrolling".to_string(),
+            workspace_inspector_width_px: None,
             updated_at: String::new(),
         };
 
@@ -867,12 +936,24 @@ mod tests {
             blank_line_delimits_statements: 0,
             show_error_toasts: 1,
             grid_fk_labels: 1,
+            scrollbar_visibility: "while_scrolling".to_string(),
+            workspace_inspector_width_px: None,
             updated_at: String::new(),
         };
 
         repo.upsert(&dto).expect("should upsert");
 
         let fetched = repo.get().expect("should get").expect("should exist");
+        assert_eq!(fetched.grid_fk_labels, 1);
+        assert_eq!(fetched.scrollbar_visibility, "while_scrolling");
+
+        repo.upsert(&GeneralSettingsDto {
+            scrollbar_visibility: "always".to_string(),
+            ..dto
+        })
+        .expect("should upsert the scrollbar visibility");
+        let fetched = repo.get().expect("should get").expect("should exist");
+        assert_eq!(fetched.scrollbar_visibility, "always");
         assert_eq!(fetched.grid_fk_labels, 1);
 
         drop(repo);

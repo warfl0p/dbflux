@@ -5,7 +5,6 @@
 //! this module owns how it is loaded, shown and switched.
 
 use super::SecretStoreDocument;
-use crate::object_text::db_error_to_user_facing;
 use dbflux_components::controls::DropdownItem;
 use dbflux_core::{DbError, SwitchRegionResult};
 use dbflux_ui_base::AppStateChanged;
@@ -13,8 +12,9 @@ use dbflux_ui_base::user_error::{ErrorKind, UserFacingError, report_error};
 use gpui::Context;
 
 /// The regions the connection offers, fetched once per document on the
-/// background executor. `Failed` keeps the store-side error, so a failed
-/// listing renders as an error with a retry and never as an empty picker.
+/// background executor. `Failed` keeps the store-side error for the log: a
+/// store that cannot list its regions is not a failure the user caused, so the
+/// document shows the configured region without a picker and says nothing.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum RegionListState {
     #[default]
@@ -27,6 +27,14 @@ pub enum RegionListState {
 impl SecretStoreDocument {
     // -- Region -----------------------------------------------------------
 
+    /// Puts the discovery in the state a slow store leaves it in, so the
+    /// loading render can be asserted without racing the executor: a real
+    /// discovery resolves on the next frame the test reads.
+    #[cfg(test)]
+    pub(crate) fn mark_regions_loading(&mut self) {
+        self.regions = RegionListState::Loading;
+    }
+
     /// Fetches the connection's offered regions, on the background executor:
     /// the seam is synchronous and may block on the network, so it never runs
     /// on the foreground. A retry calls the connection again.
@@ -34,6 +42,9 @@ impl SecretStoreDocument {
         if !self.region_switchable || matches!(self.regions, RegionListState::Loading) {
             return;
         }
+
+        self.regions_generation = self.regions_generation.wrapping_add(1);
+        let generation = self.regions_generation;
 
         let Some(connection) = self
             .app_state
@@ -60,23 +71,46 @@ impl SecretStoreDocument {
         cx.spawn(async move |_this, cx| {
             let result = task.await;
             cx.update(|cx| {
-                entity.update(cx, |doc, cx| doc.apply_regions(result, cx));
+                entity.update(cx, |doc, cx| doc.apply_regions(generation, result, cx));
             });
         })
         .detach();
     }
 
-    fn apply_regions(&mut self, result: Result<Vec<String>, DbError>, cx: &mut Context<Self>) {
+    /// The generation of the region discovery in flight, for tests that need
+    /// to land a result the way a replaced connection would.
+    #[cfg(test)]
+    pub(crate) fn region_discovery_generation(&self) -> u64 {
+        self.regions_generation
+    }
+
+    /// Lands one discovery. A result from a discovery a newer one replaced —
+    /// or from a connection that was replaced under it — belongs to a session
+    /// that no longer exists, so it is dropped instead of shown.
+    pub(crate) fn apply_regions(
+        &mut self,
+        generation: u64,
+        result: Result<Vec<String>, DbError>,
+        cx: &mut Context<Self>,
+    ) {
+        if generation != self.regions_generation {
+            return;
+        }
+
         self.regions = match result {
             Ok(mut regions) => {
                 regions.sort();
                 RegionListState::Loaded(regions)
             }
             Err(error) => {
-                // First catch site of the discovery and of the user-triggered
-                // retry: report through the error seam and keep the inline
-                // retry, which renders below with the store's message.
-                report_error(db_error_to_user_facing(&error), cx);
+                // LocalStack without EC2 and an IAM user without
+                // `ec2:DescribeRegions` both land here on every open, so this
+                // is a log line and not a toast or an audit row.
+                log::warn!(
+                    "[secret store] the regions of profile {} could not be listed; \
+                     the document keeps the configured region: {error}",
+                    self.profile_id
+                );
                 RegionListState::Failed(error.to_string())
             }
         };
@@ -118,7 +152,7 @@ impl SecretStoreDocument {
     /// stores and the selected region untouched.
     pub fn switch_region(&mut self, region: String, cx: &mut Context<Self>) {
         if !self.region_switchable
-            || self.region_switch_in_flight
+            || self.region_switch_in_flight.get()
             || self.region.as_deref() == Some(region.as_str())
         {
             return;
@@ -136,7 +170,7 @@ impl SecretStoreDocument {
             }
         };
 
-        self.region_switch_in_flight = true;
+        self.region_switch_in_flight.set(true);
         cx.notify();
 
         let entity = cx.entity().clone();
@@ -159,7 +193,7 @@ impl SecretStoreDocument {
         result: Result<SwitchRegionResult, String>,
         cx: &mut Context<Self>,
     ) {
-        self.region_switch_in_flight = false;
+        self.region_switch_in_flight.set(false);
 
         match result {
             Ok(switch) => {
@@ -240,6 +274,18 @@ impl SecretStoreDocument {
         }
 
         self.region = Some(live_region);
+
+        // A discovery still running was asked of the previous connection, so
+        // its answer is dropped rather than shown. The offered regions belong
+        // to the credentials, not to the region, so a list already loaded
+        // stays: asking again on every switch would be a call for nothing.
+        self.regions_generation = self.regions_generation.wrapping_add(1);
+
+        if !matches!(self.regions, RegionListState::Loaded(_)) {
+            self.regions = RegionListState::Idle;
+            self.load_regions(cx);
+        }
+
         self.sync_region_dropdown(cx);
         self.load_first_page(cx);
         cx.notify();

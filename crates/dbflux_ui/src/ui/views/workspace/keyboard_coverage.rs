@@ -161,6 +161,23 @@ pub(crate) const TOASTS: SurfaceRegistry = SurfaceRegistry {
     ],
 };
 
+/// The sidebar's inline confirmation of a driver-declared root section
+/// action: Enter confirms and Escape cancels in the Modal key context.
+pub(crate) const ROOT_SECTION_ACTION_CONFIRM: SurfaceRegistry = SurfaceRegistry {
+    name: "root section action confirmation",
+    contexts: &[ContextId::Modal],
+    entries: &[
+        (
+            "root-section-action-confirm",
+            KeyboardPath::Command(Command::Execute),
+        ),
+        (
+            "root-section-action-cancel",
+            KeyboardPath::Command(Command::Cancel),
+        ),
+    ],
+};
+
 pub(crate) const PANE_ACTIONS_MENU: SurfaceRegistry = SurfaceRegistry {
     name: "pane actions menu",
     contexts: &[ContextId::ContextMenu],
@@ -176,6 +193,7 @@ pub(crate) fn registries() -> Vec<SurfaceRegistry> {
         NOTIFICATIONS,
         TOASTS,
         PANE_ACTIONS_MENU,
+        ROOT_SECTION_ACTION_CONFIRM,
     ]
 }
 

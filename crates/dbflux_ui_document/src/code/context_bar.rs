@@ -1,7 +1,7 @@
 use super::*;
 use crate::result_view::ResultViewMode;
 use dbflux_components::composites::control_shell;
-use dbflux_components::controls::Button;
+use dbflux_components::controls::{Button, DropdownEnvironment};
 use dbflux_components::icons::DriverIconTone;
 use dbflux_components::primitives::{FocusShape, Icon, Text, focus_ring};
 use dbflux_components::tokens::{ChamferCut, EditorMetrics, Fields};
@@ -191,7 +191,19 @@ impl CodeDocument {
             .map(|profile| {
                 let mut path = tree.folder_path(profile.id);
                 path.push(&profile.name);
-                DropdownItem::with_value(path.join(" / "), profile.id.to_string())
+                let item = DropdownItem::with_value(path.join(" / "), profile.id.to_string());
+
+                // Each row carries its driver's logo, so the list says which
+                // engine a profile talks to before the name is read.
+                let Some(driver) = state.drivers().get(&profile.driver_id()) else {
+                    return item;
+                };
+
+                let metadata = driver.metadata();
+                item.icon(AppIcon::for_driver(metadata.icon, metadata.category))
+                    .icon_tone(
+                        DriverIconTone::for_driver(metadata.icon, metadata.category).badge_tone(),
+                    )
             })
             .collect();
 
