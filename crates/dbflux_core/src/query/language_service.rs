@@ -954,6 +954,18 @@ const CLAUSES_AFTER_GROUP_BY: [&str; 10] = [
     "INTERSECT",
 ];
 
+/// Clauses that end a `QUALIFY` condition.
+const CLAUSES_AFTER_QUALIFY: [&str; 8] = [
+    "WINDOW",
+    "ORDER",
+    "LIMIT",
+    "OFFSET",
+    "FETCH",
+    "UNION",
+    "EXCEPT",
+    "INTERSECT",
+];
+
 /// Rewrite clauses the tree-sitter grammar cannot parse before the query
 /// reaches it:
 ///
@@ -962,6 +974,8 @@ const CLAUSES_AFTER_GROUP_BY: [&str; 10] = [
 /// - DuckDB's bare `GROUP BY ALL` is read by the grammar as the `ALL` set
 ///   quantifier, which then takes the next clause keyword as its grouping
 ///   expression. `ALL` becomes the positional `1`, which parses the same way.
+/// - The DuckDB / Snowflake / BigQuery `QUALIFY <condition>` clause has no
+///   rule in the grammar and is blanked out with spaces, condition included.
 ///
 /// Rewrites keep every byte offset (newlines are kept), so every other error
 /// keeps its row and column and the rest of the script is still validated.
@@ -1005,6 +1019,7 @@ fn mask_unparsed_clauses(query: &str) -> Cow<'_, str> {
                 on_commit_clause_end(bytes, index)
                     .map(|end| index..end)
                     .or_else(|| on_conflict_target_range(bytes, index))
+                    .or_else(|| qualify_clause_range(bytes, index))
             })
             .flatten();
 
@@ -1105,6 +1120,49 @@ fn on_conflict_target_range(bytes: &[u8], start: usize) -> Option<std::ops::Rang
     }
 
     None
+}
+
+/// Returns the `QUALIFY <condition>` clause starting at `start`: the keyword
+/// through the condition, which ends before the next clause, a `;`, or the
+/// parenthesis that closes the enclosing subquery.
+fn qualify_clause_range(bytes: &[u8], start: usize) -> Option<std::ops::Range<usize>> {
+    let mut index = match_words(bytes, start, &["QUALIFY"])?;
+    let mut depth = 0usize;
+
+    while let Some(&byte) = bytes.get(index) {
+        match (byte, bytes.get(index + 1)) {
+            (quote @ (b'\'' | b'"'), _) => {
+                index = skip_quoted(bytes, index, quote);
+                continue;
+            }
+            (b'-', Some(b'-')) | (b'/', Some(b'*')) => {
+                index = skip_whitespace_and_comments(bytes, index);
+                continue;
+            }
+            (b'(', _) => depth += 1,
+            (b')', _) if depth == 0 => break,
+            (b')', _) => depth = depth.saturating_sub(1),
+            (b';', _) => break,
+            _ => {}
+        }
+
+        let starts_word = !bytes
+            .get(index.wrapping_sub(1))
+            .is_some_and(|previous| is_identifier_byte(*previous));
+
+        if depth == 0
+            && starts_word
+            && CLAUSES_AFTER_QUALIFY
+                .iter()
+                .any(|clause| match_words(bytes, index, &[clause]).is_some())
+        {
+            break;
+        }
+
+        index += 1;
+    }
+
+    Some(start..index)
 }
 
 /// Returns where `ALL` starts in a `GROUP BY ALL` starting at `start` when
@@ -2188,6 +2246,36 @@ mod tests {
         ];
 
         for query in queries {
+            assert!(
+                matches!(mask_unparsed_clauses(query), Cow::Borrowed(_)),
+                "{query:?} was masked"
+            );
+        }
+    }
+
+    #[test]
+    fn qualify_clause_has_no_diagnostics() {
+        let queries = [
+            "SELECT a, row_number() OVER (PARTITION BY b ORDER BY c) AS rn FROM t QUALIFY rn = 1;",
+            "SELECT a FROM t QUALIFY row_number() OVER (PARTITION BY b ORDER BY c) = 1 ORDER BY a LIMIT 5;",
+            "with x as (\n  select a from t\n  join u on u.id = t.id\n  qualify a is not null\n)\nselect * from x;",
+            "SELECT a FROM t WHERE a > 0 QUALIFY a = 'order' -- note\nORDER BY a;",
+        ];
+
+        for query in queries {
+            let diagnostics = sql_editor_diagnostics(query);
+            assert!(diagnostics.is_empty(), "{query:?} produced {diagnostics:?}");
+        }
+    }
+
+    #[test]
+    fn mask_qualify_clause_stops_at_the_next_clause() {
+        let query = "SELECT a FROM t QUALIFY (a) > 1\nORDER BY a";
+        let masked = mask_unparsed_clauses(query);
+
+        assert_eq!(masked, "SELECT a FROM t                \nORDER BY a");
+
+        for query in ["SELECT 'qualify a' FROM t", "SELECT qualify_count FROM t"] {
             assert!(
                 matches!(mask_unparsed_clauses(query), Cow::Borrowed(_)),
                 "{query:?} was masked"
