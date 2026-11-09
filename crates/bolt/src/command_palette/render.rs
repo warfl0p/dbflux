@@ -130,6 +130,7 @@ where
         let overlay = div()
             .id("command-palette-overlay")
             .absolute()
+            .inset_0()
             .flex()
             .justify_center()
             .items_start()
