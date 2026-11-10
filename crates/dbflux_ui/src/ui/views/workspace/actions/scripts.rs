@@ -96,6 +96,8 @@ impl Workspace {
             tab_manager.update(cx, |mgr, cx| {
                 mgr.activate(id, cx);
             });
+            self.pending_focus = Some(FocusTarget::Document);
+            cx.notify();
             return;
         }
 
