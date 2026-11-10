@@ -2027,7 +2027,40 @@ impl AppState {
         }
 
         let mut recents = self.recent_workspaces();
-        RecentWorkspace::push(&mut recents, RecentWorkspace { folders });
+        RecentWorkspace::push(
+            &mut recents,
+            RecentWorkspace {
+                folders,
+                open_files: Vec::new(),
+            },
+        );
+        self.save_recent_workspaces(&recents).log_err();
+    }
+
+    /// The files open in the workspace of `folders` when it was last switched
+    /// away from, the active one last.
+    pub fn workspace_open_files(&self, folders: &[PathBuf]) -> Vec<PathBuf> {
+        self.recent_workspaces()
+            .into_iter()
+            .find(|recent| recent.folders == folders)
+            .map(|recent| recent.open_files)
+            .unwrap_or_default()
+    }
+
+    /// Remembers the files open in the workspace of `folders`, the active one
+    /// last. A failed write only loses the list, so it is logged.
+    pub fn set_workspace_open_files(&self, folders: &[PathBuf], open_files: Vec<PathBuf>) {
+        let mut recents = self.recent_workspaces();
+        match recents.iter_mut().find(|recent| recent.folders == folders) {
+            Some(recent) => recent.open_files = open_files,
+            None => RecentWorkspace::push(
+                &mut recents,
+                RecentWorkspace {
+                    folders: folders.to_vec(),
+                    open_files,
+                },
+            ),
+        }
         self.save_recent_workspaces(&recents).log_err();
     }
 

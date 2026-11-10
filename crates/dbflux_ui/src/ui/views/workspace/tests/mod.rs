@@ -1537,3 +1537,71 @@ fn refresh_schema_from_the_sidebar_reloads_only_the_connection_schema(cx: &mut T
         Some(crate::ui::labels::connections_no_active_connection_message()),
     );
 }
+
+/// The file tabs of `workspace`, in tab order.
+fn open_file_paths(
+    window: &mut VisualTestContext,
+    workspace: &Entity<Workspace>,
+) -> Vec<std::path::PathBuf> {
+    window.update(|_, cx| {
+        workspace
+            .read(cx)
+            .tab_manager
+            .read(cx)
+            .documents()
+            .iter()
+            .filter_map(|tab| tab.session_tab_snapshot(cx)?.file_path)
+            .collect()
+    })
+}
+
+fn switch_to_workspace(
+    window: &mut VisualTestContext,
+    app_state: &Entity<AppStateEntity>,
+    folder: &std::path::Path,
+) {
+    window.update(|_, cx| {
+        app_state.update(cx, |state, cx| {
+            state
+                .open_workspace(vec![folder.to_path_buf()])
+                .expect("open workspace");
+            cx.emit(dbflux_ui_base::AppStateChanged);
+        });
+    });
+    window.run_until_parked();
+}
+
+#[gpui::test]
+fn switching_workspace_swaps_its_open_files(cx: &mut TestAppContext) {
+    let (workspace, app_state, window) = new_workspace(cx);
+
+    let scratch = std::env::temp_dir().join(format!("dbflux-ws-switch-{}", uuid::Uuid::new_v4()));
+    let first = scratch.join("first");
+    let second = scratch.join("second");
+    std::fs::create_dir_all(&first).expect("create first");
+    std::fs::create_dir_all(&second).expect("create second");
+    let first = std::fs::canonicalize(first).expect("canonical first");
+    let second = std::fs::canonicalize(second).expect("canonical second");
+    let first_file = first.join("a.sql");
+    std::fs::write(&first_file, "select 1;").expect("write a.sql");
+
+    switch_to_workspace(window, &app_state, &first);
+    window.update(|_, cx| {
+        workspace.update(cx, |workspace, cx| {
+            workspace.open_script_from_path(first_file.clone(), cx);
+        });
+    });
+    window.run_until_parked();
+    assert_eq!(
+        open_file_paths(window, &workspace),
+        vec![first_file.clone()]
+    );
+
+    switch_to_workspace(window, &app_state, &second);
+    assert!(open_file_paths(window, &workspace).is_empty());
+
+    switch_to_workspace(window, &app_state, &first);
+    assert_eq!(open_file_paths(window, &workspace), vec![first_file]);
+
+    std::fs::remove_dir_all(scratch).expect("remove scratch");
+}

@@ -383,6 +383,8 @@ pub struct Workspace {
     pending_sql: Option<String>,
     pending_focus: Option<FocusTarget>,
     pending_open_script: Option<PendingOpenScript>,
+    /// The workspace folders the open editors belong to, to notice a switch.
+    workspace_folders: Vec<std::path::PathBuf>,
     pending_open_routine: Option<PendingOpenRoutine>,
     needs_focus_restore: bool,
     /// Set when the last tab closed under an open overlay: once every overlay
@@ -1539,6 +1541,16 @@ impl Workspace {
         )
         .detach();
 
+        cx.subscribe_in(
+            &app_state,
+            window,
+            |this, _, _: &AppStateChanged, window, cx| {
+                this.switch_workspace_editors(window, cx);
+            },
+        )
+        .detach();
+        let workspace_folders = app_state.read(cx).workspace_folders();
+
         // Create the workspace inspector with the persisted width (or default).
         let initial_inspector_width = {
             let settings = app_state.read(cx).general_settings();
@@ -1790,6 +1802,7 @@ impl Workspace {
             pending_sql: None,
             pending_focus: None,
             pending_open_script: None,
+            workspace_folders,
             pending_open_routine: None,
             needs_focus_restore: false,
             focus_sidebar_after_overlays: false,
