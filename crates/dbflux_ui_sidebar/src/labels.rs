@@ -919,8 +919,8 @@ mod tests {
         let english = dbflux_i18n::t!("sidebar.tabs.connections", locale = "en");
         let spanish = dbflux_i18n::t!("sidebar.tabs.connections", locale = "es");
 
-        assert_eq!(english, "CONNECTIONS");
-        assert_eq!(spanish, "CONEXIONES");
+        assert_eq!(english, "Connections");
+        assert_eq!(spanish, "Conexiones");
         assert_ne!(english, spanish);
     }
 

@@ -5564,8 +5564,8 @@ sidebar:
     unavailable_folders: "%{count} unavailable"
   tabs:
     dashboards: "Dashboards"
-    connections: CONNECTIONS
-    scripts: EXPLORER
+    connections: Connections
+    scripts: Explorer
   root_section:
     confirm_message: "Run \"%{action}\" on \"%{item}\"?"
     action:

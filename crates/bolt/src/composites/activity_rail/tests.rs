@@ -58,13 +58,12 @@ fn entries_compare_by_icon() {
 }
 
 #[test]
-fn active_button_takes_the_tint_wash_and_idle_stays_transparent() {
+fn active_button_takes_a_neutral_fill_and_idle_stays_transparent() {
     let theme = gpui_component::Theme::default();
-    let tint = ChromeColors::tint(&theme);
 
     let active = rail_button_colors(&theme, true);
-    assert_eq!(active.rest, tint.opacity(ShellMetrics::RAIL_ACTIVE_ALPHA));
-    assert_eq!(active.icon, tint);
+    assert_eq!(active.rest, theme.secondary);
+    assert_eq!(active.icon, ChromeColors::strong(&theme));
 
     let idle = rail_button_colors(&theme, false);
     assert_eq!(idle.rest, gpui::transparent_black());

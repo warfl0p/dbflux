@@ -3,20 +3,15 @@ use super::*;
 use crate::connection_failure::ConnectionFailure;
 use dbflux_components::controls::Button;
 use dbflux_components::icons::DriverIconTone;
-use dbflux_components::primitives::{Chamfer, ChamferRing, Icon, Kbd, Text};
+use dbflux_components::primitives::{Chamfer, ChamferRing, Icon, Text};
 use dbflux_components::tokens::{
     ChamferCut, ChromeColors, Fields, HeaderMetrics, ShellMetrics, SyntaxColors,
 };
 
-/// Section label of the sidebar header for `tab`, tinted while the sidebar
-/// has keyboard focus. The Scripts view is titled by its workspace folder
-/// when one is open.
-fn sidebar_header_label(
-    tab: SidebarTab,
-    workspace_name: Option<String>,
-    focused: bool,
-    tint: Hsla,
-) -> Text {
+/// Title of the sidebar header for `tab`, in sentence case and the muted
+/// foreground, as a VS Code view title. The Scripts view is titled by its
+/// workspace folder when one is open.
+fn sidebar_header_label(tab: SidebarTab, workspace_name: Option<String>) -> Text {
     let title = match (tab, workspace_name) {
         (SidebarTab::Connections, _) => dbflux_i18n::t!("sidebar.tabs.connections"),
         (SidebarTab::Scripts, Some(name)) => name,
@@ -24,16 +19,15 @@ fn sidebar_header_label(
         (SidebarTab::Dashboards, _) => dbflux_i18n::t!("sidebar.tabs.dashboards"),
     };
 
-    let label = Text::label(title).font_size(ShellMetrics::SECTION_LABEL_FONT);
-
-    if focused { label.color(tint) } else { label }
+    Text::body(title)
+        .font_weight(FontWeight::SEMIBOLD)
+        .muted_foreground()
 }
 
 impl Sidebar {
     /// Header of the active view (AppByzTable): its section label, then the
     /// add menu button.
     fn render_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let tint = ChromeColors::tint(cx.theme());
         let sidebar_for_add = cx.entity().clone();
         let add_label = if self.active_tab == SidebarTab::Dashboards {
             dbflux_i18n::t!("sidebar.header.new_dashboard")
@@ -68,18 +62,14 @@ impl Sidebar {
                     .flex_1()
                     .min_w_0()
                     .truncate()
-                    .child(sidebar_header_label(
-                        self.active_tab,
-                        workspace_name,
-                        self.connections_focused,
-                        tint,
-                    )),
+                    .child(sidebar_header_label(self.active_tab, workspace_name)),
             )
             .child(
                 Button::new("sidebar-add", add_label)
                     .icon(AppIcon::Plus)
                     .icon_size(ShellMetrics::SIDEBAR_FILTER_ICON)
                     .icon_only()
+                    .ghost()
                     .tab_stop(false)
                     .on_click(move |_, _, cx| {
                         sidebar_for_add.update(cx, |this, cx| {
@@ -94,11 +84,10 @@ impl Sidebar {
     }
 
     /// The filter field of the active view: a 30 px chamfered field with a
-    /// search icon, the frameless input and the `/` keycap that focuses it.
+    /// search icon and the frameless input.
     fn render_filter_field(
         &self,
         input: &Entity<InputState>,
-        query_is_empty: bool,
         focused: bool,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
@@ -136,16 +125,7 @@ impl Sidebar {
                             .flex_1()
                             .min_w_0()
                             .child(Input::new(input).xsmall().appearance(false).cleanable(true)),
-                    )
-                    .when(query_is_empty, |field| {
-                        field.when_some(
-                            dbflux_ui_base::keymap::shortcut_label(
-                                dbflux_app::keymap::ContextId::Sidebar,
-                                dbflux_app::keymap::Command::FocusSearch,
-                            ),
-                            |field, label| field.child(Kbd::new(label)),
-                        )
-                    }),
+                    ),
             )
     }
 
@@ -373,23 +353,14 @@ impl Render for Sidebar {
             self.open_child_picker_modal(&item_id, window, cx);
         }
 
-        let (search_input, query_is_empty) = match self.active_tab {
-            SidebarTab::Connections => (
-                self.connections_search_input.clone(),
-                self.connections_search_query.is_empty(),
-            ),
-            SidebarTab::Scripts => (
-                self.scripts_search_input.clone(),
-                self.scripts_search_query.is_empty(),
-            ),
-            SidebarTab::Dashboards => (
-                self.dashboards_search_input.clone(),
-                self.dashboards_search_query.is_empty(),
-            ),
+        let search_input = match self.active_tab {
+            SidebarTab::Connections => self.connections_search_input.clone(),
+            SidebarTab::Scripts => self.scripts_search_input.clone(),
+            SidebarTab::Dashboards => self.dashboards_search_input.clone(),
         };
         let search_focused = search_input.read(cx).focus_handle(cx).is_focused(window);
         let filter_field = self
-            .render_filter_field(&search_input, query_is_empty, search_focused, cx)
+            .render_filter_field(&search_input, search_focused, cx)
             .into_any_element();
 
         let theme = cx.theme();
@@ -585,34 +556,20 @@ mod tests {
     use super::{measured_latencies, sidebar_header_label};
     use crate::SidebarTab;
     use dbflux_components::primitives::TextVariant;
-    use dbflux_components::tokens::ShellMetrics;
     use std::collections::HashMap;
     use uuid::Uuid;
 
     #[test]
-    fn header_label_names_the_active_view_as_a_section_label() {
-        let connections =
-            sidebar_header_label(SidebarTab::Connections, None, false, gpui::red()).inspect();
-        let scripts = sidebar_header_label(SidebarTab::Scripts, None, false, gpui::red()).inspect();
-        let dashboards =
-            sidebar_header_label(SidebarTab::Dashboards, None, false, gpui::red()).inspect();
-
-        for inspection in [connections, scripts, dashboards] {
-            assert_eq!(inspection.variant, TextVariant::Label);
-            assert_eq!(
-                inspection.size_override,
-                Some(ShellMetrics::SECTION_LABEL_FONT.into())
-            );
-            assert!(inspection.uses_role_default_color);
+    fn header_label_names_the_active_view_in_muted_body_text() {
+        for tab in [
+            SidebarTab::Connections,
+            SidebarTab::Scripts,
+            SidebarTab::Dashboards,
+        ] {
+            let inspection = sidebar_header_label(tab, None).inspect();
+            assert_eq!(inspection.variant, TextVariant::Body);
+            assert!(inspection.uses_muted_foreground_override);
         }
-    }
-
-    #[test]
-    fn header_label_takes_the_tint_while_the_sidebar_has_focus() {
-        let focused =
-            sidebar_header_label(SidebarTab::Connections, None, true, gpui::red()).inspect();
-
-        assert!(focused.has_custom_color_override);
     }
 
     #[test]

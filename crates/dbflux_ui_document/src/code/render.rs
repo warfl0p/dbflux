@@ -346,8 +346,6 @@ impl CodeDocument {
             .overflow_y_scroll()
             .pt(EditorMetrics::ACTION_STRIP_PADDING_TOP)
             .gap(EditorMetrics::ACTION_STRIP_GAP)
-            .border_r_1()
-            .border_color(theme.border)
             .child(
                 Button::new("run-query-btn", run_label)
                     .icon(run_icon)
@@ -357,7 +355,7 @@ impl CodeDocument {
                     .variant(if is_executing {
                         ButtonVariant::Danger
                     } else {
-                        ButtonVariant::Primary
+                        ButtonVariant::Ghost
                     })
                     .disabled(!run_enabled)
                     .on_click(cx.listener(move |this, _, window, cx| {

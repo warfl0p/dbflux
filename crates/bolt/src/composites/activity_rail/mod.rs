@@ -11,7 +11,7 @@ use gpui_component::tooltip::Tooltip;
 use super::shell_bar::{BellUrgency, NotificationBell, count_badge};
 use crate::icon::IconSource;
 use crate::primitives::{Chamfer, Icon};
-use crate::tokens::{ButtonMetrics, ChamferCut, ChromeColors, ShellMetrics};
+use crate::tokens::{ChamferCut, ChromeColors, ShellMetrics};
 
 /// Key context the rail sets on itself, so a keymap predicate can name it.
 pub const ACTIVITY_RAIL_KEY_CONTEXT: &str = "ActivityRail";
@@ -86,9 +86,10 @@ impl RailEntry {
     }
 }
 
-/// Fills and icon color of a rail button: the active entry takes a tint wash
-/// and a tint icon, the others are transparent with a muted icon and the
-/// ghost hover and press fills.
+/// Fills and icon color of a rail button: the active entry takes a neutral
+/// raised fill and the strong icon color, as VS Code's activity bar does; the
+/// others are transparent with a muted icon and the ghost hover and press
+/// fills.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RailButtonColors {
     pub rest: Hsla,
@@ -99,13 +100,11 @@ pub struct RailButtonColors {
 
 pub fn rail_button_colors(theme: &gpui_component::Theme, active: bool) -> RailButtonColors {
     if active {
-        let tint = ChromeColors::tint(theme);
-
         return RailButtonColors {
-            rest: tint.opacity(ShellMetrics::RAIL_ACTIVE_ALPHA),
-            hover: tint.opacity(ButtonMetrics::SOFT_FILL_HOVER),
-            pressed: tint.opacity(ButtonMetrics::SOFT_FILL_PRESSED),
-            icon: tint,
+            rest: theme.secondary,
+            hover: theme.secondary_hover,
+            pressed: theme.secondary_hover,
+            icon: ChromeColors::strong(theme),
         };
     }
 
@@ -231,7 +230,7 @@ impl RenderOnce for ActivityRail {
             .w_full()
             .min_w_0()
             .overflow_hidden()
-            .pb(ShellMetrics::RAIL_PADDING_Y)
+            .p(ShellMetrics::RAIL_PADDING_Y)
             .children(top_buttons)
             .child(div().flex_1())
             .children(bottom_buttons)

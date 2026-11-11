@@ -771,9 +771,16 @@ impl Render for Workspace {
                                     .h_full()
                                     .flex()
                                     .flex_col()
-                                    // The rail sits above the sidebar and
-                                    // goes away with it.
-                                    .when(!sidebar_collapsed, |panel| panel.child(rail))
+                                    // The rail sits above the sidebar, on
+                                    // the sidebar's fill, and goes away
+                                    // with it.
+                                    .when(!sidebar_collapsed, |panel| {
+                                        panel
+                                            .bg(dbflux_components::composites::island_fill(
+                                                cx.theme(),
+                                            ))
+                                            .child(rail)
+                                    })
                                     .on_mouse_down(
                                         MouseButton::Left,
                                         cx.listener(|this, _, window, cx| {
