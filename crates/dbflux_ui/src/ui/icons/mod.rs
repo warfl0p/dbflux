@@ -124,15 +124,15 @@ embedded_icons! {
     ChartScatter => "icons/ui/chart-scatter.svg",
     Crosshair => "icons/ui/crosshair.svg",
     ChartNetwork => "icons/ui/chart-network.svg",
-    BrandPostgres => "icons/brand/postgresql.svg",
-    BrandMysql => "icons/brand/mysql.svg",
+    BrandPostgres => "icons/brand-color/postgresql.png",
+    BrandMysql => "icons/brand-color/mysql.png",
     BrandMariadb => "icons/brand/mariadb.svg",
     BrandSqlite => "icons/brand/sqlite.svg",
     BrandMongodb => "icons/brand/mongodb.svg",
     BrandRedis => "icons/brand/redis.svg",
     BrandClickhouse => "icons/brand/clickhouse.svg",
     BrandTurso => "icons/brand/turso.svg",
-    BrandDuckdb => "icons/brand/duckdb.svg",
+    BrandDuckdb => "icons/brand-color/duckdb.png",
     BrandLua => "icons/brand/lua.svg",
     BrandPython => "icons/brand/python.svg",
     BrandBash => "icons/brand/gnubash.svg",
@@ -176,15 +176,24 @@ mod tests {
     }
 
     #[test]
-    fn every_registered_icon_has_a_unique_path_and_svg_bytes() {
+    fn every_registered_icon_has_a_unique_path_and_matching_bytes() {
         let mut paths = std::collections::HashSet::new();
 
         for icon in ALL_ICONS {
             assert!(paths.insert(icon.path()), "duplicate path for {icon:?}");
 
             let bytes = embedded_bytes(*icon);
-            let has_svg_root = bytes.windows(4).any(|window| window == b"<svg");
-            assert!(has_svg_root, "{icon:?} does not embed an SVG document");
+
+            // Full-color brand marks are PNGs; every other icon is an SVG.
+            if icon.path().ends_with(".png") {
+                assert!(
+                    bytes.starts_with(b"\x89PNG"),
+                    "{icon:?} does not embed a PNG"
+                );
+            } else {
+                let has_svg_root = bytes.windows(4).any(|window| window == b"<svg");
+                assert!(has_svg_root, "{icon:?} does not embed an SVG document");
+            }
         }
     }
 }

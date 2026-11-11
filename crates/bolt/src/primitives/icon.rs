@@ -1,5 +1,5 @@
 use gpui::prelude::*;
-use gpui::{AbsoluteLength, App, Hsla, Transformation, Window, svg};
+use gpui::{AbsoluteLength, App, Hsla, Transformation, Window, img, svg};
 use gpui_component::{ActiveTheme, IconNamed};
 
 use crate::icon::IconSource;
@@ -95,6 +95,12 @@ impl Icon {
     }
 }
 
+/// Whether `path` names a full-color raster mark rather than a monochrome
+/// SVG glyph.
+fn is_color_mark(path: &str) -> bool {
+    path.ends_with(".png")
+}
+
 impl RenderOnce for Icon {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
@@ -106,14 +112,22 @@ impl RenderOnce for Icon {
             IconTone::Danger => theme.danger,
         };
 
-        let icon = match self.source {
-            IconSource::Named(name) => svg().path(name.path()).size(self.size).text_color(color),
-            IconSource::Svg(path) => svg().path(path).size(self.size).text_color(color),
+        let path = match self.source {
+            IconSource::Named(name) => name.path(),
+            IconSource::Svg(path) => path,
         };
 
+        // A full-color mark (a brand logo) is a raster drawn as is: neither
+        // tinted nor transformed.
+        if is_color_mark(&path) {
+            return img(path).size(self.size).flex_shrink_0().into_any_element();
+        }
+
+        let icon = svg().path(path).size(self.size).text_color(color);
+
         match self.transformation {
-            Some(transformation) => icon.with_transformation(transformation),
-            None => icon,
+            Some(transformation) => icon.with_transformation(transformation).into_any_element(),
+            None => icon.into_any_element(),
         }
     }
 }

@@ -6138,8 +6138,11 @@ pub(crate) mod object_tree_adapter_tests {
             .expect("sidebar alive");
         cx.run_until_parked();
 
+        // The two first loads race, so only the set of calls is stable.
+        let mut schema_calls = fake.schema_calls();
+        schema_calls.sort();
         assert_eq!(
-            fake.schema_calls(),
+            schema_calls,
             vec!["app".to_string(), "other".to_string()],
             "cached reopen must not re-dispatch loaded databases"
         );
