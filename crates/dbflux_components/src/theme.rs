@@ -478,10 +478,7 @@ mod tests {
                 theme.colors.table_active,
                 rgb_to_hsla_alpha(DARK_ACCENT, 0.07)
             );
-            assert_eq!(
-                theme.colors.list_active,
-                rgb_to_hsla_alpha(DARK_ACCENT, 0.12)
-            );
+            assert_eq!(theme.colors.list_active, gpui::hsla(0.0, 0.0, 1.0, 0.08));
         });
 
         cx.update(|cx| apply_theme(ThemeSetting::Light, AppStyle::Default, None, cx));
@@ -490,7 +487,7 @@ mod tests {
             assert_eq!(theme.colors.selection, rgb_to_hsla_alpha(ACCENT, 0.25));
             assert_eq!(theme.colors.drop_target, rgb_to_hsla_alpha(ACCENT, 0.10));
             assert_eq!(theme.colors.table_active, rgb_to_hsla_alpha(ACCENT, 0.07));
-            assert_eq!(theme.colors.list_active, rgb_to_hsla_alpha(ACCENT, 0.14));
+            assert_eq!(theme.colors.list_active, gpui::hsla(0.0, 0.0, 0.0, 0.07));
         });
     }
 

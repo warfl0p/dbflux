@@ -351,7 +351,7 @@ fn dashboards_empty_state(has_search: bool, cx: &mut Context<Sidebar>) -> gpui::
 }
 
 /// One row of the Dashboards view, styled as a tree row: the selected row
-/// takes the tint wash and the 2 px tint bar on its left edge.
+/// takes a neutral wash, with no edge bar.
 fn render_dashboard_row(
     ix: usize,
     entry: &TreeEntry,
@@ -361,7 +361,6 @@ fn render_dashboard_row(
     cx: &mut App,
 ) -> ListItem {
     let theme = cx.theme();
-    let tint = ChromeColors::tint(theme);
     let strong = ChromeColors::strong(theme);
     let muted = theme.muted_foreground;
 
@@ -408,12 +407,7 @@ fn render_dashboard_row(
     ListItem::new(ix)
         .h(TreeMetrics::ROW_HEIGHT)
         .px(TreeMetrics::PADDING_X)
-        .when(selected, |el| {
-            el.bg(theme.list_active)
-                .border_l_2()
-                .border_color(tint)
-                .pl(TreeMetrics::PADDING_X - TreeMetrics::SELECTION_BAR)
-        })
+        .when(selected, |el| el.bg(theme.list_active))
         .child(
             div()
                 .id(SharedString::from(format!("dashboard-row-{item_id}")))

@@ -278,12 +278,9 @@ pub(super) fn render_tree_item(
         _ => None,
     };
 
-    // Icons read muted, the driver logo keeps its tone, and the selected row
-    // takes the tint (DSApp "Tree").
+    // Icons read muted and the driver logo keeps its tone, selected or not.
     let icon_color = if connect_failure.is_some() {
         theme.danger
-    } else if selected {
-        ChromeColors::tint(theme)
     } else if let Some(color) = profile_id.and_then(|id| params.profile_icon_colors.get(&id)) {
         *color
     } else {
@@ -397,19 +394,12 @@ pub(super) fn render_tree_item(
     let current_drop_target = params.drop_target.as_ref();
     let drop_indicator_color = ChromeColors::tint(theme);
 
-    let selection_tint = ChromeColors::tint(theme);
-    let selection_wash = theme.list_active;
-
-    // The selected row gets the tint wash and a 2 px tint bar on its left
-    // edge; the bar takes its width out of the left padding so the row's
-    // content, and with it the indent guides, stay in place.
+    // The selected row gets a neutral wash and no edge bar, as a VS Code
+    // list selection.
     let mut list_item = ListItem::new(ix)
         .h(TreeMetrics::ROW_HEIGHT)
         .when(selected && !is_pending_delete, |el| {
-            el.bg(selection_wash)
-                .border_l_2()
-                .border_color(selection_tint)
-                .pl(TreeMetrics::PADDING_X - TreeMetrics::SELECTION_BAR)
+            el.bg(theme.list_active)
         })
         .when(is_pending_delete, |el| el.bg(pending_delete_bg))
         .when(is_multi_selected && !selected && !is_pending_delete, |el| {

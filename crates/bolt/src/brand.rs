@@ -19,7 +19,8 @@ use crate::palette::{PaletteMode, resolved_mode};
 pub struct AccentWashes {
     /// Background of a selected row in a table or a flat list.
     pub selected_row: Hsla,
-    /// Background of a selected item in a sidebar or a tree.
+    /// Background of a selected item in a sidebar or a tree: neutral, not
+    /// derived from the accent.
     pub selected_item: Hsla,
     /// Highlight behind selected text.
     pub text_selection: Hsla,
@@ -29,11 +30,11 @@ pub struct AccentWashes {
 
 /// Share of the wash color behind a selected row.
 const SELECTED_ROW_ALPHA: f32 = 0.07;
-/// Share behind a selected item on dark surfaces.
-const SELECTED_ITEM_ALPHA_DARK: f32 = 0.12;
-/// Share behind a selected item on light surfaces, where the accent reads
-/// stronger than its tint.
-const SELECTED_ITEM_ALPHA_LIGHT: f32 = 0.14;
+/// Share of white behind a selected item on dark surfaces: a neutral gray
+/// lift, as a VS Code list selection, rather than an accent wash.
+const SELECTED_ITEM_ALPHA_DARK: f32 = 0.08;
+/// Share of black behind a selected item on light surfaces.
+const SELECTED_ITEM_ALPHA_LIGHT: f32 = 0.07;
 /// Share behind selected text.
 const TEXT_SELECTION_ALPHA: f32 = 0.25;
 /// Share behind the drop target.
@@ -50,7 +51,7 @@ impl AccentWashes {
                 let accent = brand.accent;
                 Self {
                     selected_row: with_alpha(accent, SELECTED_ROW_ALPHA),
-                    selected_item: with_alpha(accent, SELECTED_ITEM_ALPHA_LIGHT),
+                    selected_item: hsla(0.0, 0.0, 0.0, SELECTED_ITEM_ALPHA_LIGHT),
                     text_selection: with_alpha(accent, TEXT_SELECTION_ALPHA),
                     drop_target: with_alpha(accent, DROP_TARGET_ALPHA),
                 }
@@ -59,7 +60,7 @@ impl AccentWashes {
                 let tint = brand.accent_tint;
                 Self {
                     selected_row: with_alpha(tint, SELECTED_ROW_ALPHA),
-                    selected_item: with_alpha(tint, SELECTED_ITEM_ALPHA_DARK),
+                    selected_item: hsla(0.0, 0.0, 1.0, SELECTED_ITEM_ALPHA_DARK),
                     text_selection: with_alpha(tint, TEXT_SELECTION_ALPHA),
                     drop_target: with_alpha(tint, DROP_TARGET_ALPHA),
                 }
@@ -178,7 +179,7 @@ mod tests {
         let washes = AccentWashes::for_brand(&brand, PaletteMode::Dark);
 
         assert_eq!(washes.selected_row, with_alpha(brand.accent_tint, 0.07));
-        assert_eq!(washes.selected_item, with_alpha(brand.accent_tint, 0.12));
+        assert_eq!(washes.selected_item, hsla(0.0, 0.0, 1.0, 0.08));
         assert_eq!(washes.text_selection, with_alpha(brand.accent_tint, 0.25));
         assert_eq!(washes.drop_target, with_alpha(brand.accent_tint, 0.10));
     }
@@ -189,7 +190,7 @@ mod tests {
         let washes = AccentWashes::for_brand(&brand, PaletteMode::Light);
 
         assert_eq!(washes.selected_row, with_alpha(brand.accent, 0.07));
-        assert_eq!(washes.selected_item, with_alpha(brand.accent, 0.14));
+        assert_eq!(washes.selected_item, hsla(0.0, 0.0, 0.0, 0.07));
         assert_eq!(washes.text_selection, with_alpha(brand.accent, 0.25));
         assert_eq!(washes.drop_target, with_alpha(brand.accent, 0.10));
     }

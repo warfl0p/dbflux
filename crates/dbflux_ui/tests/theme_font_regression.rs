@@ -181,7 +181,7 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         assert_eq!(theme.danger, rgb_to_hsla(0xFF6B5E));
         assert_eq!(theme.danger_foreground, rgb_to_hsla(0x09090B));
         assert_eq!(theme.table_row_border, rgb_to_hsla(0x1F2021));
-        assert_eq!(theme.list_active, rgb_to_hsla_alpha(0x7AA2F7, 0.12));
+        assert_eq!(theme.list_active, gpui::hsla(0.0, 0.0, 1.0, 0.08));
         assert_eq!(theme.table_active, rgb_to_hsla_alpha(0x7AA2F7, 0.07));
         assert_eq!(theme.title_bar_border, rgb_to_hsla(0x2B2C2E));
         assert_eq!(theme.window_border, rgb_to_hsla(0x2B2C2E));
