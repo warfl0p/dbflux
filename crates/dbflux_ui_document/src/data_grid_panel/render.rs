@@ -66,7 +66,6 @@ struct RenderState {
     is_loading: bool,
     show_panel_controls: bool,
     is_maximized: bool,
-    uses_result_view: bool,
     content_mode: DataGridContentMode,
     shows_content_controls: bool,
     is_editable: bool,
@@ -320,7 +319,6 @@ impl Render for DataGridPanel {
                     st.can_next,
                     st.sort_info,
                     st.has_data,
-                    st.uses_result_view,
                     // A document collection counts its staged edits in the view row.
                     if st.document_collection {
                         0
@@ -605,7 +603,6 @@ impl DataGridPanel {
             is_loading,
             show_panel_controls,
             is_maximized,
-            uses_result_view,
             content_mode,
             shows_content_controls,
             is_editable,
@@ -1059,7 +1056,7 @@ fn builder_button(
 
 /// Icon of the refresh action: a loader while a query runs, a clock while
 /// auto-refresh is on, a circling arrow otherwise.
-fn refresh_icon(is_running: bool, is_auto: bool) -> AppIcon {
+pub(crate) fn refresh_icon(is_running: bool, is_auto: bool) -> AppIcon {
     if is_running {
         AppIcon::Loader
     } else if is_auto {
@@ -1069,10 +1066,11 @@ fn refresh_icon(is_running: bool, is_auto: bool) -> AppIcon {
     }
 }
 
-/// The table view's primary Refresh split: the main action refreshes (or
-/// cancels a running query) and the menu segment hosts the auto-refresh
-/// dropdown as a bare chevron.
-fn refresh_split(
+/// The Refresh split of a table and a query result alike: the main action
+/// refreshes (or cancels a running query) and the menu segment hosts the
+/// auto-refresh dropdown as a bare chevron.
+pub(crate) fn refresh_split(
+    ids: (&'static str, &'static str),
     label: String,
     icon: AppIcon,
     focused: bool,
@@ -1080,9 +1078,8 @@ fn refresh_split(
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> SplitButton {
     SplitButton::new(
-        "refresh-action-btn",
-        Button::new("refresh-action", label)
-            .primary()
+        ids.0,
+        Button::new(ids.1, label)
             .icon(icon)
             .focused(focused)
             .tab_stop(false)
@@ -1368,6 +1365,7 @@ impl DataGridPanel {
                 })))
             })
             .child(refresh_split(
+                ("refresh-action-btn", "refresh-action"),
                 refresh_label,
                 refresh_icon(
                     self.runner.is_primary_active(),
@@ -3522,7 +3520,6 @@ impl DataGridPanel {
         can_next: bool,
         sort_info: Option<(String, SortDirection, bool)>,
         has_data: bool,
-        uses_result_view: bool,
         pending_change_count: usize,
         is_editable: bool,
         theme: &gpui_component::theme::Theme,
@@ -3533,25 +3530,9 @@ impl DataGridPanel {
         let shows_read_only =
             !is_editable && self.collection.raw.is_none() && !self.result.columns.is_empty();
 
-        let result_shape_label = if uses_result_view && !self.footer_hosts_view_switch() {
-            Some(self.result.shape.clone())
-        } else {
-            None
-        };
-
-        // A table or collection hosts its whole view switch here, Chart
-        // included (AppByzTable footer). A query result switches views from
-        // the `ResultPanel` mode bar above its content, so this row only
-        // offers the shape's other views while one of them is showing, and
-        // never Chart.
-        let footer_hosts_switch = self.footer_hosts_view_switch();
-        let available_modes = if footer_hosts_switch {
-            self.available_result_view_modes(cx)
-        } else if uses_result_view {
-            ResultViewMode::available_for_shape(&self.result.shape)
-        } else {
-            vec![]
-        };
+        // Every source hosts its whole view switch here, Chart included, so a
+        // table and a query result share one footer.
+        let available_modes = self.available_result_view_modes(cx);
         let current_result_mode = self.chrome.result_view_mode;
 
         let show_record_toggle = self.record_view_available();
@@ -3561,19 +3542,13 @@ impl DataGridPanel {
         let panel = cx.entity().downgrade();
 
         let view_switch =
-            (available_modes.len() > 1
-                && (footer_hosts_switch || !current_result_mode.shows_chart()))
-            .then(|| {
+            (available_modes.len() > 1).then(|| {
                 let items: Vec<SegmentedItem> = available_modes
                     .iter()
                     .map(|mode| {
                         SegmentedItem::new(
                             SharedString::from(format!("result-view-{}", mode.label())),
-                            if footer_hosts_switch {
-                                crate::labels::table_view_mode_label(*mode)
-                            } else {
-                                crate::labels::result_view_mode_label(*mode)
-                            },
+                            crate::labels::table_view_mode_label(*mode),
                         )
                         .icon(Self::result_mode_icon(*mode))
                     })
@@ -3707,20 +3682,6 @@ impl DataGridPanel {
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.set_record_mode(!this.record_mode(), cx);
                         })),
-                )
-            })
-            .when_some(result_shape_label, |d, shape| {
-                let label = match &shape {
-                    dbflux_core::QueryResultShape::Table => "table",
-                    dbflux_core::QueryResultShape::Json => "json",
-                    dbflux_core::QueryResultShape::Text => "text",
-                    dbflux_core::QueryResultShape::Binary => "binary",
-                };
-                d.child(
-                    div()
-                        .flex_shrink_0()
-                        .font_family(dbflux_components::fonts::editor_family(cx))
-                        .child(label),
                 )
             })
             .child(footer_item(

@@ -239,16 +239,6 @@ impl DataGridPanel {
         ) || self.chart.time_series_source
     }
 
-    /// Whether the footer carries the view switch (Grid / JSON / Chart): a
-    /// table or collection draws it there (AppByzTable), while a query result
-    /// uses the `ResultPanel` mode bar above its content.
-    pub(super) fn footer_hosts_view_switch(&self) -> bool {
-        matches!(
-            self.source,
-            DataSource::Table { .. } | DataSource::Collection { .. }
-        )
-    }
-
     pub(super) fn uses_result_view(&self) -> bool {
         self.has_result_views() && !self.chrome.result_view_mode.is_table()
     }

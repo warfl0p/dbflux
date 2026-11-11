@@ -482,27 +482,21 @@ impl CodeDocument {
         } else {
             dbflux_i18n::t!("document.code.toolbar.refresh")
         };
-        let refresh_icon = if is_executing {
-            AppIcon::Loader
-        } else if auto_refresh_enabled {
-            AppIcon::Clock
-        } else {
-            AppIcon::RefreshCcw
-        };
         let refresh_menu_focused = self.refresh.refresh_dropdown.read(cx).is_focused(window);
 
-        SplitButton::new(
-            "sql-refresh-split",
-            Button::new("sql-refresh-action", refresh_label)
-                .icon(refresh_icon)
-                .on_click(cx.listener(|this, _, window, cx| {
-                    if this.runner.is_primary_active() {
-                        this.cancel_query(cx);
-                    } else {
-                        this.run_query(window, cx);
-                    }
-                })),
+        crate::data_grid_panel::refresh_split(
+            ("sql-refresh-split", "sql-refresh-action"),
+            refresh_label,
+            crate::data_grid_panel::refresh_icon(is_executing, auto_refresh_enabled),
+            false,
             self.refresh.refresh_dropdown.clone(),
+            cx.listener(|this, _, window, cx| {
+                if this.runner.is_primary_active() {
+                    this.cancel_query(cx);
+                } else {
+                    this.run_query(window, cx);
+                }
+            }),
         )
         .menu_focused(refresh_menu_focused)
         .into_any_element()

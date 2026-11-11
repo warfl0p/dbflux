@@ -44,9 +44,8 @@ pub(crate) fn grid_edits_dropped_on_reload(count: usize) -> String {
 /// `dbflux_components` so the shared refresh split-button uses it too.
 pub(crate) use dbflux_components::composites::refresh_policy_label;
 
-/// Label for a [`crate::result_view::ResultViewMode`] shown in the
-/// status-bar result-view mode chips.
-pub(crate) fn result_view_mode_label(mode: crate::result_view::ResultViewMode) -> String {
+/// Label for a [`crate::result_view::ResultViewMode`] other than the grid.
+fn result_view_mode_label(mode: crate::result_view::ResultViewMode) -> String {
     use crate::result_view::ResultViewMode;
 
     match mode {
@@ -64,8 +63,8 @@ pub(crate) fn record_view_label() -> String {
     dbflux_i18n::t!("document.data.grid.views.record")
 }
 
-/// Label of a mode in a table's footer view switch, where the data view is
-/// the "Grid" (AppByzTable) rather than a query result's "Data".
+/// Label of a mode in the footer view switch, where the data view is the
+/// "Grid" for a table and a query result alike.
 pub(crate) fn table_view_mode_label(mode: crate::result_view::ResultViewMode) -> String {
     match mode {
         crate::result_view::ResultViewMode::Table => {

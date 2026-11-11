@@ -562,11 +562,7 @@ impl DataGridPanel {
                 }
             },
             ToolbarAction::ResultView(mode) => {
-                let view = if self.footer_hosts_view_switch() {
-                    crate::labels::table_view_mode_label(mode)
-                } else {
-                    crate::labels::result_view_mode_label(mode)
-                };
+                let view = crate::labels::table_view_mode_label(mode);
                 dbflux_i18n::t!("document.data.context_menu.toolbar.show_view", view = view)
             }
             ToolbarAction::OpenBuilder if self.collection.builder.open => {

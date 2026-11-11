@@ -307,8 +307,6 @@ fn a_table_browse_offers_its_views_in_the_footer(cx: &mut TestAppContext) {
     window.update(|_, app| {
         let panel = panel.read(app);
 
-        assert!(panel.footer_hosts_view_switch());
-
         let modes = panel.available_result_view_modes(app);
         assert!(modes.contains(&super::super::ResultViewMode::Table));
         assert!(modes.contains(&super::super::ResultViewMode::Json));

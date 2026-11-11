@@ -18,6 +18,7 @@ mod primary_key;
 mod query;
 mod refresh;
 mod render;
+pub(crate) use render::{refresh_icon, refresh_split};
 mod result_search;
 pub(crate) mod row_inspector;
 pub(crate) mod side_island;
@@ -1642,7 +1643,6 @@ impl DataGridPanel {
         let e_render = entity.clone();
         let e_focus_get = entity.clone();
         let e_focus_do = entity.clone();
-        let e_modes = entity.clone();
         let e_current = entity.clone();
         let e_set_mode = entity.clone();
         let e_segments = entity.clone();
@@ -1662,14 +1662,9 @@ impl DataGridPanel {
             })
             .focus_handle(move |cx| e_focus_get.read(cx).focus_handle.clone())
             .toolbar_segments(move |cx| Self::result_toolbar_segments(&e_segments, cx))
-            .available_modes(move |cx| {
-                let grid = e_modes.read(cx);
-                if grid.footer_hosts_view_switch() {
-                    Vec::new()
-                } else {
-                    grid.available_result_view_modes(cx)
-                }
-            })
+            // The footer hosts the view switch for every source, so the
+            // `ResultPanel` draws no mode bar of its own.
+            .available_modes(|_cx| Vec::new())
             .current_mode(move |cx| e_current.read(cx).current_result_view_mode())
             .set_mode(move |mode, cx| {
                 e_set_mode.update(cx, |grid, cx| grid.set_result_view_mode(mode, cx));
