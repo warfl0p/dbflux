@@ -5,9 +5,23 @@ The DBFlux application icon is excluded and licensed separately.
 
 ---
 
+## Material Symbols
+
+The non-brand UI icons in `ui/` (except `github.svg`) are **Material Symbols**,
+Outlined style, weight 400, from the `@material-symbols/svg-400` package
+(version 0.48.3). Each file keeps the Lucide-derived name it replaced, so the
+code refers to the same paths.
+
+- Project: Material Symbols (Google)
+- License: Apache License 2.0
+- Source: https://fonts.google.com/icons
+- Copyright: © Google LLC
+
+---
+
 ## Lucide Icons
 
-Most non-brand UI icons in this directory are derived from **Lucide**.
+`ui/github.svg` is derived from **Lucide**.
 
 - Project: Lucide
 - License: ISC License
@@ -42,3 +56,14 @@ any affiliation, endorsement, or sponsorship.
 
 The DBFlux application icon and branding assets are original works and are
 not covered by the licenses listed above.
+
+## devicon (Full-Color Brand Marks)
+
+The full-color PostgreSQL, MySQL and DuckDB marks in `brand-color/` are
+rendered to PNG from the `-original` SVGs of **devicon** 2.17.0.
+
+- Project: devicon
+- License: MIT License
+- Source: https://devicon.dev
+
+The trademark notice above applies to them as well.
