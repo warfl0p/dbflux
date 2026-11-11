@@ -3616,6 +3616,7 @@ mod tests {
         assert!(created.is_file());
     }
 
+    #[cfg(feature = "cloudwatch")]
     #[test]
     fn build_builtin_drivers_registers_cloudwatch_driver() {
         let drivers = AppState::build_builtin_drivers();

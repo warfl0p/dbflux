@@ -31,6 +31,9 @@ serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
+# Tests open profiles of every built-in driver; the fork keeps these four out
+# of dbflux_app's defaults, so test builds enable them here.
+dbflux_app = { workspace = true, features = ["mongodb", "dynamodb", "cloudwatch", "mssql"] }
 gpui = { workspace = true, features = ["test-support"] }
 # The keyboard-coverage registry's frame capture lives behind Bolt's
 # `test-support` feature, which a plain dependency build does not enable.

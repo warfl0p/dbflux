@@ -26,6 +26,9 @@ rfd.workspace = true
 dirs.workspace = true
 
 [dev-dependencies]
+# Tests open profiles of every built-in driver; the fork keeps these four out
+# of dbflux_app's defaults, so test builds enable them here.
+dbflux_app = { workspace = true, features = ["mongodb", "dynamodb", "cloudwatch", "mssql"] }
 secrecy.workspace = true
 rusqlite.workspace = true
 gpui = { workspace = true, features = ["test-support"] }

@@ -53,7 +53,9 @@ reqwest.workspace = true
 semver.workspace = true
 
 [features]
-default = ["sqlite", "postgres", "mysql", "mongodb", "redis", "dynamodb", "cloudwatch", "mssql"]
+# Fork: MongoDB, DynamoDB, CloudWatch and SQL Server are opt-in; the dbflux
+# binary's own default list still enables every driver.
+default = ["sqlite", "postgres", "mysql", "redis"]
 # Per-driver features enable the driver crate (for registration here) and, when
 # the MCP server is compiled in, forward the matching driver feature to it. This
 # relay used to live in dbflux_ui; it belongs here because dbflux_app owns both

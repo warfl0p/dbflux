@@ -56,6 +56,9 @@ aws = ["dbflux_app/aws", "dbflux_ui_base/aws"]
 test-support = []
 
 [dev-dependencies]
+# Tests open profiles of every built-in driver; the fork keeps these four out
+# of dbflux_app's defaults, so test builds enable them here.
+dbflux_app = { workspace = true, features = ["mongodb", "dynamodb", "cloudwatch", "mssql"] }
 gpui = { workspace = true, features = ["test-support"] }
 dbflux_components = { workspace = true, features = ["test-support"] }
 dbflux_ui_base = { workspace = true, features = ["test-support"] }
