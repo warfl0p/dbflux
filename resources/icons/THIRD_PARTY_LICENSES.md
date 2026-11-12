@@ -59,8 +59,8 @@ not covered by the licenses listed above.
 
 ## devicon (Full-Color Brand Marks)
 
-The full-color PostgreSQL, MySQL and DuckDB marks in `brand-color/` are
-rendered to PNG from the `-original` SVGs of **devicon** 2.17.0.
+The full-color PostgreSQL, MySQL, DuckDB, SQLite and Redis marks in
+`brand-color/` are rendered to PNG from the `-original` SVGs of **devicon** 2.17.0.
 
 - Project: devicon
 - License: MIT License
