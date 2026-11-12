@@ -1,5 +1,8 @@
 use gpui::prelude::*;
-use gpui::{AbsoluteLength, App, Hsla, Transformation, Window, img, svg};
+use gpui::{
+    AbsoluteLength, Animation, AnimationExt, App, Hsla, Transformation, Window, img, percentage,
+    svg,
+};
 use gpui_component::{ActiveTheme, IconNamed};
 
 use crate::icon::IconSource;
@@ -95,6 +98,14 @@ impl Icon {
     }
 }
 
+/// One full turn of a spinning loader.
+const LOADER_TURN: std::time::Duration = std::time::Duration::from_millis(900);
+
+/// Whether `path` names the loader glyph, by our path or gpui_component's.
+fn is_loader(path: &str) -> bool {
+    path.ends_with("/loader.svg")
+}
+
 /// Whether `path` names a full-color raster mark rather than a monochrome
 /// SVG glyph.
 fn is_color_mark(path: &str) -> bool {
@@ -123,7 +134,22 @@ impl RenderOnce for Icon {
             return img(path).size(self.size).flex_shrink_0().into_any_element();
         }
 
+        let is_loader = is_loader(&path);
         let icon = svg().path(path).size(self.size).text_color(color);
+
+        // The loader glyph is an open arc that only reads as progress while
+        // it turns, so every loader spins.
+        if is_loader {
+            return icon
+                .with_animation(
+                    "loader-spin",
+                    Animation::new(LOADER_TURN).repeat(),
+                    |icon, delta| {
+                        icon.with_transformation(Transformation::rotate(percentage(delta)))
+                    },
+                )
+                .into_any_element();
+        }
 
         match self.transformation {
             Some(transformation) => icon.with_transformation(transformation).into_any_element(),
