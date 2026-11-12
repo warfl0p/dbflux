@@ -100,9 +100,10 @@ comandos se ejecutan desde la paleta de comandos (`Ctrl+Shift+P`):
   sincronizados con la carpeta. Crear, renombrar y eliminar archivos y
   subcarpetas dentro de ella funciona igual que en tu propia carpeta de scripts.
   Mover un archivo entre dos carpetas distintas se rechaza.
-- DBFlux no vigila las carpetas. Pulsa `r` sobre una carpeta, o elige
-  **Actualizar** en su menú, para ver archivos agregados o modificados fuera de
-  DBFlux. Las carpetas también se escanean en segundo plano cada vez que DBFlux
+- DBFlux vigila las carpetas: los archivos y subcarpetas que otros programas
+  agregan, eliminan o renombran aparecen solos en el sidebar. Pulsa `r` sobre
+  una carpeta, o elige **Actualizar** en su menú, para volver a escanearla a
+  mano. Las carpetas también se escanean en segundo plano cada vez que DBFlux
   arranca.
 - Si una carpeta se mueve, se elimina, se desmonta o no se puede leer, sigue
   abierta marcada como **no disponible** hasta que vuelva o la quites, y el pie

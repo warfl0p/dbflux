@@ -1103,6 +1103,9 @@ pub struct Sidebar {
     syncing_expansion: bool,
     tracked_operation_tasks: HashMap<TaskId, Task<()>>,
     _subscriptions: Vec<Subscription>,
+    /// The scripts folders watched for files added or removed outside DBFlux;
+    /// `None` when the app runs without a file watcher (tests).
+    scripts_watch: Option<dbflux_ui_base::file_watcher::FolderWatch>,
     editing_id: Option<Uuid>,
     editing_is_folder: bool,
     editing_script_path: Option<std::path::PathBuf>,
@@ -1300,8 +1303,22 @@ impl Sidebar {
                 this.refresh_tree(cx);
                 this.refresh_scripts_tree(cx);
                 this.refresh_dashboards_tree(cx);
+                this.sync_scripts_watch(cx);
             },
         );
+
+        let file_watcher = dbflux_ui_base::file_watcher::FileWatcher::global(cx);
+        let scripts_watch = file_watcher
+            .as_ref()
+            .map(|watcher| watcher.read(cx).folder_watch());
+        let files_subscription = file_watcher.map(|watcher| {
+            cx.subscribe(
+                &watcher,
+                |this, _, event: &dbflux_ui_base::file_watcher::FilesChanged, cx| {
+                    this.rescan_scripts_for_outside_changes(event, cx);
+                },
+            )
+        });
 
         let object_tree_subscription = cx.subscribe(
             &app_state,
@@ -1467,7 +1484,11 @@ impl Sidebar {
                 scripts_search_subscription,
                 dashboards_search_subscription,
                 tree_expansion_subscription,
-            ],
+            ]
+            .into_iter()
+            .chain(files_subscription)
+            .collect(),
+            scripts_watch,
             editing_id: None,
             editing_is_folder: false,
             editing_script_path: None,

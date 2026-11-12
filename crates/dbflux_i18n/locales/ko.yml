@@ -1449,6 +1449,14 @@ document:
         end_time_required: 종료 시간은 필수입니다
         start_before_end: 시작 시간은 종료 시간보다 이전이어야 합니다
       hint_prefix: "%{message}\n힌트: %{hint}"
+    disk:
+      changed: "이 탭에 저장하지 않은 편집이 있는 동안 디스크의 파일이 변경되었습니다."
+      deleted: "이 파일이 디스크에서 삭제되었습니다."
+      reload: "디스크에서 다시 불러오기"
+      keep_mine: "내 편집 유지"
+      save_again: "다시 저장"
+      missing: "%{path}이(가) 더 이상 없습니다"
+      reload_failed: "%{path}을(를) 다시 불러올 수 없습니다"
     file_ops:
       save_as:
         title: 스크립트 다른 이름으로 저장

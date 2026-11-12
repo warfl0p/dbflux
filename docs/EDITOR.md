@@ -23,6 +23,13 @@ queue. Autosave and closing never overwrite a file that changed outside DBFlux:
 your version stays in the editor and DBFlux reports the refused write. `Ctrl+s`
 and **Save file as…** are deliberate and write the file even then.
 
+Open files follow changes other programs make to them. A tab without unsaved
+edits reloads the new contents on its own. A tab with unsaved edits keeps them
+and shows a bar above the editor: **Reload from Disk** discards your edits for
+the file's contents, and **Keep Mine** (`Ctrl+s`) writes your version over the
+file. When the file is deleted, the bar offers **Save Again** to recreate it.
+**Reload from Disk** is also in the pane actions menu (`Shift+F10`).
+
 Closing a tab with pending edits saves them first, then closes; if the write
 cannot land (for example, the file changed outside DBFlux or is read-only), the
 tab stays open with your changes and DBFlux points at `Ctrl+s` / **Save file as…**

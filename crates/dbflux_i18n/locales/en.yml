@@ -1449,6 +1449,14 @@ document:
         end_time_required: End time is required
         start_before_end: Start time must be earlier than end time
       hint_prefix: "%{message}\nHint: %{hint}"
+    disk:
+      changed: "This file changed on disk while this tab has unsaved edits."
+      deleted: "This file was deleted on disk."
+      reload: "Reload from Disk"
+      keep_mine: "Keep Mine"
+      save_again: "Save Again"
+      missing: "%{path} no longer exists"
+      reload_failed: "Could not reload %{path}"
     file_ops:
       save_as:
         title: Save Script As

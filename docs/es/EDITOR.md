@@ -25,6 +25,15 @@ nunca sobrescriben un archivo que cambió fuera de DBFlux: tu versión sigue en
 el editor y DBFlux informa de la escritura rechazada. `Ctrl+s` y **Save file as…**
 son deliberados y escriben el archivo incluso entonces.
 
+Los archivos abiertos siguen los cambios que otros programas hacen en ellos. Una
+pestaña sin ediciones pendientes recarga el contenido nuevo por sí sola. Una
+pestaña con ediciones pendientes las conserva y muestra una barra sobre el
+editor: **Recargar desde el disco** descarta tus ediciones a favor del contenido
+del archivo, y **Conservar los míos** (`Ctrl+s`) escribe tu versión sobre el
+archivo. Si el archivo se elimina, la barra ofrece **Guardar de nuevo** para
+recrearlo. **Recargar desde el disco** también está en el menú de acciones del
+panel (`Shift+F10`).
+
 Cerrar una pestaña con ediciones pendientes las guarda primero y después la
 cierra; si la escritura no puede aterrizar (por ejemplo, el archivo cambió
 fuera de DBFlux o es read-only), la pestaña queda abierta con tus cambios y

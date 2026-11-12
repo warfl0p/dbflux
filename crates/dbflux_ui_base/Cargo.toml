@@ -29,6 +29,9 @@ anyhow = { workspace = true }
 chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# Already in the tree through gpui-component, which watches its theme folder.
+notify = "8.2"
+futures = "0.3"
 
 [dev-dependencies]
 # Tests open profiles of every built-in driver; the fork keeps these four out

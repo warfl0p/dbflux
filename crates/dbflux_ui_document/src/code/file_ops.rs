@@ -164,25 +164,29 @@ async fn finish_physical_write(
             });
         }
         WriteOutcome::ExternalConflict => {
-            report_error_async(
-                refusal_error(
-                    write.kind,
-                    &write.path,
-                    "the file changed outside dbflux after the last save; keeping the buffer dirty instead of overwriting it".to_string(),
-                ),
-                cx,
-            );
+            if !banner_reports_refusal(entity, write.kind, cx) {
+                report_error_async(
+                    refusal_error(
+                        write.kind,
+                        &write.path,
+                        "the file changed outside dbflux after the last save; keeping the buffer dirty instead of overwriting it".to_string(),
+                    ),
+                    cx,
+                );
+            }
             start_next_physical_write(entity, cx);
         }
         WriteOutcome::ExternallyDeleted => {
-            report_error_async(
-                refusal_error(
-                    write.kind,
-                    &write.path,
-                    "the file was removed outside dbflux; keeping the buffer dirty instead of recreating it".to_string(),
-                ),
-                cx,
-            );
+            if !banner_reports_refusal(entity, write.kind, cx) {
+                report_error_async(
+                    refusal_error(
+                        write.kind,
+                        &write.path,
+                        "the file was removed outside dbflux; keeping the buffer dirty instead of recreating it".to_string(),
+                    ),
+                    cx,
+                );
+            }
             start_next_physical_write(entity, cx);
         }
         WriteOutcome::BaselineUnknown => {
@@ -229,6 +233,17 @@ async fn finish_physical_write(
     if close_flush_was_refused {
         abandon_close_flush(entity, cx);
     }
+}
+
+/// Whether a refused autosave is left to the disk banner, which the drained
+/// queue's disk check raises. Close and shutdown flushes keep their toast:
+/// they report why a tab stayed open or edits stayed in the session.
+fn banner_reports_refusal(
+    entity: &Entity<CodeDocument>,
+    kind: WriteKind,
+    cx: &mut AsyncApp,
+) -> bool {
+    kind == WriteKind::Auto && cx.update(|cx| entity.read(cx).disk_sync.is_watching())
 }
 
 /// Frees the queue slot and starts the next queued write, if any.
@@ -565,6 +580,13 @@ impl CodeDocument {
                         let Some(path) = doc.editor.path.clone() else {
                             return;
                         };
+                        // The file changed or vanished outside DBFlux: autosave
+                        // would only be refused, so keep the edits in the
+                        // session shadow until the user picks a side.
+                        if doc.disk_sync.state != disk_sync::DiskState::InSync {
+                            doc.write_session_artifact(&content);
+                            return;
+                        }
                         doc.enqueue_physical_write(
                             PhysicalWrite::auto(path, content, saved_input, shadow),
                             cx,
@@ -703,6 +725,9 @@ impl CodeDocument {
         self.physical_writes.mark_finished();
 
         let Some(write) = self.physical_writes.next_to_start() else {
+            // Outside changes are not checked while our writes are queued, and
+            // a refused write means the file changed; look now that it is idle.
+            self.check_disk_change(cx);
             return;
         };
         let baseline = self.physical_writes.baseline().cloned();

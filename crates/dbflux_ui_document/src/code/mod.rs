@@ -63,6 +63,7 @@ mod completion;
 mod completion_tests;
 mod context_bar;
 mod diagnostics;
+mod disk_sync;
 mod execution;
 mod execution_session;
 mod file_ops;
@@ -684,6 +685,9 @@ pub struct CodeDocument {
     // and tracks the on-disk baseline for external-change detection.
     physical_writes: file_persistence::PhysicalWriteQueue,
 
+    /// Notices when another program changes or removes the file.
+    disk_sync: disk_sync::DiskSync,
+
     // Session persistence (auto-save to disk).
     session: SessionPersistence,
 
@@ -1304,6 +1308,7 @@ impl CodeDocument {
             is_active_tab: true,
             _pending_save: None,
             physical_writes: file_persistence::PhysicalWriteQueue::new(),
+            disk_sync: disk_sync::DiskSync::new(cx),
             session: SessionPersistence {
                 scratch_path,
                 shadow_path: None,

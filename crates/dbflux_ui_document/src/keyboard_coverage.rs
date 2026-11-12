@@ -25,6 +25,12 @@ pub(crate) const CODE_EDITOR_CHROME: SurfaceRegistry = SurfaceRegistry {
             KeyboardPath::Command(Command::SaveQuery),
         ),
         ("toolbar-history-btn", KeyboardPath::Menu("history")),
+        // The bar shown when another program changed or removed the file.
+        ("disk-banner-reload", KeyboardPath::Menu("reload-from-disk")),
+        (
+            "disk-banner-save",
+            KeyboardPath::Command(Command::SaveQuery),
+        ),
         ("toolbar-explain-btn", KeyboardPath::Menu("explain")),
         ("toolbar-chart-btn", KeyboardPath::Menu("chart")),
         (

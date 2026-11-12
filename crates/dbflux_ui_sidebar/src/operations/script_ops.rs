@@ -425,6 +425,60 @@ impl Sidebar {
         rescan_scripts_in_background(&self.app_state, cx);
     }
 
+    /// Watches every scripts root and every folder they list, so files added
+    /// or removed by other programs show up without a manual rescan.
+    pub(crate) fn sync_scripts_watch(&mut self, cx: &mut Context<Self>) {
+        let Some(watch) = self.scripts_watch.as_mut() else {
+            return;
+        };
+        let folders = self
+            .app_state
+            .read(cx)
+            .scripts_directory()
+            .map(dbflux_core::ScriptsDirectory::watch_folders)
+            .unwrap_or_default();
+        watch.set_folders(folders);
+    }
+
+    /// Rescans each scripts root in which a file or folder appeared,
+    /// disappeared or was renamed.
+    ///
+    /// ponytail: an autosave lands through a rename, so it also rescans its
+    /// root once; skip already-listed paths if large external roots make that
+    /// noticeable.
+    pub(crate) fn rescan_scripts_for_outside_changes(
+        &mut self,
+        event: &dbflux_ui_base::file_watcher::FilesChanged,
+        cx: &mut Context<Self>,
+    ) {
+        let roots: HashSet<std::path::PathBuf> = {
+            let state = self.app_state.read(cx);
+            let Some(directory) = state.scripts_directory() else {
+                return;
+            };
+            event
+                .added_or_removed
+                .iter()
+                // The scan lists no hidden entries, and autosave stages its
+                // writes in hidden files.
+                .filter(|path| {
+                    !path
+                        .file_name()
+                        .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+                })
+                .filter_map(|path| {
+                    directory
+                        .owning_root(path)
+                        .map(std::path::Path::to_path_buf)
+                })
+                .collect()
+        };
+
+        for root in roots {
+            rescan_script_root_in_background(&self.app_state, &root, cx);
+        }
+    }
+
     pub(crate) fn handle_script_drop_with_position(
         &mut self,
         state: &ScriptsDragState,

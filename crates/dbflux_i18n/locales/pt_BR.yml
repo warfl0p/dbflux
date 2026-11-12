@@ -1449,6 +1449,14 @@ document:
         end_time_required: O horário final é obrigatório
         start_before_end: O horário inicial deve ser anterior ao horário final
       hint_prefix: "%{message}\nDica: %{hint}"
+    disk:
+      changed: "Este arquivo mudou no disco enquanto esta aba tem alterações não salvas."
+      deleted: "Este arquivo foi excluído do disco."
+      reload: "Recarregar do disco"
+      keep_mine: "Manter as minhas"
+      save_again: "Salvar novamente"
+      missing: "%{path} não existe mais"
+      reload_failed: "Não foi possível recarregar %{path}"
     file_ops:
       save_as:
         title: Salvar script como

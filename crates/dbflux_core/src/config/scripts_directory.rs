@@ -534,6 +534,27 @@ impl ScriptsDirectory {
             .find(|root| path.starts_with(root))
     }
 
+    /// Every root and every folder the cached trees list: the folders to watch
+    /// for files appearing or disappearing outside DBFlux.
+    pub fn watch_folders(&self) -> HashSet<PathBuf> {
+        fn collect(entries: &[ScriptEntry], folders: &mut HashSet<PathBuf>) {
+            for entry in entries {
+                if let ScriptEntry::Folder { path, children, .. } = entry {
+                    folders.insert(path.clone());
+                    collect(children, folders);
+                }
+            }
+        }
+
+        let mut folders = HashSet::from([self.root.clone()]);
+        collect(&self.entries, &mut folders);
+        for mounted in &self.external {
+            folders.insert(mounted.path().to_path_buf());
+            collect(mounted.entries(), &mut folders);
+        }
+        folders
+    }
+
     /// Whether `path` is the managed root or an external root itself.
     pub fn is_root(&self, path: &Path) -> bool {
         path == self.root || self.external_root_at(path).is_some()
@@ -2454,6 +2475,26 @@ mod tests {
         let dir = make_dir(tmp.path());
         assert_eq!(dir.entries().len(), 1);
         assert_eq!(dir.entries()[0].name(), "visible.sql");
+    }
+
+    #[test]
+    fn watch_folders_lists_the_root_and_visible_folders() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join("reports/monthly")).unwrap();
+        fs::create_dir(tmp.path().join(".git")).unwrap();
+        fs::write(tmp.path().join("reports/a.sql"), "SELECT 1").unwrap();
+
+        let dir = make_dir(tmp.path());
+        let folders = dir.watch_folders();
+
+        assert_eq!(
+            folders,
+            HashSet::from([
+                tmp.path().to_path_buf(),
+                tmp.path().join("reports"),
+                tmp.path().join("reports/monthly"),
+            ])
+        );
     }
 
     #[test]

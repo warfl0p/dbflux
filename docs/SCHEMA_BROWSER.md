@@ -94,9 +94,10 @@ the command palette (`Ctrl+Shift+P`):
   Creating, renaming and deleting files and subfolders inside it works as in
   your own scripts folder. Moving a file between two different folders is
   refused.
-- DBFlux does not watch the folders. Press `r` on a folder, or choose
-  **Refresh** from its menu, to pick up files added or changed outside DBFlux.
-  The folders are also scanned in the background each time DBFlux starts.
+- DBFlux watches the folders: files and subfolders added, removed or renamed
+  by other programs appear in the sidebar on their own. Press `r` on a folder,
+  or choose **Refresh** from its menu, to rescan it by hand. The folders are
+  also scanned in the background each time DBFlux starts.
 - If a folder is moved, deleted, unmounted or cannot be read, it stays open
   marked **unavailable** until it comes back or you remove it, and the footer
   counts it. In a multi-folder workspace its menu says why it could not be

@@ -1449,6 +1449,14 @@ document:
         end_time_required: La hora de fin es obligatoria
         start_before_end: La hora de inicio debe ser anterior a la hora de fin
       hint_prefix: "%{message}\nSugerencia: %{hint}"
+    disk:
+      changed: "Este archivo cambió en el disco mientras esta pestaña tiene cambios sin guardar."
+      deleted: "Este archivo se eliminó del disco."
+      reload: "Recargar desde el disco"
+      keep_mine: "Conservar los míos"
+      save_again: "Guardar de nuevo"
+      missing: "%{path} ya no existe"
+      reload_failed: "No se pudo recargar %{path}"
     file_ops:
       save_as:
         title: Guardar script como

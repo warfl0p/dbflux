@@ -498,6 +498,11 @@ fn run_gui() {
         // AeroSpace, Spaces and Stage Manager.
         platform::apply_main_window_options(&mut main_window_options, 800.0, 600.0);
 
+        // Started here rather than in the workspace so tests, which build the
+        // workspace on gpui's deterministic scheduler, never get an OS watcher
+        // thread.
+        dbflux_ui_base::file_watcher::FileWatcher::init(cx);
+
         let window_result = cx.open_window(main_window_options, |window, cx| {
             let workspace = cx.new(|cx| Workspace::new(app_state.clone(), window, cx));
             workspace.update(cx, |workspace, cx| workspace.start_update_flow(cx));

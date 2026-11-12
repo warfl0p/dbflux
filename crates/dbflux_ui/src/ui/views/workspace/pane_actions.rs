@@ -554,6 +554,7 @@ mod tests {
                 "history",
                 "explain",
                 "chart",
+                "reload-from-disk",
             ]
         );
         assert!(

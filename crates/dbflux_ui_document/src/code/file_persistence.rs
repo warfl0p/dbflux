@@ -157,7 +157,7 @@ pub(super) struct ExecutedWrite {
 }
 
 /// Reads the current file bytes, or `None` when the file does not exist.
-fn read_disk_state(path: &PathBuf) -> Result<Option<String>, std::io::Error> {
+pub(super) fn read_disk_state(path: &PathBuf) -> Result<Option<String>, std::io::Error> {
     match std::fs::read_to_string(path) {
         Ok(bytes) => Ok(Some(bytes)),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),

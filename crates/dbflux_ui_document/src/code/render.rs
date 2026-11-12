@@ -157,6 +157,20 @@ impl CodeDocument {
             .icon(AppIcon::ChartColumnBig),
         );
 
+        if self.is_file_backed() {
+            let document = entity.clone();
+            actions.push(
+                PaneAction::callback(
+                    "reload-from-disk",
+                    dbflux_i18n::t!("document.code.disk.reload"),
+                    move |_window, cx| {
+                        document.update(cx, |document, cx| document.reload_from_disk(cx));
+                    },
+                )
+                .icon(AppIcon::RefreshCcw),
+            );
+        }
+
         actions.extend(self.results_pane_actions());
 
         actions
@@ -1265,10 +1279,14 @@ impl Render for CodeDocument {
             self.set_content(&body, window, cx);
         }
 
+        self.sync_disk_watch(cx);
+        self.apply_pending_disk_reload(window, cx);
+
         // The workspace draws the context bar in its top row (see
         // `title_bar_actions` in pane.rs); test builds keep it in place.
         let context_bar = cfg!(test).then(|| self.render_context_bar(cx));
         let production_banner = self.render_production_banner(cx);
+        let disk_banner = self.render_disk_banner(cx);
 
         let editor_view = if self.routine_definition_pending {
             self.render_awaiting_connection(cx).into_any_element()
@@ -1304,6 +1322,7 @@ impl Render for CodeDocument {
             .track_focus(&self.focus_handle)
             .children(context_bar)
             .when_some(production_banner, |el, banner| el.child(banner))
+            .when_some(disk_banner, |el, banner| el.child(banner))
             .child(
                 div()
                     .flex_1()

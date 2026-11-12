@@ -1449,6 +1449,14 @@ document:
         end_time_required: 需要结束时间
         start_before_end: 开始时间必须早于结束时间
       hint_prefix: "%{message}\n提示：%{hint}"
+    disk:
+      changed: "此标签页有未保存的编辑时，磁盘上的文件已被更改。"
+      deleted: "此文件已从磁盘中删除。"
+      reload: "从磁盘重新加载"
+      keep_mine: "保留我的版本"
+      save_again: "重新保存"
+      missing: "%{path} 已不存在"
+      reload_failed: "无法重新加载 %{path}"
     file_ops:
       save_as:
         title: 脚本另存为
