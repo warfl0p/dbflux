@@ -120,23 +120,8 @@ impl UserFacingError {
 /// | Inside `cx.spawn(async ...)`            | `report_error_async`    |
 /// | Inside a `cx.update(|cx| { ... })`      | `report_error`          |
 pub fn report_error(err: UserFacingError, cx: &mut App) {
-    use crate::app_state_entity::AppStateGlobal;
-
     record(&err, cx);
-
-    let show_toast = cx
-        .try_global::<AppStateGlobal>()
-        .is_none_or(|app_state_global| {
-            app_state_global
-                .entity
-                .read(cx)
-                .general_settings()
-                .show_error_toasts
-        });
-
-    if show_toast {
-        push_error_toast(&err, cx);
-    }
+    push_error_toast(&err, cx);
 }
 
 fn push_error_toast(err: &UserFacingError, cx: &mut App) {
@@ -296,10 +281,8 @@ mod report_tests {
     use crate::object_tree::test_support::test_app_state;
     use crate::toast::{ToastGlobal, ToastHost};
 
-    fn report_with_error_toasts(
-        show_error_toasts: bool,
-        cx: &mut TestAppContext,
-    ) -> (usize, usize) {
+    #[gpui::test]
+    fn reported_error_shows_a_toast_and_a_notification(cx: &mut TestAppContext) {
         let state = test_app_state(cx);
 
         cx.update(|cx| {
@@ -307,12 +290,6 @@ mod report_tests {
             cx.set_global(ToastGlobal { host: host.clone() });
             cx.set_global(AppStateGlobal {
                 entity: state.clone(),
-            });
-
-            state.update(cx, |state, _| {
-                let mut settings = state.general_settings().clone();
-                settings.show_error_toasts = show_error_toasts;
-                state.update_general_settings(settings);
             });
 
             report_error(
@@ -327,18 +304,8 @@ mod report_tests {
                 .snapshot(&NotificationSources::default())
                 .entries
                 .len();
-            (toasts, errors)
-        })
-    }
-
-    #[gpui::test]
-    fn reported_error_shows_a_toast_and_a_notification_by_default(cx: &mut TestAppContext) {
-        assert_eq!(report_with_error_toasts(true, cx), (1, 1));
-    }
-
-    #[gpui::test]
-    fn reported_error_skips_the_toast_when_error_toasts_are_off(cx: &mut TestAppContext) {
-        assert_eq!(report_with_error_toasts(false, cx), (0, 1));
+            assert_eq!((toasts, errors), (1, 1));
+        });
     }
 }
 

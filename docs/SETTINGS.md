@@ -80,7 +80,6 @@ the changes stay applied until DBFlux quits; save again to keep them.
 | Setting | Options | Default |
 |---------|---------|---------|
 | **Toast timeout** | 4 seconds, 8 seconds, 15 seconds, Keep until dismissed | 8 seconds |
-| **Show error toasts** | On, Off | On |
 
 **Toast timeout** sets how long a toast stays before it closes on its own.
 Success and Info toasts close after it, and Warning toasts after twice it. An
@@ -93,12 +92,8 @@ Toasts stack in the top-right corner of the document area. At most four are
 shown at once; older ones fold into an *N more* entry that expands them or
 dismisses them together.
 
-**Show error toasts** decides whether an error from an action you ran, such as
-a failed connection, pops up as a toast. Turned off, the error is listed only
-in the notifications center behind the bell, whose badge turns red, where you
-can open it in Audit or dismiss it. Errors that never reach the notifications
-center, such as a failed query in the editor, still show a toast. See
-[Notifications center](KEYBOARD.md#notifications-center).
+A failed connection raises no toast: its error shows on the connection in the
+sidebar, and Audit records it.
 
 ### Execution safety (dangerous-query confirmation)
 

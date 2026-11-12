@@ -157,7 +157,7 @@ async fn wait_for_connection_teardown(
 enum ConnectStop {
     /// Another attempt for the same profile is in flight; nothing to report.
     AlreadyConnecting,
-    Failed(PendingToast),
+    Failed,
 }
 
 impl Sidebar {
@@ -338,8 +338,8 @@ impl Sidebar {
                     }
                     Err(error) => {
                         let toast = connect_prepare_error_toast(&error, diagnostic.as_ref());
-                        state.record_connect_failure(profile_id, toast.message.clone());
-                        Err(ConnectStop::Failed(toast))
+                        state.record_connect_failure(profile_id, toast.message);
+                        Err(ConnectStop::Failed)
                     }
                 }
             }) {
@@ -354,8 +354,7 @@ impl Sidebar {
                     );
                     return;
                 }
-                Err(ConnectStop::Failed(toast)) => {
-                    self.pending_toast = Some(toast);
+                Err(ConnectStop::Failed) => {
                     self.refresh_tree(cx);
                     cx.notify();
                     return;
@@ -424,10 +423,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: error,
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -467,10 +462,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: crate::labels::connection_cancelled_by_hook_toast_label(),
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -632,19 +623,11 @@ impl Sidebar {
                             } else {
                                 // Tunnel info not found — fall back to error toast.
                                 sidebar.update(cx, |sidebar, cx| {
-                                    sidebar.pending_toast = Some(PendingToast {
-                                        message: error,
-                                        is_error: true,
-                                    });
                                     sidebar.refresh_tree(cx);
                                 });
                             }
                         } else {
                             sidebar.update(cx, |sidebar, cx| {
-                                sidebar.pending_toast = Some(PendingToast {
-                                    message: error,
-                                    is_error: true,
-                                });
                                 sidebar.refresh_tree(cx);
                             });
                         }
@@ -680,10 +663,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: error,
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -723,12 +702,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message:
-                                    crate::labels::connection_cancelled_by_post_connect_hook_toast_label(
-                                    ),
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });

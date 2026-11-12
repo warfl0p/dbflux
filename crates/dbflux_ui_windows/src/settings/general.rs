@@ -60,7 +60,6 @@ impl GeneralSection {
             current.blank_line_delimits_statements != saved.blank_line_delimits_statements,
             current.grid_fk_labels != saved.grid_fk_labels,
             current.toast_auto_dismiss_secs != saved.toast_auto_dismiss_secs,
-            current.show_error_toasts != saved.show_error_toasts,
         ];
 
         let input_changes = [
@@ -184,7 +183,6 @@ impl GeneralSection {
             GeneralFormRow::ObjectPreviewLimit,
             GeneralFormRow::KeyValueSizeLimit,
             GeneralFormRow::ToastTimeout,
-            GeneralFormRow::ShowErrorToasts,
         ];
 
         // The shared-database toggle only makes sense on nightly, which is the
@@ -372,10 +370,6 @@ impl GeneralSection {
             Some(GeneralFormRow::ToastTimeout) => {
                 self.dropdown_toast_timeout
                     .update(cx, |dropdown, cx| dropdown.toggle_open(cx));
-                cx.notify();
-            }
-            Some(GeneralFormRow::ShowErrorToasts) => {
-                self.gen_settings.show_error_toasts = !self.gen_settings.show_error_toasts;
                 cx.notify();
             }
             Some(GeneralFormRow::PauseRefreshOnError) => {
@@ -1457,15 +1451,6 @@ impl GeneralSection {
                 Some(dbflux_i18n::t!("settings.general.toast_timeout.hint")),
                 self.dropdown_toast_timeout.clone(),
                 GeneralFormRow::ToastTimeout,
-                cx,
-            ))
-            .child(self.render_gen_checkbox(
-                "error-toasts",
-                dbflux_i18n::t!("settings.general.show_error_toasts.label"),
-                Some(dbflux_i18n::t!("settings.general.show_error_toasts.hint")),
-                self.gen_settings.show_error_toasts,
-                GeneralFormRow::ShowErrorToasts,
-                |this, value, _cx| this.gen_settings.show_error_toasts = value,
                 cx,
             ));
 

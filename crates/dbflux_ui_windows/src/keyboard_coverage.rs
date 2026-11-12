@@ -195,7 +195,6 @@ pub(crate) const SETTINGS: SurfaceRegistry = SurfaceRegistry {
             "blank-line-delimiter",
             KeyboardPath::Command(Command::Execute),
         ),
-        ("error-toasts", KeyboardPath::Command(Command::Execute)),
         ("audit-enabled", KeyboardPath::Command(Command::Execute)),
         (
             "capture-query-text",

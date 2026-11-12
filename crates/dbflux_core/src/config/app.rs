@@ -391,9 +391,8 @@ pub struct GeneralSettings {
     #[serde(default = "default_toast_auto_dismiss_secs")]
     pub toast_auto_dismiss_secs: u32,
 
-    /// Show a toast for each error reported through the user-facing error
-    /// seam. Off lists those errors in the notifications center only. On by
-    /// default.
+    /// Unused in this fork: the setting was removed from the UI and every
+    /// reported error toasts. Kept only because its storage column exists.
     #[serde(default = "default_true")]
     pub show_error_toasts: bool,
 

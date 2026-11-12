@@ -8,7 +8,7 @@ use dbflux_storage::error::StorageError;
 use dbflux_ui_base::hook_phase_runner::{DetachedHookScope, HookPhaseState, run_hook_phase};
 use dbflux_ui_base::schema_snapshot_manager::CaptureOutcome;
 use dbflux_ui_base::toast::PendingToast;
-use dbflux_ui_base::user_error::{ErrorKind, UserFacingError, report_error, report_error_async};
+use dbflux_ui_base::user_error::{ErrorKind, UserFacingError, record_error, report_error_async};
 use std::sync::Arc;
 
 /// Why a pipeline connect stopped before it started.
@@ -17,7 +17,7 @@ enum PrepareStop {
     Skipped(String),
     /// A preparation failure the caller still has to show.
     Failed(String),
-    /// A failure already reported through `report_error`.
+    /// A failure already recorded through `record_error`.
     Reported,
 }
 
@@ -254,7 +254,7 @@ impl Sidebar {
                             Err(error) => {
                                 state.finish_pending_operation(profile_id, None);
                                 state.record_connect_failure(profile_id, error.clone());
-                                report_error(
+                                record_error(
                                     UserFacingError::new(
                                         ErrorKind::Storage,
                                         "Could not read the connection password from the system keyring",
@@ -294,10 +294,6 @@ impl Sidebar {
                 match stop {
                     PrepareStop::Failed(message) => {
                         log::warn!("Pipeline connect failed: {}", message);
-                        self.pending_toast = Some(PendingToast {
-                            message,
-                            is_error: true,
-                        });
                         self.refresh_tree(cx);
                         cx.notify();
                     }
@@ -497,10 +493,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: error,
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -542,10 +534,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: crate::labels::connection_cancelled_by_hook_toast_label(),
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -617,10 +605,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: error_msg,
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -726,10 +710,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: error,
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -769,10 +749,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message: error,
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
@@ -814,11 +790,6 @@ impl Sidebar {
                         });
 
                         sidebar.update(cx, |sidebar, cx| {
-                            sidebar.pending_toast = Some(PendingToast {
-                                message:
-                                    crate::labels::connection_cancelled_by_post_connect_hook_toast_label(),
-                                is_error: true,
-                            });
                             sidebar.refresh_tree(cx);
                         });
                     });
