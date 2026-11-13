@@ -67,6 +67,11 @@ pub struct LanguageConfig {
     pub highlights: SharedString,
     pub injections: SharedString,
     pub locals: SharedString,
+    /// The token that ends a statement (`;` for SQL). When error recovery
+    /// runs an unfinished statement into the next ones, the highlighter
+    /// parses each statement of that stretch on its own, so one broken
+    /// statement does not miscolor the statements after it.
+    pub statement_separator: Option<SharedString>,
 }
 
 /// Explicit name for grammar resources; editing rules use `input::language_config::LanguageConfig`.
@@ -88,7 +93,14 @@ impl LanguageConfig {
             highlights: SharedString::from(highlights.to_string()),
             injections: SharedString::from(injections.to_string()),
             locals: SharedString::from(locals.to_string()),
+            statement_separator: None,
         }
+    }
+
+    /// See [`LanguageConfig::statement_separator`].
+    pub fn with_statement_separator(mut self, separator: impl Into<SharedString>) -> Self {
+        self.statement_separator = Some(separator.into());
+        self
     }
 
     /// A plain text language without a grammar, it will never be parsed.
@@ -100,6 +112,7 @@ impl LanguageConfig {
             highlights: SharedString::default(),
             injections: SharedString::default(),
             locals: SharedString::default(),
+            statement_separator: None,
         }
     }
 

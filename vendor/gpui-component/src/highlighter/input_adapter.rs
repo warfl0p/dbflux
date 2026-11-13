@@ -64,6 +64,7 @@ impl TreeSitterInputHighlighter {
         let language = highlighter.borrow().language().clone();
         let old_tree = highlighter.borrow().tree().cloned();
         let injection_data = highlighter.borrow().injection_parse_data();
+        let statement_data = highlighter.borrow().statement_parse_data();
         let text = text.clone();
         let text_for_apply = text.clone();
         let cancel = Arc::new(AtomicBool::new(false));
@@ -104,19 +105,25 @@ impl TreeSitterInputHighlighter {
                     let injections = injection_data.map_or_else(Default::default, |data| {
                         SyntaxHighlighter::compute_injection_layers(data, &tree, &text)
                     });
+                    let statements = statement_data.map_or_else(Default::default, |data| {
+                        SyntaxHighlighter::compute_statement_layers(&data.0, &data.1, &tree, &text)
+                    });
                     let folds = if folding {
                         extract_fold_ranges(&tree)
                     } else {
                         Vec::new()
                     };
-                    Some((tree, injections, folds))
+                    Some((tree, injections, statements, folds))
                 })
                 .await;
 
-            if let Some((tree, injections, folds)) = result {
-                highlighter
-                    .borrow_mut()
-                    .apply_background_tree(tree, &text_for_apply, injections);
+            if let Some((tree, injections, statements, folds)) = result {
+                highlighter.borrow_mut().apply_background_tree(
+                    tree,
+                    &text_for_apply,
+                    injections,
+                    statements,
+                );
                 let _ = entity.update(cx, |state, cx| {
                     state.apply_highlighter_fold_candidates(folds, cx);
                 });

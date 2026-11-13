@@ -29,7 +29,8 @@ const REGISTERED_LANGUAGES: &[&str] = &[
 /// before any `InputState::code_editor(...)` call — call alongside
 /// `gpui_component::init`.
 pub fn register_languages() {
-    Grammar::new("sql", tree_sitter_sequel::LANGUAGE, sql_highlights_query()).register();
+    Grammar::new("sql", tree_sitter_sequel::LANGUAGE, sql_highlights_query())
+        .register();
     Grammar::new(
         "cypher",
         tree_sitter_cypher::LANGUAGE,
@@ -237,7 +238,8 @@ mod tests {
         let expected = [
             (
                 "sql",
-                config("sql", tree_sitter_sequel::LANGUAGE, &sql_highlights_query()),
+                config("sql", tree_sitter_sequel::LANGUAGE, &sql_highlights_query())
+                    .with_statement_separator(";"),
             ),
             (
                 "javascript",
@@ -496,6 +498,18 @@ mod tests {
         for keyword in ["ASC", "DESC", "NULLS", "LAST", "DEFAULT"] {
             assert_eq!(role_of(keyword), Some("keyword"), "{keyword}: {roles:?}");
         }
+    }
+
+    #[test]
+    fn a_broken_statement_leaves_the_next_statement_colored_as_on_its_own() {
+        let broken = "SELECT\n  c.email,\n  ms.\n  a.postal_code,\n  a.city\nFROM\n  bronze.driver d\n  LEFT JOIN bronze.contact c ON d.contact_billing_id = c.contact_id\n  left join bronze.mobility_subscription ms on ms.driver_id = d.driver_id\n  left join bronze.;\n  \n  \n";
+        let next = "SELECT\n  ms.mobility_subscription_id,\n  ms.driver_id,\n  ms.id_tag\nFROM\n  bronze.mobility_subscription ms ;\n  \n";
+
+        let alone = sql_roles(next);
+        let together = sql_roles(&format!("{broken}{next}"));
+        let tail = &together[together.len() - alone.len()..];
+
+        assert_eq!(tail, alone.as_slice(), "{together:?}");
     }
 
     #[test]

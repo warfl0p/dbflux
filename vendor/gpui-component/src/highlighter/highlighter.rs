@@ -31,7 +31,9 @@ const INJECTION_PARSE_TIMEOUT: Duration = Duration::from_millis(20);
 #[allow(unused)]
 pub struct SyntaxHighlighter {
     language: SharedString,
-    query: Option<Query>,
+    query: Option<Arc<Query>>,
+    /// See [`LanguageConfig::statement_separator`].
+    statement_separator: Option<SharedString>,
     /// The full injections query. This is used to build injection layers during parsing.
     injections_query: Option<Arc<Query>>,
 
@@ -55,6 +57,10 @@ pub struct SyntaxHighlighter {
     /// Parsed injection trees.
     /// These are built once in update() and queried multiple times in match_styles().
     injection_layers: Vec<InjectionLayer>,
+
+    /// Statements parsed on their own because error recovery ran them
+    /// together in `tree`; their captures replace the tree's in their range.
+    statement_layers: Vec<StatementLayer>,
 
     /// Bumped whenever the text or tree changes, so callers can tell whether
     /// styles computed earlier still hold.
@@ -81,6 +87,13 @@ struct LineStyleCache {
 /// of runs; evict least recently painted lines if long scroll sessions over
 /// huge scripts make the refill noticeable.
 const MAX_CACHED_LINES: usize = 4096;
+
+/// One statement parsed on its own, in the host language, over the absolute
+/// byte offsets of the full text.
+pub(crate) struct StatementLayer {
+    byte_range: Range<usize>,
+    tree: Tree,
+}
 
 /// A parsed injection layer.
 /// Stores the parsed tree and the ranges it covers.
@@ -422,6 +435,7 @@ impl SyntaxHighlighter {
         Self {
             language,
             query: None,
+            statement_separator: None,
             injections_query: None,
             locals_pattern_index: 0,
             highlights_pattern_index: 0,
@@ -436,6 +450,7 @@ impl SyntaxHighlighter {
             parser: Parser::new(),
             tree: None,
             injection_layers: Vec::new(),
+            statement_layers: Vec::new(),
             revision: 0,
             line_style_cache: RefCell::default(),
         }
@@ -545,7 +560,8 @@ impl SyntaxHighlighter {
 
         Ok(Self {
             language: config.name.clone(),
-            query: Some(query),
+            query: Some(Arc::new(query)),
+            statement_separator: config.statement_separator.clone(),
             injections_query,
 
             locals_pattern_index,
@@ -561,6 +577,7 @@ impl SyntaxHighlighter {
             parser,
             tree: None,
             injection_layers: Vec::new(),
+            statement_layers: Vec::new(),
             revision: 0,
             line_style_cache: RefCell::default(),
         })
@@ -582,6 +599,7 @@ impl SyntaxHighlighter {
             tree.edit(&edit);
         }
         self.edit_injection_layers(edit.as_ref());
+        self.statement_layers.clear();
         self.text = text.clone();
         self.revision += 1;
     }
@@ -710,6 +728,7 @@ impl SyntaxHighlighter {
 
         if timed_out || new_tree.is_none() {
             // Restore the old tree so highlighting continues with stale data.
+            self.statement_layers.clear();
             self.tree = Some(old_tree);
             self.text = text.clone();
             return false;
@@ -719,7 +738,113 @@ impl SyntaxHighlighter {
         self.tree = Some(new_tree.clone());
         self.text = text.clone();
         self.parse_injection_layers(&new_tree);
+        self.statement_layers = self
+            .statement_separator
+            .as_ref()
+            .map(|separator| {
+                Self::compute_statement_layers(&self.language, separator, &new_tree, text)
+            })
+            .unwrap_or_default();
         true
+    }
+
+    /// The language and separator [`Self::compute_statement_layers`] needs,
+    /// for a parse on a background thread. `None` when the language does not
+    /// separate statements.
+    pub(crate) fn statement_parse_data(&self) -> Option<(SharedString, SharedString)> {
+        Some((self.language.clone(), self.statement_separator.clone()?))
+    }
+
+    /// Statements to parse on their own: those inside a top-level node of
+    /// `tree` that holds a `separator` token under an `ERROR` node, where error
+    /// recovery read past the end of a statement into the ones after it. A
+    /// separator whose parent is the root or an `ERROR` ends a statement; one
+    /// inside a well-formed node (a function body) does not.
+    ///
+    /// ponytail: each affected statement is reparsed from scratch on every
+    /// parse; reuse the old trees if large broken scripts make typing slow.
+    pub(crate) fn compute_statement_layers(
+        language: &SharedString,
+        separator: &str,
+        tree: &Tree,
+        text: &Rope,
+    ) -> Vec<StatementLayer> {
+        let root = tree.root_node();
+        if !root.has_error() {
+            return Vec::new();
+        }
+
+        let mut boundaries = Vec::new();
+        let mut broken = Vec::new();
+        let mut cursor = root.walk();
+        for child in root.children(&mut cursor) {
+            if child.kind() == separator && child.child_count() == 0 {
+                boundaries.push(child.end_byte());
+                continue;
+            }
+            if !child.has_error() {
+                continue;
+            }
+            let found = boundaries.len();
+            let mut stack = vec![child];
+            while let Some(node) = stack.pop() {
+                let mut node_cursor = node.walk();
+                for inner in node.children(&mut node_cursor) {
+                    if inner.kind() == separator && inner.child_count() == 0 && node.is_error() {
+                        boundaries.push(inner.end_byte());
+                    } else if inner.has_error() {
+                        stack.push(inner);
+                    }
+                }
+            }
+            if boundaries.len() > found {
+                broken.push(child.byte_range());
+            }
+        }
+        if broken.is_empty() {
+            return Vec::new();
+        }
+
+        boundaries.sort_unstable();
+        boundaries.dedup();
+        let starts = std::iter::once(0).chain(boundaries.iter().copied());
+        let ends = boundaries.iter().copied().chain(std::iter::once(text.len()));
+        let Ok((mut parser, grammar)) = LanguageRegistry::singleton().parser(language) else {
+            return Vec::new();
+        };
+        if parser.set_language(&grammar).is_err() {
+            return Vec::new();
+        }
+
+        starts
+            .zip(ends)
+            .filter(|(start, end)| {
+                start < end
+                    && broken
+                        .iter()
+                        .any(|range| range.start < *end && *start < range.end)
+            })
+            .filter_map(|(start, end)| {
+                let start_point = text.offset_to_point(start);
+                let end_point = text.offset_to_point(end);
+                let range = tree_sitter::Range {
+                    start_byte: start,
+                    end_byte: end,
+                    start_point: Point::new(start_point.row, start_point.column),
+                    end_point: Point::new(end_point.row, end_point.column),
+                };
+                parser.set_included_ranges(&[range]).ok()?;
+                let tree = parser.parse_with_options(
+                    &mut |offset, _| parse_input_bytes(text, offset),
+                    None,
+                    None,
+                )?;
+                Some(StatementLayer {
+                    byte_range: start..end,
+                    tree,
+                })
+            })
+            .collect()
     }
 
     /// Returns the data needed to compute injection layers on a background thread.
@@ -1030,6 +1155,7 @@ impl SyntaxHighlighter {
         tree: Tree,
         text: &Rope,
         injection_layers: Vec<InjectionLayer>,
+        statement_layers: Vec<StatementLayer>,
     ) {
         // Only apply if the text still matches what was parsed.
         if !self.text.eq(text) {
@@ -1038,6 +1164,7 @@ impl SyntaxHighlighter {
 
         self.tree = Some(tree);
         self.injection_layers = injection_layers;
+        self.statement_layers = statement_layers;
         self.revision += 1;
     }
 
@@ -1130,10 +1257,18 @@ impl SyntaxHighlighter {
         query_cursor.set_byte_range(range.clone());
 
         let mut matches = query_cursor.matches(query, root_node, TextProvider(source));
+        let in_statement_layer = |node_range: &Range<usize>| {
+            self.statement_layers.iter().any(|layer| {
+                layer.byte_range.start < node_range.end && node_range.start < layer.byte_range.end
+            })
+        };
 
         while let Some(query_match) = matches.next() {
             for cap in query_match.captures {
                 let node = cap.node;
+                if in_statement_layer(&node.byte_range()) {
+                    continue;
+                }
 
                 let Some(highlight_name) = query.capture_names().get(cap.index as usize) else {
                     continue;
@@ -1157,6 +1292,30 @@ impl SyntaxHighlighter {
                     ));
                 } else {
                     highlights.push(HighlightItem::new(node_range, highlight_name.clone()));
+                }
+            }
+        }
+
+        for layer in &self.statement_layers {
+            if layer.byte_range.end <= range.start || layer.byte_range.start >= range.end {
+                continue;
+            }
+            let mut layer_cursor = QueryCursor::new();
+            layer_cursor.set_byte_range(range.clone());
+            let mut layer_matches =
+                layer_cursor.matches(query, layer.tree.root_node(), TextProvider(source));
+            while let Some(query_match) = layer_matches.next() {
+                for cap in query_match.captures {
+                    let Some(name) = query.capture_names().get(cap.index as usize) else {
+                        continue;
+                    };
+                    // The first capture of a node wins, as in the root loop.
+                    let node_range = cap.node.byte_range();
+                    let name = match highlights.last() {
+                        Some(last) if last.range == node_range => last.name.clone(),
+                        _ => SharedString::from(name.to_string()),
+                    };
+                    highlights.push(HighlightItem::new(node_range, name));
                 }
             }
         }

@@ -25,6 +25,7 @@ pub struct Grammar {
     highlights: String,
     injections: String,
     locals: String,
+    statement_separator: Option<SharedString>,
 }
 
 impl Grammar {
@@ -44,6 +45,7 @@ impl Grammar {
             highlights: highlights.into(),
             injections: String::new(),
             locals: String::new(),
+            statement_separator: None,
         }
     }
 
@@ -63,6 +65,14 @@ impl Grammar {
         self
     }
 
+    /// The token that ends a statement, such as `;` for SQL. A statement
+    /// error recovery runs into the statements after it is then highlighted
+    /// on its own, so the statements below keep their colors.
+    pub fn statement_separator(mut self, separator: impl Into<SharedString>) -> Self {
+        self.statement_separator = Some(separator.into());
+        self
+    }
+
     /// The name the grammar registers under.
     pub fn name(&self) -> &SharedString {
         &self.name
@@ -78,17 +88,16 @@ impl Grammar {
     /// Register the grammar under `name` as well, such as `text` beside
     /// `plaintext`.
     pub fn register_as(&self, name: &str) {
-        LanguageRegistry::singleton().register(
-            name,
-            &LanguageConfig::new(
-                self.name.clone(),
-                self.language.clone(),
-                Vec::new(),
-                &self.highlights,
-                &self.injections,
-                &self.locals,
-            ),
+        let mut config = LanguageConfig::new(
+            self.name.clone(),
+            self.language.clone(),
+            Vec::new(),
+            &self.highlights,
+            &self.injections,
+            &self.locals,
         );
+        config.statement_separator = self.statement_separator.clone();
+        LanguageRegistry::singleton().register(name, &config);
     }
 }
 
