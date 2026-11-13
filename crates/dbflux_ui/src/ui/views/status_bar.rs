@@ -348,7 +348,7 @@ impl StatusBar {
         if segments.is_empty() {
             segments.push((
                 "tasks-toggle".into(),
-                AppIcon::Loader,
+                AppIcon::Activity,
                 muted,
                 crate::ui::labels::background_tasks_label(0),
             ));
