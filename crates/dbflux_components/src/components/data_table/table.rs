@@ -916,10 +916,12 @@ impl DataTable {
                     .ml(-h_offset)
                     .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
                     .children(header_cells)
-                    .child(
-                        pinned_row_number_cell(h_offset, theme.table_head)
-                            .debug_selector(|| "row-number-header".to_string()),
-                    ),
+                    .child(select_all_corner(
+                        state_entity,
+                        h_offset,
+                        theme.table_head,
+                        theme.table_hover,
+                    )),
             )
     }
 
@@ -1153,7 +1155,12 @@ impl DataTable {
                     .when(!has_presence, |row| row.items_center())
                     .child(div().flex_shrink_0().w(ROW_NUMBER_WIDTH))
                     .children(name_cells)
-                    .child(pinned_row_number_cell(h_offset, theme.table_head)),
+                    .child(select_all_corner(
+                        self.state.clone(),
+                        h_offset,
+                        theme.table_head,
+                        theme.table_hover,
+                    )),
             )
     }
 
@@ -1345,6 +1352,27 @@ fn sort_button(
         .on_click(move |_event: &ClickEvent, _window, cx| {
             cx.stop_propagation();
             state.update(cx, |state, cx| state.cycle_sort(col_ix, cx));
+        })
+}
+
+/// The header cell above the row numbers: a click selects every loaded row
+/// and column, the way the corner of a spreadsheet does.
+fn select_all_corner(
+    state: Entity<DataTableState>,
+    h_offset: gpui::Pixels,
+    background: gpui::Hsla,
+    hover: gpui::Hsla,
+) -> gpui::Stateful<gpui::Div> {
+    pinned_row_number_cell(h_offset, background)
+        .id("row-number-header")
+        .debug_selector(|| "row-number-header".to_string())
+        .cursor_pointer()
+        .hover(move |style| style.bg(hover))
+        .on_click(move |_: &ClickEvent, window, cx| {
+            state.update(cx, |state, cx| {
+                state.focus(window, cx);
+                state.select_all(cx);
+            });
         })
 }
 
@@ -1666,6 +1694,20 @@ mod tests {
             sorted_column(visual),
             Some(1),
             "a name click must not change the sort"
+        );
+
+        let corner = visual
+            .debug_bounds("row-number-header")
+            .expect("the header corner must render");
+        visual.simulate_click(corner.center(), gpui::Modifiers::default());
+        visual.run_until_parked();
+        assert_eq!(
+            selected(visual),
+            Some(CellRange::new(
+                CellCoord::new(0, 0),
+                CellCoord::new(row_count - 1, 1)
+            )),
+            "the corner selects every loaded row and column"
         );
     }
 

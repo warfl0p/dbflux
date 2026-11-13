@@ -54,6 +54,9 @@ Cuando el panel de resultados tiene el foco:
 - `Shift+Space` / `Ctrl+Shift+Space` — selecciona la fila / columna entera de la
   celda con el foco. Un clic en el número de fila o en el nombre de la columna
   hace lo mismo, y `Shift`+clic extiende la selección hasta ella.
+- `Ctrl+A` selecciona todas las filas y columnas cargadas, igual que un clic en
+  la esquina sobre los números de fila. Al copiar la tabla entera, los nombres
+  de las columnas van en la primera línea.
 
 Los números de fila se quedan en el borde izquierdo mientras la grilla se
 desplaza hacia los lados.

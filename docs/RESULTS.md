@@ -50,6 +50,9 @@ When the results panel has focus:
 - `Shift+Space` / `Ctrl+Shift+Space` — select the whole row / column of the focused
   cell. A click on a row number or a column name does the same, and
   `Shift`+click extends the selection to it.
+- `Ctrl+A` selects every loaded row and column, as does a click on the
+  corner above the row numbers. Copying the whole table puts the column names
+  on the first line.
 
 The row numbers stay at the left edge while the grid scrolls sideways.
 

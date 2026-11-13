@@ -89,6 +89,10 @@ pub(crate) const DATA_GRID: SurfaceRegistry = SurfaceRegistry {
     ],
     entries: &[
         ("cell-*", KeyboardPath::Command(Command::SelectNext)),
+        (
+            "row-number-header",
+            KeyboardPath::Command(Command::SelectAll),
+        ),
         ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
         ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         // The table menu of the column carries Copy column name, Order
@@ -1069,6 +1073,10 @@ pub(crate) const DELIMITED: SurfaceRegistry = SurfaceRegistry {
             "segmented-delimited-text-mode-*",
             KeyboardPath::Command(Command::CycleResultView),
         ),
+        (
+            "row-number-header",
+            KeyboardPath::Command(Command::SelectAll),
+        ),
         ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
         ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         (
@@ -1156,6 +1164,10 @@ pub(crate) const PARQUET: SurfaceRegistry = SurfaceRegistry {
     ],
     entries: &[
         ("cell-*", KeyboardPath::Command(Command::SelectNext)),
+        (
+            "row-number-header",
+            KeyboardPath::Command(Command::SelectAll),
+        ),
         ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
         ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
         (
@@ -1233,6 +1245,10 @@ pub(crate) const SPREADSHEET: SurfaceRegistry = SurfaceRegistry {
         (
             "segmented-spreadsheet-view-*",
             KeyboardPath::Command(Command::CycleDocumentView),
+        ),
+        (
+            "row-number-header",
+            KeyboardPath::Command(Command::SelectAll),
         ),
         ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
         ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),

@@ -47,6 +47,23 @@ pub fn copy_selection(model: &TableModel, selection: &SelectionState) -> Option<
     let range = selection.selected_range()?;
 
     let mut lines = Vec::new();
+    // A copy of the whole loaded table carries the column names, so it pastes
+    // into a spreadsheet with its header row.
+    let whole_table = range.start.row == 0
+        && range.start.col == 0
+        && range.end.row + 1 >= model.rows.len()
+        && range.end.col + 1 >= model.columns.len()
+        && range.row_count() * range.col_count() > 1;
+    if whole_table {
+        lines.push(
+            model
+                .columns
+                .iter()
+                .map(|column| escape_tsv(&column.title))
+                .collect::<Vec<_>>()
+                .join("\t"),
+        );
+    }
     for row in range.start.row..=range.end.row {
         let mut cells = Vec::new();
         for col in range.start.col..=range.end.col {
@@ -90,6 +107,36 @@ mod tests {
         assert_eq!(display.chars().count(), 201);
         assert!(display.ends_with('…'));
         assert_eq!(display.as_ref(), format!("{}…", &full_text[..200]));
+    }
+
+    #[test]
+    fn copying_the_whole_table_adds_the_header_row_and_a_part_does_not() {
+        use super::super::model::{ColumnKind, ColumnSpec, RowData};
+
+        let column = |name: &str| ColumnSpec {
+            id: name.into(),
+            title: name.into(),
+            kind: ColumnKind::Text,
+            align: gpui::TextAlign::Left,
+            type_name: "text".into(),
+        };
+        let row = |id: i64, name: &str| RowData {
+            cells: vec![CellValue::int(id), CellValue::text(name)],
+        };
+        let model = TableModel::new(
+            vec![column("id"), column("name")],
+            vec![row(1, "a"), row(2, "b")],
+        );
+
+        let mut selection = SelectionState::new();
+        selection.select_all(2, 2);
+        assert_eq!(
+            copy_selection(&model, &selection).as_deref(),
+            Some("id\tname\n1\ta\n2\tb")
+        );
+
+        selection.select_rows(0, false, 2);
+        assert_eq!(copy_selection(&model, &selection).as_deref(), Some("1\ta"));
     }
 
     #[test]
