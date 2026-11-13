@@ -175,20 +175,33 @@ impl SelectionState {
         self.active = Some(CellCoord::new(0, col));
     }
 
-    /// Select all cells in the table.
+    /// Select all cells in the table. The cursor stays on the first cell: a
+    /// cursor on the last row reads as having reached the end, which fetches
+    /// the next rows of a limited result instead of selecting the loaded ones.
     pub fn select_all(&mut self, row_count: usize, col_count: usize) {
         if row_count == 0 || col_count == 0 {
             self.clear();
             return;
         }
-        self.anchor = Some(CellCoord::new(0, 0));
-        self.active = Some(CellCoord::new(row_count - 1, col_count - 1));
+        self.anchor = Some(CellCoord::new(row_count - 1, col_count - 1));
+        self.active = Some(CellCoord::new(0, 0));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn select_all_covers_every_cell_with_the_cursor_on_the_first() {
+        let mut sel = SelectionState::new();
+        sel.select_all(5, 3);
+        assert_eq!(
+            sel.selected_range(),
+            Some(CellRange::new(CellCoord::new(0, 0), CellCoord::new(4, 2)))
+        );
+        assert_eq!(sel.active, Some(CellCoord::new(0, 0)));
+    }
 
     #[test]
     fn test_cell_range_contains() {
