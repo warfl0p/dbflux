@@ -30,6 +30,7 @@ const REGISTERED_LANGUAGES: &[&str] = &[
 /// `gpui_component::init`.
 pub fn register_languages() {
     Grammar::new("sql", tree_sitter_sequel::LANGUAGE, sql_highlights_query())
+        .statement_separator(";")
         .register();
     Grammar::new(
         "cypher",
