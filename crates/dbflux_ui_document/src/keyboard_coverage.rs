@@ -91,9 +91,16 @@ pub(crate) const DATA_GRID: SurfaceRegistry = SurfaceRegistry {
         ("cell-*", KeyboardPath::Command(Command::SelectNext)),
         ("row-number-*", KeyboardPath::Command(Command::SelectRow)),
         ("header-col-*", KeyboardPath::Command(Command::SelectColumn)),
-        // The table menu of the column carries Order ascending / descending.
+        // The table menu of the column carries Copy column name, Order
+        // ascending / descending and the Filter entries.
         (
             "header-sort-*",
+            KeyboardPath::Command(Command::OpenContextMenu),
+        ),
+        // The header menu's entries are the table menu's, for the active
+        // cell's column (`m`).
+        (
+            "column-menu-action-*",
             KeyboardPath::Command(Command::OpenContextMenu),
         ),
         // Every row of the table menu and its submenus.

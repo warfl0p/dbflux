@@ -76,10 +76,12 @@ modos; `Up`/`Down` recorren los campos y `Left`/`Right` cambian de fila. Pulsa
 ## Menú de la cabecera de columna
 
 Haz clic derecho en la cabecera de una columna para abrir un menú limitado a
-esa columna: ordenar ascendente o descendente, quitar el orden y todos los
-operadores de filtro, en una sola lista plana. El clic izquierdo en la
-cabecera selecciona la columna; la flecha a la derecha de la cabecera alterna
-el orden.
+esa columna: copiar el nombre de la columna, ordenar ascendente o descendente,
+quitar el orden y todos los operadores de filtro, en una sola lista plana. El
+clic izquierdo en la cabecera selecciona la columna; la flecha a la derecha de
+la cabecera alterna el orden. El menú de la tabla (`m`) también ofrece
+**Copiar nombre de columna** para la columna de la celda activa, así que el
+teclado también llega a él.
 
 ## Panel de valor
 
