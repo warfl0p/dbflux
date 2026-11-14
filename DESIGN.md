@@ -297,6 +297,10 @@ ghost.
   shadows between panes.
 - Don't use Archivo Expanded, extra-bold or wide-tracked labels.
 - Don't introduce a new palette, accent or named theme unasked.
+- Don't change the syntax highlighting colors (`SyntaxColors::dark()` /
+  `light()` in `crates/bolt/src/tokens.rs`, the keyword color from the
+  accent tint) as part of any style work. They change only when a task asks
+  for exactly that.
 - Don't branch on the theme name in a component; read the role.
 
 ## Upstream references
