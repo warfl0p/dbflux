@@ -4171,6 +4171,7 @@ palette:
     placeholder: Buscar comandos, conexões, tabelas, scripts…
   empty: Nenhum item correspondente
   section:
+    editors: "Editores abertos"
     workspaces: "Workspaces"
     connections: Conexões
     commands: Comandos

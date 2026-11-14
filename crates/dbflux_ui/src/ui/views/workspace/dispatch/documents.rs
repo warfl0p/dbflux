@@ -8,22 +8,8 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<bool> {
         match cmd {
-            Command::NextTab => {
-                self.tab_manager.update(cx, |mgr, cx| {
-                    mgr.next_visual_tab(cx);
-                });
-                // Focus the newly active document
-                self.tab_manager
-                    .update(cx, |mgr, cx| mgr.focus_active(window, cx));
-                Some(true)
-            }
-            Command::PrevTab => {
-                self.tab_manager.update(cx, |mgr, cx| {
-                    mgr.prev_visual_tab(cx);
-                });
-                // Focus the newly active document
-                self.tab_manager
-                    .update(cx, |mgr, cx| mgr.focus_active(window, cx));
+            Command::NextTab | Command::PrevTab => {
+                self.open_editor_switcher(cmd == Command::PrevTab, window, cx);
                 Some(true)
             }
             Command::SwitchToTab(n) => {

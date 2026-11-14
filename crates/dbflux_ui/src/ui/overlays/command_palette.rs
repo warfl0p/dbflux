@@ -19,6 +19,7 @@ use dbflux_components::command_palette::{
 };
 use dbflux_components::icon::IconSource;
 use dbflux_components::icons::DriverIconTone;
+use dbflux_core::document_id::DocumentId;
 use dbflux_core::{CollectionRef, TableRef};
 use dbflux_ui_base::keymap::{
     RunCommand, chord_display_parts, default_keymap, effective_keymap, run_command, shortcut_label,
@@ -33,6 +34,15 @@ pub type CommandPalette =
 /// A searchable item in the command palette.
 #[derive(Clone)]
 pub enum PaletteItem {
+    /// An open document, listed by the editor switcher (Ctrl+Tab).
+    Editor {
+        id: DocumentId,
+        title: String,
+        icon: AppIcon,
+        /// Where the document lives (a file path), shown muted after the
+        /// title.
+        detail: Option<String>,
+    },
     Action {
         id: &'static str,
         name: SharedString,
@@ -241,6 +251,9 @@ impl PaletteItem {
                 )
             }
             Self::Workspace { name, detail, .. } => format!("{name} {detail}"),
+            Self::Editor { title, detail, .. } => {
+                format!("{title} {}", detail.as_deref().unwrap_or_default())
+            }
         }
     }
 
@@ -289,13 +302,16 @@ impl PaletteItem {
             Self::Workspace { name, .. } => {
                 (dbflux_i18n::t!("palette.section.workspaces"), name.clone())
             }
+            Self::Editor { title, .. } => {
+                (dbflux_i18n::t!("palette.section.editors"), title.clone())
+            }
         }
     }
 
     /// Type priority for tiebreaking (lower = higher priority).
     pub fn type_priority(&self) -> u8 {
         match self {
-            Self::Action { .. } => 0,
+            Self::Action { .. } | Self::Editor { .. } => 0,
             Self::Connection { .. } => 1,
             Self::SavedChart { .. } => 2,
             Self::ImportDashboard => 2,
@@ -363,6 +379,7 @@ impl PaletteItem {
             Self::SavedChart { .. } => (AppIcon::ChartSpline, None),
             Self::ImportDashboard => (AppIcon::Download, None),
             Self::Workspace { .. } => (AppIcon::Folder, None),
+            Self::Editor { icon, .. } => (*icon, None),
         }
     }
 
@@ -377,6 +394,7 @@ impl PaletteItem {
                 .filter(|folder| !folder.is_empty())
                 .map(SharedString::from),
             Self::Workspace { detail, .. } => Some(SharedString::from(detail.clone())),
+            Self::Editor { detail, .. } => detail.clone().map(SharedString::from),
             _ => None,
         }
     }
@@ -508,6 +526,9 @@ pub enum PaletteSelection {
     /// The user selected the "Import Dashboard from JSON" entry.
     ImportDashboard,
     Workspace(WorkspaceAction),
+    ActivateEditor {
+        id: DocumentId,
+    },
 }
 
 /// The section a [`PaletteItem`] groups under.
@@ -519,6 +540,7 @@ fn item_section(item: &PaletteItem) -> PaletteSection {
         PaletteItem::Resource(_) => PaletteSection::Tables,
         PaletteItem::Script { .. } => PaletteSection::Scripts,
         PaletteItem::Workspace { .. } => PaletteSection::Workspaces,
+        PaletteItem::Editor { .. } => PaletteSection::Editors,
     }
 }
 
@@ -640,6 +662,7 @@ impl PaletteEntry for PaletteItem {
             }
             PaletteItem::ImportDashboard => PaletteSelection::ImportDashboard,
             PaletteItem::Workspace { action, .. } => PaletteSelection::Workspace(action.clone()),
+            PaletteItem::Editor { id, .. } => PaletteSelection::ActivateEditor { id: *id },
         }
     }
 }
@@ -980,6 +1003,7 @@ mod tests {
         "palette.section.charts",
         "palette.section.tables",
         "palette.section.scripts",
+        "palette.section.editors",
         "palette.kind.connection",
         "palette.kind.chart",
         "palette.kind.table",

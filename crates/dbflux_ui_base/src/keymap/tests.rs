@@ -1152,6 +1152,11 @@ fn global_chords_stop_at_dialogs_menus_and_pickers() {
         let root = root_key_context(WORKSPACE_KEY_CONTEXT, context, &[]);
 
         for keys in ["ctrl-tab", "ctrl-shift-p", "ctrl-1"] {
+            // The palette takes Ctrl+Tab itself, to walk the editor switcher.
+            if context == ContextId::CommandPalette && keys == "ctrl-tab" {
+                continue;
+            }
+
             assert!(
                 top_action(&keymap, keys, std::slice::from_ref(&root)).is_none(),
                 "`{keys}` must not fire while {context:?} owns the keyboard"

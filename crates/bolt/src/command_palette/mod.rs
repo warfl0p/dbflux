@@ -171,6 +171,8 @@ pub trait PaletteEntry: 'static {
 /// themselves are not selectable — they are a render-only concern.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PaletteSection {
+    /// The open documents, listed by the editor switcher (Ctrl+Tab).
+    Editors,
     Commands,
     Connections,
     Charts,
@@ -180,7 +182,8 @@ pub enum PaletteSection {
 }
 
 impl PaletteSection {
-    const ORDER: [PaletteSection; 6] = [
+    const ORDER: [PaletteSection; 7] = [
+        Self::Editors,
         Self::Commands,
         Self::Connections,
         Self::Charts,
@@ -194,6 +197,7 @@ impl PaletteSection {
         strings::text(
             cx,
             match self {
+                Self::Editors => "palette.section.editors",
                 Self::Connections => "palette.section.connections",
                 Self::Commands => "palette.section.commands",
                 Self::Charts => "palette.section.charts",
@@ -404,9 +408,12 @@ pub struct CommandPalette<T: PaletteEntry, H: PaletteHost> {
     matcher: SkimMatcherV2,
     /// The typed query without its scope prefix, for the match highlight.
     match_query: String,
-    /// Opened as Go to file: a query without a `>` or `@` prefix searches
-    /// only scripts.
-    files_by_default: bool,
+    /// The one section a query without a `>` or `@` prefix searches: scripts
+    /// for Go to file, open documents for the editor switcher.
+    default_section: Option<PaletteSection>,
+    /// Opened by the editor switcher while Ctrl was held: releasing Ctrl
+    /// opens the selected document, as VS Code's Ctrl+Tab does.
+    commit_on_ctrl_release: bool,
     host: PhantomData<fn() -> H>,
 }
 
@@ -456,7 +463,8 @@ where
             input_state,
             matcher: SkimMatcherV2::default(),
             match_query: String::new(),
-            files_by_default: false,
+            default_section: None,
+            commit_on_ctrl_release: false,
             host: PhantomData,
         }
     }
@@ -464,7 +472,8 @@ where
     /// Set items and reset filter state. Called on each toggle.
     pub fn open_with_items(&mut self, items: Vec<T>, window: &mut Window, cx: &mut Context<Self>) {
         self.items = items;
-        self.files_by_default = false;
+        self.default_section = None;
+        self.commit_on_ctrl_release = false;
         self.filtered = self
             .items
             .iter()
@@ -490,8 +499,41 @@ where
     /// commands and tables, but an unprefixed query lists only scripts.
     pub fn open_files(&mut self, items: Vec<T>, window: &mut Window, cx: &mut Context<Self>) {
         self.open_with_items(items, window, cx);
-        self.files_by_default = true;
+        self.default_section = Some(PaletteSection::Scripts);
         self.update_filter("", cx);
+    }
+
+    /// Opens as the editor switcher over `items`, the open documents with the
+    /// most recently used first. The selection starts on the previous
+    /// document, or on the least recent one when `backward`. Opened with Ctrl
+    /// held, releasing Ctrl opens the selection.
+    pub fn open_switcher(
+        &mut self,
+        items: Vec<T>,
+        backward: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_with_items(items, window, cx);
+        self.default_section = Some(PaletteSection::Editors);
+        self.update_filter("", cx);
+        self.commit_on_ctrl_release = window.modifiers().control;
+
+        let last = self.filtered.len().saturating_sub(1);
+        self.selected_index = if backward { last } else { last.min(1) };
+        self.ensure_selected_visible();
+    }
+
+    /// Opens the switcher's selection once Ctrl is released.
+    fn modifiers_changed(
+        &mut self,
+        modifiers: &gpui::Modifiers,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.visible && self.commit_on_ctrl_release && !modifiers.control {
+            self.execute_selected(OpenPlacement::ReuseTab, window, cx);
+        }
     }
 
     pub fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -519,6 +561,7 @@ where
 
     pub fn hide(&mut self, cx: &mut Context<Self>) {
         self.visible = false;
+        self.commit_on_ctrl_release = false;
         cx.emit(H::Closed::default());
         cx.notify();
     }
@@ -531,13 +574,15 @@ where
     fn update_filter(&mut self, query: &str, cx: &mut Context<Self>) {
         let mut filtered = filter_items(&self.items, &self.matcher, query);
 
-        if self.files_by_default && PaletteScope::parse(query).0 == PaletteScope::All {
+        if let Some(section) = self.default_section
+            && PaletteScope::parse(query).0 == PaletteScope::All
+        {
             #[expect(
                 clippy::indexing_slicing,
                 reason = "`filter_items` pairs each index with `.enumerate()` over \
                           `self.items`, so `item.index` stays below its length"
             )]
-            filtered.retain(|item| self.items[item.index].section() == PaletteSection::Scripts);
+            filtered.retain(|item| self.items[item.index].section() == section);
         }
 
         self.filtered = arrange_results(&self.items, filtered, query);
@@ -665,6 +710,7 @@ where
             let selection = item.select(new_tab);
 
             self.visible = false;
+            self.commit_on_ctrl_release = false;
             cx.emit(selection);
             cx.notify();
         }
@@ -992,6 +1038,7 @@ mod tests {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum TestKind {
+        Editor,
         Command,
         Connection,
         Resource,
@@ -1026,6 +1073,13 @@ mod tests {
                 name,
             }
         }
+
+        fn editor(name: &'static str) -> Self {
+            Self {
+                kind: TestKind::Editor,
+                name,
+            }
+        }
     }
 
     impl PaletteEntry for TestItem {
@@ -1050,7 +1104,7 @@ mod tests {
 
         fn type_priority(&self) -> u8 {
             match self.kind {
-                TestKind::Command => 0,
+                TestKind::Editor | TestKind::Command => 0,
                 TestKind::Connection => 1,
                 TestKind::Resource => 3,
                 TestKind::Script => 4,
@@ -1063,6 +1117,7 @@ mod tests {
 
         fn section(&self) -> PaletteSection {
             match self.kind {
+                TestKind::Editor => PaletteSection::Editors,
                 TestKind::Command => PaletteSection::Commands,
                 TestKind::Connection => PaletteSection::Connections,
                 TestKind::Resource => PaletteSection::Tables,
@@ -1338,6 +1393,68 @@ mod tests {
         window.update(|_, cx| {
             let host = host.read(cx);
             assert_eq!(host.selections, vec![(TestKind::Command, true)]);
+            assert!(!host.palette.read(cx).is_visible());
+        });
+    }
+
+    /// The editor switcher lists only the open documents in the order given,
+    /// starts on the previous one, and opens the selection when Ctrl is
+    /// released.
+    #[gpui::test]
+    fn the_editor_switcher_opens_its_selection_when_ctrl_is_released(cx: &mut TestAppContext) {
+        cx.update(gpui_component::init);
+        let (host, window) = cx.add_window_view(|window, cx| {
+            let palette = cx.new(|cx| CommandPalette::<TestItem, TestHost>::new(window, cx));
+            let subscription = cx.subscribe(
+                &palette,
+                |this: &mut Host, _, event: &(TestKind, bool), _| {
+                    this.selections.push(*event);
+                },
+            );
+
+            Host {
+                palette,
+                selections: Vec::new(),
+                _subscription: subscription,
+            }
+        });
+        window.run_until_parked();
+
+        window.simulate_modifiers_change(gpui::Modifiers::control());
+        window.update(|window, cx| {
+            host.update(cx, |host, cx| {
+                host.palette.update(cx, |palette, cx| {
+                    let items = vec![
+                        TestItem::editor("current.sql"),
+                        TestItem::command("Run query"),
+                        TestItem::editor("previous.sql"),
+                        TestItem::editor("oldest.sql"),
+                    ];
+                    palette.open_switcher(items, false, window, cx);
+                });
+            });
+        });
+        window.run_until_parked();
+
+        window.update(|_, cx| {
+            let palette = host.read(cx).palette.read(cx);
+            let shown: Vec<&str> = palette
+                .filtered
+                .iter()
+                .filter_map(|filtered| palette.items.get(filtered.index))
+                .map(|item| item.name)
+                .collect();
+            assert_eq!(shown, ["current.sql", "previous.sql", "oldest.sql"]);
+            assert_eq!(palette.selected_index, 1);
+            assert!(palette.is_visible());
+        });
+
+        window.simulate_modifiers_change(gpui::Modifiers::none());
+        window.run_until_parked();
+
+        window.update(|_, cx| {
+            let host = host.read(cx);
+            assert_eq!(host.selections, vec![(TestKind::Editor, false)]);
             assert!(!host.palette.read(cx).is_visible());
         });
     }

@@ -122,9 +122,10 @@ fn global_layer() -> KeymapLayer {
     // Quit goes through the workspace, which asks first when a query is still
     // running. macOS also shows this chord beside Quit in the application menu.
     layer.bind(KeyChord::new("q", Modifiers::primary()), Command::Quit);
-    // Ctrl+Tab / Ctrl+Shift+Tab stay literal Ctrl on every platform — that is
-    // the long-standing tabbed-UI idiom (browsers, terminals). Cmd+Tab on
-    // macOS is the system app switcher and must not be shadowed.
+    // Ctrl+Tab / Ctrl+Shift+Tab open the editor switcher, as in VS Code. They
+    // stay literal Ctrl on every platform — that is the long-standing
+    // tabbed-UI idiom (browsers, terminals). Cmd+Tab on macOS is the system
+    // app switcher and must not be shadowed.
     layer.bind(KeyChord::new("tab", Modifiers::ctrl()), Command::NextTab);
     layer.bind(
         KeyChord::new("tab", Modifiers::ctrl_shift()),
@@ -941,6 +942,13 @@ fn command_palette_layer() -> KeymapLayer {
     layer.bind(KeyChord::new("up", Modifiers::none()), Command::SelectPrev);
     layer.bind(KeyChord::new("j", Modifiers::ctrl()), Command::SelectNext);
     layer.bind(KeyChord::new("k", Modifiers::ctrl()), Command::SelectPrev);
+    // The editor switcher opens on Ctrl+Tab; while Ctrl stays down, Tab and
+    // Shift+Tab walk its list, and releasing Ctrl opens the selection.
+    layer.bind(KeyChord::new("tab", Modifiers::ctrl()), Command::SelectNext);
+    layer.bind(
+        KeyChord::new("tab", Modifiers::ctrl_shift()),
+        Command::SelectPrev,
+    );
 
     layer.bind(KeyChord::new("enter", Modifiers::none()), Command::Execute);
     // Opens the chosen table or collection in another tab instead of the

@@ -553,15 +553,11 @@ impl Render for Workspace {
                     this.close_active_tab(window, cx);
                 }),
             )
-            .on_action(cx.listener(|this, _: &keymap::NextTab, _window, cx| {
-                this.tab_manager.update(cx, |mgr, cx| {
-                    mgr.next_visual_tab(cx);
-                });
+            .on_action(cx.listener(|this, _: &keymap::NextTab, window, cx| {
+                this.open_editor_switcher(false, window, cx);
             }))
-            .on_action(cx.listener(|this, _: &keymap::PrevTab, _window, cx| {
-                this.tab_manager.update(cx, |mgr, cx| {
-                    mgr.prev_visual_tab(cx);
-                });
+            .on_action(cx.listener(|this, _: &keymap::PrevTab, window, cx| {
+                this.open_editor_switcher(true, window, cx);
             }))
             .on_action(cx.listener(|this, _: &keymap::SwitchToTab1, _window, cx| {
                 this.tab_manager

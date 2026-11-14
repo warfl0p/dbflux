@@ -583,66 +583,10 @@ impl TabManager {
         document.set_value_panel_open(rail.value_panel_open, cx);
     }
 
-    /// Navigates to the next tab in VISUAL order (Ctrl+PgDn).
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "documents.len() > 1 after the early return and next is a modular step over it"
-    )]
-    pub fn next_visual_tab(&mut self, cx: &mut Context<Self>) {
-        if self.documents.len() <= 1 {
-            return;
-        }
-
-        if let Some(active) = self.active_index {
-            let next = (active + 1) % self.documents.len();
-            let id = self.documents[next].id();
-            self.activate(id, cx);
-        }
-    }
-
-    /// Navigates to the previous tab in VISUAL order (Ctrl+PgUp).
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "documents.len() > 1 after the early return and prev is documents.len() - 1 or active - 1, with active_index kept below documents.len() by the manager (not re-checked here)"
-    )]
-    pub fn prev_visual_tab(&mut self, cx: &mut Context<Self>) {
-        if self.documents.len() <= 1 {
-            return;
-        }
-
-        if let Some(active) = self.active_index {
-            let prev = if active == 0 {
-                self.documents.len() - 1
-            } else {
-                active - 1
-            };
-            let id = self.documents[prev].id();
-            self.activate(id, cx);
-        }
-    }
-
-    /// Navigates to the next tab in MRU order (Ctrl+Tab).
-    pub fn next_mru_tab(&mut self, cx: &mut Context<Self>) {
-        if self.mru_order.len() <= 1 {
-            return;
-        }
-
-        // The second in MRU is the "next" most recent
-        if let Some(&next_id) = self.mru_order.get(1) {
-            self.activate(next_id, cx);
-        }
-    }
-
-    /// Navigates to the previous tab in MRU order (Ctrl+Shift+Tab).
-    pub fn prev_mru_tab(&mut self, cx: &mut Context<Self>) {
-        if self.mru_order.len() <= 1 {
-            return;
-        }
-
-        // The last in MRU is the "least recent"
-        if let Some(&prev_id) = self.mru_order.last() {
-            self.activate(prev_id, cx);
-        }
+    /// The ids of every open document, most recently used first, for the
+    /// editor switcher (Ctrl+Tab).
+    pub fn mru_ids(&self) -> &[DocumentId] {
+        &self.mru_order
     }
 
     /// The ids of every open document, in tab order.

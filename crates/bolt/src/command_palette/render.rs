@@ -161,6 +161,11 @@ where
 
         overlay
             .key_context(H::key_context())
+            .on_modifiers_changed(
+                cx.listener(|this, event: &ModifiersChangedEvent, window, cx| {
+                    this.modifiers_changed(&event.modifiers, window, cx);
+                }),
+            )
             .child(
                 div()
                     .id("command-palette-container")

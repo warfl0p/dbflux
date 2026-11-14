@@ -790,7 +790,7 @@ mod tests {
 
 /// The icon a tab shows for its document kind, matching the icon the sidebar
 /// gives the same object (a collection's box, a key-value database's key).
-fn tab_icon(icon: super::types::DocumentIcon) -> AppIcon {
+pub fn tab_icon(icon: super::types::DocumentIcon) -> AppIcon {
     use super::types::DocumentIcon;
 
     match icon {

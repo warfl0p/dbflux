@@ -226,6 +226,7 @@ pub(super) fn map_item_to_selection(item: &PaletteItem) -> Option<PaletteSelecti
         }
         PaletteItem::ImportDashboard => Some(PaletteSelection::ImportDashboard),
         PaletteItem::Workspace { action, .. } => Some(PaletteSelection::Workspace(action.clone())),
+        PaletteItem::Editor { id, .. } => Some(PaletteSelection::ActivateEditor { id: *id }),
     }
 }
 
@@ -856,6 +857,12 @@ impl Workspace {
                 }
                 PaletteSelection::Workspace(action) => {
                     this.run_workspace_action(action.clone(), cx);
+                }
+                PaletteSelection::ActivateEditor { id } => {
+                    this.tab_manager.update(cx, |manager, cx| {
+                        manager.activate(*id, cx);
+                        manager.focus_active(window, cx);
+                    });
                 }
             },
         )
@@ -2536,6 +2543,40 @@ impl Workspace {
         self.sidebar.update(cx, |sidebar, cx| match action {
             WorkspaceAction::OpenRecent(recent) => sidebar.open_recent_workspace(recent, cx),
             WorkspaceAction::RemoveFolder(folder) => sidebar.remove_workspace_folder(&folder, cx),
+        });
+    }
+
+    /// Opens the editor switcher (Ctrl+Tab): the open documents, most
+    /// recently used first, with the previous one selected, or the least
+    /// recent one when `backward`.
+    pub fn open_editor_switcher(
+        &mut self,
+        backward: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let manager = self.tab_manager.read(cx);
+        let items: Vec<PaletteItem> = manager
+            .mru_ids()
+            .iter()
+            .filter_map(|id| manager.document(*id))
+            .map(|tab| {
+                let meta = tab.meta_snapshot(cx);
+                PaletteItem::Editor {
+                    id: meta.id,
+                    title: meta.title,
+                    icon: dbflux_ui_document::tab_bar::tab_icon(meta.icon),
+                    detail: tab.tab_tooltip(cx).map(|tooltip| tooltip.to_string()),
+                }
+            })
+            .collect();
+
+        if items.is_empty() {
+            return;
+        }
+
+        self.command_palette.update(cx, |palette, cx| {
+            palette.open_switcher(items, backward, window, cx);
         });
     }
 
