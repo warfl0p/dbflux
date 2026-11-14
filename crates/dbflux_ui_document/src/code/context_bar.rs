@@ -1,6 +1,5 @@
 use super::*;
 use crate::result_view::ResultViewMode;
-use dbflux_components::composites::control_shell;
 use dbflux_components::controls::{Button, DropdownEnvironment};
 use dbflux_components::icons::DriverIconTone;
 use dbflux_components::primitives::{FocusShape, Icon, Text, focus_ring};
@@ -44,6 +43,24 @@ fn context_selector(icon: Icon, dropdown: Entity<Dropdown>) -> gpui::Div {
         .w_full()
         .child(icon)
         .child(div().flex_1().min_w_0().child(dropdown))
+}
+
+/// The frame of a context selector, as a VS Code breadcrumb: no fill or
+/// border at rest, the hover wash under the pointer, so the bar reads as
+/// text rather than a row of boxes.
+fn context_shell(child: impl IntoElement, cx: &App) -> gpui::Div {
+    let theme = cx.theme();
+
+    div()
+        .relative()
+        .w_full()
+        .h(Fields::HEIGHT_SMALL)
+        .flex()
+        .items_center()
+        .px(Spacing::XXS)
+        .rounded(Radii::SM)
+        .hover(|shell| shell.bg(theme.list_hover))
+        .child(child)
 }
 
 /// The chevron between two context selectors.
@@ -156,7 +173,7 @@ impl CodeDocument {
                     "document.code.context_bar.placeholder.connection"
                 ))
                 .toolbar_style(true)
-                .mono_label(true)
+                .mono_label(false)
         });
 
         let sub = cx.subscribe_in(
@@ -810,7 +827,7 @@ impl CodeDocument {
                     "document.code.context_bar.placeholder.database"
                 ))
                 .toolbar_style(true)
-                .mono_label(true)
+                .mono_label(false)
         });
 
         let sub = cx.subscribe_in(
@@ -845,7 +862,7 @@ impl CodeDocument {
                     "document.code.context_bar.placeholder.schema"
                 ))
                 .toolbar_style(true)
-                .mono_label(true)
+                .mono_label(false)
         });
 
         let sub = cx.subscribe_in(
@@ -1583,7 +1600,6 @@ impl CodeDocument {
                 .min_w_0()
                 .items_center()
                 .gap(EditorMetrics::FILE_GAP)
-                .font_family(dbflux_components::fonts::editor_family(cx))
                 .text_size(EditorMetrics::FILE_FONT)
                 .text_color(theme.muted_foreground)
                 .child(
@@ -1659,7 +1675,6 @@ impl CodeDocument {
                         .items_center()
                         .gap(EditorMetrics::LAST_RUN_GAP)
                         .mr(EditorMetrics::LAST_RUN_MARGIN_RIGHT)
-                        .font_family(dbflux_components::fonts::editor_family(cx))
                         .text_size(EditorMetrics::LAST_RUN_FONT)
                         .text_color(theme.muted_foreground)
                         .child(
@@ -1678,7 +1693,6 @@ impl CodeDocument {
                         .flex_shrink_0()
                         .items_center()
                         .gap(EditorMetrics::LAST_RUN_GAP)
-                        .font_family(dbflux_components::fonts::editor_family(cx))
                         .text_size(EditorMetrics::LAST_RUN_FONT)
                         .text_color(theme.success)
                         .child(
@@ -1737,7 +1751,27 @@ impl CodeDocument {
             .into_any_element()
     }
 
+    /// The document's row in the workspace's top row: the context controls,
+    /// then the editor actions at the right end.
     pub(super) fn render_context_bar(&self, cx: &mut Context<Self>) -> AnyElement {
+        let actions = self.render_action_strip(cx);
+
+        div()
+            .flex()
+            .flex_1()
+            .min_w_0()
+            .items_center()
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .child(self.render_context_controls(cx)),
+            )
+            .children(actions)
+            .into_any_element()
+    }
+
+    fn render_context_controls(&self, cx: &mut Context<Self>) -> AnyElement {
         if !self.supports_connection_context() {
             return self.render_script_context_bar(cx);
         }
@@ -1797,7 +1831,7 @@ impl CodeDocument {
                         ),
                         FocusShape::Chamfer(ChamferCut::CONTROL),
                         Some(theme.ring),
-                        control_shell(
+                        context_shell(
                             context_selector(
                                 Icon::new(connection_icon)
                                     .size(EditorMetrics::SELECTOR_ICON)
@@ -1836,7 +1870,7 @@ impl CodeDocument {
                                     ),
                                     FocusShape::Chamfer(ChamferCut::CONTROL),
                                     Some(theme.ring),
-                                    control_shell(
+                                    context_shell(
                                         self.source.source_query_mode_dropdown.clone(),
                                         cx,
                                     ),
@@ -1860,7 +1894,7 @@ impl CodeDocument {
                         ),
                         FocusShape::Chamfer(ChamferCut::CONTROL),
                         Some(theme.ring),
-                        control_shell(self.source.source_targets.clone(), cx),
+                        context_shell(self.source.source_targets.clone(), cx),
                         cx,
                     )));
 
@@ -1889,7 +1923,7 @@ impl CodeDocument {
                                 div()
                                     .flex_none()
                                     .min_w(px(220.0))
-                                    .child(control_shell(dropdown, cx)),
+                                    .child(context_shell(dropdown, cx)),
                             )
                     },
                 );
@@ -1917,7 +1951,7 @@ impl CodeDocument {
                             ),
                             FocusShape::Chamfer(ChamferCut::CONTROL),
                             Some(theme.ring),
-                            control_shell(
+                            context_shell(
                                 Input::new(&self.source.source_start_input).appearance(false),
                                 cx,
                             ),
@@ -1940,7 +1974,7 @@ impl CodeDocument {
                             ),
                             FocusShape::Chamfer(ChamferCut::CONTROL),
                             Some(theme.ring),
-                            control_shell(
+                            context_shell(
                                 Input::new(&self.source.source_end_input).appearance(false),
                                 cx,
                             ),
@@ -1962,7 +1996,7 @@ impl CodeDocument {
                             ),
                             FocusShape::Chamfer(ChamferCut::CONTROL),
                             Some(theme.ring),
-                            control_shell(
+                            context_shell(
                                 context_selector(
                                     Icon::new(AppIcon::Database)
                                         .size(EditorMetrics::SELECTOR_ICON)
@@ -1988,7 +2022,7 @@ impl CodeDocument {
                             ),
                             FocusShape::Chamfer(ChamferCut::CONTROL),
                             Some(theme.ring),
-                            control_shell(
+                            context_shell(
                                 context_selector(
                                     Icon::new(AppIcon::Layers)
                                         .size(EditorMetrics::SELECTOR_ICON)

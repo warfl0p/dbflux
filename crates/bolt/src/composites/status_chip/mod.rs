@@ -4,14 +4,13 @@ use gpui::prelude::*;
 use gpui::{App, Div, ElementId, FontWeight, Hsla, Stateful, div};
 use gpui_component::ActiveTheme;
 
-use super::island_fill;
 use crate::primitives::Chamfer;
 use crate::tokens::{ChamferCut, ShellMetrics};
 
-/// A chip of a status bar: 26 px high, cut 6, 12 px padding and an 8 px gap
-/// between its children, on the island fill.
+/// An item of a status bar, as in VS Code: the full bar height, 8 px padding
+/// and a 4 px gap between its children, with no fill at rest.
 ///
-/// A clickable chip takes the raised fill on hover and press. A toned chip
+/// A clickable item takes the raised fill on hover and press. A toned chip
 /// draws its text in the tone, semibold; with the wash it also sits on the
 /// tone at `ShellMetrics::STATUS_CHIP_ALPHA` instead of the island fill (a
 /// connection's environment, for example).
@@ -43,18 +42,18 @@ impl StatusChip {
         self
     }
 
-    /// Fills the chip with a wash of its tone. Without a tone the chip keeps
-    /// the island fill.
+    /// Fills the chip with a wash of its tone. Without a tone the chip stays
+    /// unfilled.
     pub fn wash(mut self, wash: bool) -> Self {
         self.wash = wash;
         self
     }
 
     /// The chip's resting fill.
-    pub fn fill(&self, theme: &gpui_component::Theme) -> Hsla {
+    pub fn fill(&self, _theme: &gpui_component::Theme) -> Hsla {
         match self.tone.filter(|_| self.wash) {
             Some(tone) => tone.opacity(ShellMetrics::STATUS_CHIP_ALPHA),
-            None => island_fill(theme),
+            None => gpui::transparent_black(),
         }
     }
 

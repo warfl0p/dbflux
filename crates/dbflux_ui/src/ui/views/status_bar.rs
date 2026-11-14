@@ -189,9 +189,10 @@ impl StatusBar {
         Text::caption(text)
     }
 
-    /// Statements and counters stay in the data face so their digits line up.
+    /// Readouts (statements, timings, counters) in the interface face, as
+    /// VS Code's status bar.
     fn readout_text(text: impl Into<SharedString>) -> Text {
-        Text::code(text).font_size(ShellMetrics::STATUS_FONT)
+        Text::body_sm(text).font_size(ShellMetrics::STATUS_FONT)
     }
 
     /// Compact badge label and tooltip explaining why the active connection
@@ -523,10 +524,10 @@ mod tests {
     }
 
     #[test]
-    fn status_bar_readouts_use_the_mono_face_at_status_size() {
+    fn status_bar_readouts_use_the_interface_face_at_status_size() {
         let inspection = StatusBar::readout_text("SELECT 1 \u{b7} 12 ms").inspect();
 
-        assert_eq!(inspection.family, AppFonts::MONO);
+        assert_eq!(inspection.family, AppFonts::INTERFACE);
         assert_eq!(
             inspection.size_override,
             Some(ShellMetrics::STATUS_FONT.into())

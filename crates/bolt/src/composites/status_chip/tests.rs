@@ -6,24 +6,21 @@ use gpui::{Context, IntoElement, Modifiers, Render, TestAppContext, Window, div}
 use super::*;
 
 #[test]
-fn the_wash_needs_a_tone_and_replaces_the_island_fill() {
+fn the_wash_needs_a_tone_and_is_the_only_fill() {
     let theme = gpui_component::Theme::default();
     let tone = gpui::red();
-    assert_ne!(
-        island_fill(&theme),
-        tone.opacity(ShellMetrics::STATUS_CHIP_ALPHA)
-    );
+    let none = gpui::transparent_black();
 
-    assert_eq!(StatusChip::new("plain").fill(&theme), island_fill(&theme));
+    assert_eq!(StatusChip::new("plain").fill(&theme), none);
     assert_eq!(
         StatusChip::new("toned").tone(tone).fill(&theme),
-        island_fill(&theme),
+        none,
         "a tone alone colors the text, not the fill"
     );
     assert_eq!(
         StatusChip::new("washed").wash(true).fill(&theme),
-        island_fill(&theme),
-        "a wash without a tone keeps the island fill"
+        none,
+        "a wash without a tone draws no fill"
     );
     assert_eq!(
         StatusChip::new("washed").tone(tone).wash(true).fill(&theme),

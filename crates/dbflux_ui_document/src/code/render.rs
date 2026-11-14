@@ -312,11 +312,10 @@ impl CodeDocument {
         actions
     }
 
-    /// The editor action strip (IslEditor): a column of icon buttons on the
-    /// editor's left edge, with Run first and set apart by a short line. The
-    /// buttons keep the ids the toolbar row had. A read-only document has no
-    /// strip.
-    fn render_action_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    /// The editor actions, as VS Code's editor title actions: a row of ghost
+    /// icon buttons at the right end of the context bar, with Run first and
+    /// set apart by a short line. A read-only document has none.
+    pub(super) fn render_action_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         if self.read_only {
             return None;
         }
@@ -351,14 +350,8 @@ impl CodeDocument {
             .id("editor-action-strip")
             .debug_selector(|| "editor-action-strip".to_string())
             .flex()
-            .flex_col()
             .flex_shrink_0()
             .items_center()
-            .w(EditorMetrics::ACTION_STRIP_WIDTH)
-            .h_full()
-            // The editor pane can be dragged shorter than the strip.
-            .overflow_y_scroll()
-            .pt(EditorMetrics::ACTION_STRIP_PADDING_TOP)
             .gap(EditorMetrics::ACTION_STRIP_GAP)
             .child(
                 Button::new("run-query-btn", run_label)
@@ -382,9 +375,9 @@ impl CodeDocument {
             )
             .child(
                 div()
-                    .w(EditorMetrics::ACTION_STRIP_SEPARATOR_WIDTH)
-                    .h(px(1.0))
-                    .my(EditorMetrics::ACTION_STRIP_SEPARATOR_MARGIN_Y)
+                    .w(px(1.0))
+                    .h(EditorMetrics::ACTION_STRIP_SEPARATOR_LENGTH)
+                    .mx(EditorMetrics::ACTION_STRIP_SEPARATOR_MARGIN)
                     .bg(theme.border),
             )
             .when(is_db_language && !is_executing, |el| {
@@ -1295,7 +1288,6 @@ impl Render for CodeDocument {
                 .size_full()
                 .flex()
                 .min_h_0()
-                .children(self.render_action_strip(cx))
                 .child(
                     div()
                         .debug_selector(|| "code-editor-area".to_string())

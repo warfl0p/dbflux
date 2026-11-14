@@ -3,10 +3,8 @@ use super::*;
 use crate::connection_failure::ConnectionFailure;
 use dbflux_components::controls::Button;
 use dbflux_components::icons::DriverIconTone;
-use dbflux_components::primitives::{Chamfer, ChamferRing, Icon, Text};
-use dbflux_components::tokens::{
-    ChamferCut, ChromeColors, Fields, HeaderMetrics, ShellMetrics, SyntaxColors,
-};
+use dbflux_components::primitives::{Chamfer, Text};
+use dbflux_components::tokens::{ChamferCut, Fields, HeaderMetrics, ShellMetrics, SyntaxColors};
 
 /// Title of the sidebar header for `tab`, in sentence case and the muted
 /// foreground, as a VS Code view title. The Scripts view is titled by its
@@ -19,9 +17,8 @@ fn sidebar_header_label(tab: SidebarTab, workspace_name: Option<String>) -> Text
         (SidebarTab::Dashboards, _) => dbflux_i18n::t!("sidebar.tabs.dashboards"),
     };
 
-    Text::body(title)
-        .font_weight(FontWeight::SEMIBOLD)
-        .muted_foreground()
+    // VS Code's view title: small caps-height uppercase, regular weight.
+    Text::label(title).font_weight(FontWeight::NORMAL)
 }
 
 impl Sidebar {
@@ -83,8 +80,8 @@ impl Sidebar {
             )
     }
 
-    /// The filter field of the active view: a 30 px chamfered field with a
-    /// search icon and the frameless input.
+    /// The filter field of the active view, as VS Code's input boxes: a 26 px
+    /// field on the raised fill, with an accent border while focused.
     fn render_filter_field(
         &self,
         input: &Entity<InputState>,
@@ -93,13 +90,13 @@ impl Sidebar {
     ) -> impl IntoElement {
         let theme = cx.theme();
 
-        let mut shape = Chamfer::new(ChamferCut::CONTROL)
-            .fill(theme.background)
-            .border(theme.border);
-
-        if focused {
-            shape = shape.ring(ChamferRing::focus(ChromeColors::tint(theme)));
-        }
+        let shape = Chamfer::new(ChamferCut::KEYCAP)
+            .fill(theme.secondary)
+            .border(if focused {
+                theme.primary
+            } else {
+                theme.secondary
+            });
 
         div()
             .flex_shrink_0()
@@ -110,16 +107,10 @@ impl Sidebar {
                     .relative()
                     .flex()
                     .items_center()
-                    .gap(Fields::GAP)
-                    .h(Fields::HEIGHT)
-                    .px(Fields::PADDING_X)
+                    .h(ShellMetrics::SIDEBAR_FILTER_HEIGHT)
+                    .px(ShellMetrics::SIDEBAR_FILTER_INSET)
                     .text_size(Fields::TEXT)
                     .child(shape)
-                    .child(
-                        Icon::new(AppIcon::Search)
-                            .size(ShellMetrics::SIDEBAR_FILTER_ICON)
-                            .color(theme.muted_foreground),
-                    )
                     .child(
                         div()
                             .flex_1()
@@ -560,15 +551,14 @@ mod tests {
     use uuid::Uuid;
 
     #[test]
-    fn header_label_names_the_active_view_in_muted_body_text() {
+    fn header_label_names_the_active_view_as_an_uppercase_label() {
         for tab in [
             SidebarTab::Connections,
             SidebarTab::Scripts,
             SidebarTab::Dashboards,
         ] {
             let inspection = sidebar_header_label(tab, None).inspect();
-            assert_eq!(inspection.variant, TextVariant::Body);
-            assert!(inspection.uses_muted_foreground_override);
+            assert_eq!(inspection.variant, TextVariant::Label);
         }
     }
 

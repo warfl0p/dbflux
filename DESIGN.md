@@ -64,7 +64,11 @@ spacing:
   xl: 24px
   pane-gap: 1px
   control: 30px
-  tree-row: 26px
+  tree-row: 22px
+  top-row: 35px
+  sidebar-header: 35px
+  filter-field: 26px
+  status-bar: 24px
   grid-row: 31px
   rail-button: 28px
   palette-row: 24px
@@ -161,8 +165,8 @@ Text roles are the `Text` constructors in `bolt::primitives::text`; base size is
 | `Text::caption` | 12 px | 500 | metadata, muted |
 | `Text::code`, `Text::key_hint` | 13 / 12 px | 500 | mono |
 
-Pane and view titles (the sidebar's "Connections", "Explorer") are
-sentence-case muted body text, not uppercase labels.
+View titles in the sidebar header ("CONNECTIONS", the workspace name) are
+`Text::label` at regular weight, as VS Code's "EXPLORER".
 
 Sizes are rems from `tokens::ui(px)` so they follow the interface size setting;
 see AGENTS.md § Font Size Scaling.
@@ -191,11 +195,11 @@ flowchart TB
             tree["View title, filter field, tree"]
         end
         subgraph document["Document area"]
-            top["Top row: active document title (dot while unsaved), the document's context actions, notifications bell"]
+            top["Top row, 35 px: active document title, context pickers, editor actions, notifications bell"]
             doc["The active document; results below with no tab for a single result"]
         end
     end
-    status["Status bar: chips on the desk"]
+    status["Status bar, 24 px: flat items on the desk"]
     body --> status
 ```
 
@@ -204,12 +208,20 @@ flowchart TB
 - **Activity rail** is a horizontal row of 28 px ghost buttons at the top of the
   sidebar, on the sidebar's fill, and it hides with the sidebar. The active
   button takes the neutral selected wash, not the accent.
-- **Sidebar**: sentence-case muted view title, ghost `+` button, a filter field
-  without a keycap hint, the tree with a neutral selected row.
-- **Document tab strip is off.** The top row shows the active document's title
-  and its context actions (connection, database, run summary through
-  `PaneHandle::title_bar_actions`). Documents are switched with Ctrl+Tab and
-  opened with Ctrl+P. Test builds keep the strip for the close-prompt tests.
+- **Sidebar**: a 35 px header with the uppercase view title and a ghost `+`
+  button; a 26 px filter field on the raised fill with no icon or keycap and an
+  accent border while focused; 22 px tree rows with 16 px twisties and icons
+  and a neutral selected row.
+- **Document tab strip is off.** The 35 px top row shows the active
+  document's title, its context pickers drawn as breadcrumbs (no box until
+  hovered, interface font), the run summary and file state, and at the right
+  end the editor actions as ghost icon buttons, as VS Code's editor title
+  actions (all through `PaneHandle::title_bar_actions`). The editor text starts
+  at the pane's left edge. Documents are switched with Ctrl+Tab and opened with
+  Ctrl+P. Test builds keep the strip for the close-prompt tests.
+- **Status bar**, as VS Code's: 24 px, items side by side with no fill at rest
+  and the hover wash when clickable, in the interface font. Only the connection
+  item keeps a tone wash, so a production connection still stands out.
 - **Results**: Refresh and the pane buttons sit in the result toolbar; the
   result tab row only appears with more than one result.
 

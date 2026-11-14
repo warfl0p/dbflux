@@ -447,11 +447,11 @@ mod tests {
         use dbflux_components::tokens::EditorMetrics;
         use dbflux_core::QueryLanguage;
 
-        /// The actions sit in a 32 px column on the editor's left edge, on
-        /// the same row as the editor text and below the context bar, so the
-        /// context bar is the only row above the editor.
+        /// The actions sit in the context bar's row, after its controls, as
+        /// VS Code's editor title actions, so the editor text starts at the
+        /// pane's left edge.
         #[gpui::test]
-        fn the_editor_actions_sit_in_a_strip_left_of_the_editor(cx: &mut gpui::TestAppContext) {
+        fn the_editor_actions_sit_in_the_context_row(cx: &mut gpui::TestAppContext) {
             let (_document, window) = open_sql_document(cx);
 
             let context_bar = window
@@ -464,12 +464,13 @@ mod tests {
                 .debug_bounds("code-editor-area")
                 .expect("the editor is drawn");
 
-            assert_eq!(strip.size.width, EditorMetrics::ACTION_STRIP_WIDTH);
-            assert_eq!(strip.origin.y, editor.origin.y);
-            assert_eq!(strip.origin.y, context_bar.bottom());
             assert!(
-                strip.right() <= editor.origin.x,
-                "the strip ends where the editor text starts: {strip:?} {editor:?}"
+                strip.bottom() <= editor.origin.y,
+                "the actions sit above the editor: {strip:?} {editor:?}"
+            );
+            assert!(
+                strip.origin.x >= context_bar.right(),
+                "the actions follow the context controls: {strip:?} {context_bar:?}"
             );
         }
 

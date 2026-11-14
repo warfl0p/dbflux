@@ -209,9 +209,10 @@ impl ModalMetrics {
 pub struct TabMetrics;
 
 impl TabMetrics {
-    /// Document tab row at the top of the document island: 46 px, 10 px
-    /// side padding, 4 px between tabs.
-    pub const DOCUMENT_BAR_HEIGHT: Rems = ui(46.0);
+    /// Top row of the document area (the active title, or the tab strip in
+    /// test builds): 35 px, as VS Code's editor title row, 10 px side
+    /// padding, 4 px between tabs.
+    pub const DOCUMENT_BAR_HEIGHT: Rems = ui(35.0);
     pub const DOCUMENT_BAR_PADDING_X: Pixels = px(10.0);
     pub const DOCUMENT_BAR_GAP: Pixels = px(4.0);
     /// One document tab: a 30 px chip, 12 px side padding, 8 px between
@@ -1072,21 +1073,21 @@ impl PopoverMetrics {
 pub struct TreeMetrics;
 
 impl TreeMetrics {
-    /// Row height. (26 px)
-    pub const ROW_HEIGHT: Rems = ui(26.0);
-    /// Indent added per depth level. (14 px)
-    pub const INDENT: Rems = ui(14.0);
-    /// Padding before the depth-0 chevron and after the trailing slot. (12 px)
-    pub const PADDING_X: Pixels = px(12.0);
-    /// Gap between chevron, icon, label and trailing slot. (7 px)
-    pub const GAP: Pixels = px(7.0);
-    /// Expand chevron. (12 px)
-    pub const CHEVRON: Rems = ui(12.0);
-    /// Node icon or driver logo. (15 px)
-    pub const ICON: Rems = ui(15.0);
+    /// Row height, as VS Code's lists. (22 px)
+    pub const ROW_HEIGHT: Rems = ui(22.0);
+    /// Indent added per depth level. (12 px)
+    pub const INDENT: Rems = ui(12.0);
+    /// Padding before the depth-0 chevron and after the trailing slot. (8 px)
+    pub const PADDING_X: Pixels = px(8.0);
+    /// Gap between chevron, icon, label and trailing slot. (6 px)
+    pub const GAP: Pixels = px(6.0);
+    /// Expand chevron, as VS Code's twistie. (16 px)
+    pub const CHEVRON: Rems = ui(16.0);
+    /// Node icon or driver logo. (16 px)
+    pub const ICON: Rems = ui(16.0);
     /// Distance from the row's left edge to the first indent guide, which
-    /// runs through the depth-0 chevron. (19 px)
-    pub const GUIDE_OFFSET: Rems = ui(19.0);
+    /// runs through the depth-0 chevron. (16 px)
+    pub const GUIDE_OFFSET: Rems = ui(16.0);
     /// Label size. (13 px)
     pub const FONT: Rems = ui(13.0);
     /// Trailing count and latency size. (11 px)
@@ -1416,8 +1417,9 @@ impl CollectionMetrics {
 pub struct EditorMetrics;
 
 impl EditorMetrics {
-    /// Context bar: 46 px tall, 14 px side padding.
-    pub const BAR_HEIGHT: Rems = ui(46.0);
+    /// Context bar: 35 px tall, as VS Code's editor title row, 14 px side
+    /// padding.
+    pub const BAR_HEIGHT: Rems = ui(35.0);
     pub const BAR_PADDING_X: Pixels = px(14.0);
     /// Gap between the context bar's selectors and separators. (8 px)
     pub const CONTEXT_GAP: Pixels = px(8.0);
@@ -1433,14 +1435,11 @@ impl EditorMetrics {
     pub const BANNER_ICON: Rems = ui(15.0);
     pub const BANNER_FILL_ALPHA: f32 = 0.08;
     pub const BANNER_LINE_ALPHA: f32 = 0.25;
-    /// Editor action strip (IslEditor): a 32 px column on the editor's left
-    /// edge, 6 px above the first button, 2 px between buttons, and a 14 px
-    /// line with 3 px above and below it after Run.
-    pub const ACTION_STRIP_WIDTH: Pixels = px(32.0);
-    pub const ACTION_STRIP_PADDING_TOP: Pixels = px(6.0);
+    /// Editor actions, a row at the right end of the editor's top row: 2 px
+    /// between buttons, and a 14 px line with 3 px either side after Run.
     pub const ACTION_STRIP_GAP: Pixels = px(2.0);
-    pub const ACTION_STRIP_SEPARATOR_WIDTH: Pixels = px(14.0);
-    pub const ACTION_STRIP_SEPARATOR_MARGIN_Y: Pixels = px(3.0);
+    pub const ACTION_STRIP_SEPARATOR_LENGTH: Pixels = px(14.0);
+    pub const ACTION_STRIP_SEPARATOR_MARGIN: Pixels = px(3.0);
     /// Run summary in the context bar, before the file path: 12 px mono text,
     /// 13 px icon, 6 px gap, 10 px before the path.
     pub const LAST_RUN_FONT: Rems = ui(12.0);
@@ -1804,14 +1803,18 @@ impl ShellMetrics {
 
     /// Sidebar island: 290 px wide by default.
     pub const SIDEBAR_WIDTH: Pixels = px(290.0);
-    /// Sidebar header: 46 px, 16 px left and 12 px right padding, 8 px gap.
-    pub const SIDEBAR_HEADER_HEIGHT: Rems = ui(46.0);
+    /// Sidebar header: 35 px, as VS Code's view title, 16 px left and 12 px
+    /// right padding, 8 px gap.
+    pub const SIDEBAR_HEADER_HEIGHT: Rems = ui(35.0);
     /// Section label of the sidebar header and the empty workspace cards. (10 px)
     pub const SECTION_LABEL_FONT: Rems = ui(10.0);
-    /// Sidebar filter: 12 px side and 10 px bottom padding around a 30 px
-    /// field; 14 px search icon.
-    pub const SIDEBAR_FILTER_PADDING_X: Pixels = px(12.0);
-    pub const SIDEBAR_FILTER_PADDING_BOTTOM: Pixels = px(10.0);
+    /// Sidebar filter, as VS Code's input boxes: a 26 px field on the raised
+    /// fill with 6 px text padding, 8 px side and 6 px bottom padding around
+    /// it; 14 px icons in the header.
+    pub const SIDEBAR_FILTER_HEIGHT: Rems = ui(26.0);
+    pub const SIDEBAR_FILTER_INSET: Pixels = px(6.0);
+    pub const SIDEBAR_FILTER_PADDING_X: Pixels = px(8.0);
+    pub const SIDEBAR_FILTER_PADDING_BOTTOM: Pixels = px(6.0);
     pub const SIDEBAR_FILTER_ICON: Rems = ui(14.0);
     /// Sidebar footer: 46 px with no line above it, 16 px padding, 10 px gap.
     pub const SIDEBAR_FOOTER_HEIGHT: Rems = ui(46.0);
@@ -1819,17 +1822,17 @@ impl ShellMetrics {
     pub const SIDEBAR_FOOTER_GAP: Pixels = px(10.0);
     pub const SIDEBAR_FOOTER_FONT: Rems = ui(12.0);
 
-    /// Status bar: 38 px on the desk, 8 px side padding and 8 px between
-    /// its chips, 12 px text.
-    pub const STATUS_BAR_HEIGHT: Rems = ui(38.0);
-    pub const STATUS_BAR_PADDING_X: Pixels = px(8.0);
-    pub const STATUS_BAR_GAP: Pixels = px(8.0);
+    /// Status bar, as VS Code's: 24 px on the desk, 4 px side padding, items
+    /// side by side, 12 px text.
+    pub const STATUS_BAR_HEIGHT: Rems = ui(24.0);
+    pub const STATUS_BAR_PADDING_X: Pixels = px(4.0);
+    pub const STATUS_BAR_GAP: Pixels = px(0.0);
     pub const STATUS_FONT: Rems = ui(12.0);
-    /// Status chip: a 26 px island chip, cut 6, 12 px padding, 8 px gap,
-    /// 13 px icon.
-    pub const STATUS_CHIP_HEIGHT: Rems = ui(26.0);
-    pub const STATUS_CHIP_PADDING_X: Pixels = px(12.0);
-    pub const STATUS_CHIP_GAP: Pixels = px(8.0);
+    /// Status item: the bar's full height, 8 px padding, 4 px gap, 13 px
+    /// icon.
+    pub const STATUS_CHIP_HEIGHT: Rems = ui(24.0);
+    pub const STATUS_CHIP_PADDING_X: Pixels = px(8.0);
+    pub const STATUS_CHIP_GAP: Pixels = px(4.0);
     pub const STATUS_ICON: Rems = ui(13.0);
     /// Wash of the connection chip, over the success color.
     pub const STATUS_CHIP_ALPHA: f32 = 0.12;
