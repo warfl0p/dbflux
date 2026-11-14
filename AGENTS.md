@@ -206,6 +206,14 @@ fn table_details(&self, name: &str) -> TableDetails // Columns, indexes
 
 ## GPUI Guidelines
 
+### Visual style
+
+Read `DESIGN.md` before any UI or styling work. This fork's look follows VS
+Code's default dark theme (flat neutral panes, a rare blue accent, small
+rounded corners, minimal chrome), not upstream's byzantine cut-corner look.
+Build from `bolt` tokens and components (see `docs/DESIGN_SYSTEM.md`), and
+change only the colors and screens the task names.
+
 ### Context Types
 
 - `App` — root context for global state and entity access
