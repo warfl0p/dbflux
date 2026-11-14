@@ -1,292 +1,182 @@
 use crate::icon::IconSource;
 use dbflux_core::{DatabaseCategory, Icon};
 
-/// App-specific icons embedded from resources/icons/
+/// Declares every app icon once: the `AppIcon` variant, the asset path gpui
+/// asks for, and the embedded bytes served for that path. One table keeps the
+/// three in lockstep.
 ///
-/// This enum centralizes all SVG icon references used throughout DBFlux.
-/// Icons are loaded via GPUI's AssetSource using the `path()` method.
-///
-/// Usage:
-/// ```rust,ignore
-/// Icon::new(AppIcon::Folder).size_4().color(theme.foreground)
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum AppIcon {
-    // Chevrons / Navigation
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    ChevronUp,
+/// A file is relative to the workspace `resources/` directory and defaults to
+/// the asset path; `from` names a different file.
+macro_rules! app_icons {
+    ($($icon:ident => $path:literal $(from $file:literal)?),* $(,)?) => {
+        /// App-specific icons embedded from `resources/`, loaded through gpui's
+        /// `AssetSource` by [`AppIcon::path`].
+        ///
+        /// ```rust,ignore
+        /// Icon::new(AppIcon::Folder).size_4().color(theme.foreground)
+        /// ```
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum AppIcon {
+            $($icon,)*
+        }
 
-    // Actions
-    Play,
-    SquarePlay,
-    Plus,
-    Power,
-    Save,
-    Delete,
-    Pencil,
-    Copy,
-    RefreshCcw,
-    RotateCcw,
-    Download,
-    Search,
-    Settings,
-    History,
-    Undo,
-    Redo,
-    X,
+        impl AppIcon {
+            pub const ALL: &[AppIcon] = &[$(AppIcon::$icon),*];
 
-    // UI elements
-    Eye,
-    EyeOff,
-    Loader,
-    Info,
-    Check,
-    CircleAlert,
-    CircleCheck,
-    CircleX,
-    TriangleAlert,
-    ExternalLink,
-    Globe,
-    Code,
-    Table,
-    Columns,
-    Rows3,
-    ArrowUp,
-    ArrowDown,
-    Star,
-    Clock,
-    Zap,
-    Hash,
-    Lock,
-    Layers,
-    Keyboard,
-    FingerprintPattern,
-    Maximize2,
-    Minimize2,
-    PanelBottomClose,
-    PanelBottomOpen,
-    PanelBottom,
-    PanelRight,
-    PanelRightClose,
-    PanelRightOpen,
-    FileSpreadsheet,
-    KeyRound,
-    Cable,
-    Link2,
-    CaseSensitive,
-    ScrollText,
-    ListFilter,
-    Tag,
-    Activity,
-    FileDown,
-    FileScan,
-    SquareFunction,
-    ArrowUpDown,
-    Bot,
-    Bell,
-    BrainCircuit,
+            /// Returns the asset path for this icon.
+            pub const fn path(self) -> &'static str {
+                match self {
+                    $(Self::$icon => $path,)*
+                }
+            }
 
-    // Connection / Network
-    Plug,
-    Unplug,
-    Server,
-    HardDrive,
+            /// Returns the embedded file served for [`AppIcon::path`].
+            pub fn embedded_bytes(self) -> &'static [u8] {
+                match self {
+                    $(Self::$icon => include_bytes!(concat!(
+                        "../../../../resources/",
+                        icon_file!($path $(, $file)?)
+                    )),)*
+                }
+            }
+        }
+    };
+}
 
-    // Files / Folders
-    File,
-    FileCode,
-    Image,
-    Folder,
-    Box,
-    Boxes,
-    Braces,
-    SquareTerminal,
-    Parentheses,
-    Sigma,
+macro_rules! icon_file {
+    ($path:literal) => {
+        $path
+    };
+    ($path:literal, $file:literal) => {
+        $file
+    };
+}
 
-    // Database generic
-    Database,
-    DatabaseZap,
-
-    // Zoom / View
-    ZoomIn,
-    ZoomOut,
-    Minus,
-    Grid3x3,
-    Snowflake,
-    Scale,
-    ArrowLeftRight,
-
-    // Clipboard
-    Clipboard,
-    Pin,
-
-    // Generic non-database data sources
-    Logs,
-
-    // Charts
-    ChartSpline,
-    ChartArea,
-    ChartColumnBig,
-    ChartNoAxesColumn,
-    ChartBar,
-    ChartPie,
-    ChartScatter,
-    Crosshair,
-    ChartNetwork,
-
-    // Database brands (SimpleIcons)
-    BrandPostgres,
-    BrandMysql,
-    BrandMariadb,
-    BrandSqlite,
-    BrandMongodb,
-    BrandRedis,
-    BrandClickhouse,
-    BrandTurso,
-    BrandDuckdb,
-
-    // Language brands (for script file icons)
-    BrandLua,
-    BrandPython,
-    BrandBash,
-    BrandJavaScript,
-    BrandInfluxDb,
-
-    // App branding
-    DbFlux,
+app_icons! {
+    ChevronDown => "icons/ui/chevron-down.svg",
+    ChevronLeft => "icons/ui/chevron-left.svg",
+    ChevronRight => "icons/ui/chevron-right.svg",
+    ChevronUp => "icons/ui/chevron-up.svg",
+    Play => "icons/ui/play.svg",
+    SquarePlay => "icons/ui/square-play.svg",
+    Plus => "icons/ui/plus.svg",
+    Power => "icons/ui/power.svg",
+    Save => "icons/ui/save.svg",
+    Delete => "icons/ui/delete.svg",
+    Pencil => "icons/ui/pencil.svg",
+    Copy => "icons/ui/copy.svg",
+    RefreshCcw => "icons/ui/refresh-ccw.svg",
+    RotateCcw => "icons/ui/rotate-ccw.svg",
+    Download => "icons/ui/download.svg",
+    Search => "icons/ui/search.svg",
+    Settings => "icons/ui/settings.svg",
+    History => "icons/ui/history.svg",
+    Undo => "icons/ui/undo.svg",
+    Redo => "icons/ui/redo.svg",
+    X => "icons/ui/x.svg",
+    Eye => "icons/ui/eye.svg",
+    EyeOff => "icons/ui/eye-off.svg",
+    Loader => "icons/ui/loader.svg",
+    Info => "icons/ui/info.svg",
+    CircleAlert => "icons/ui/circle-alert.svg",
+    CircleCheck => "icons/ui/circle-check.svg",
+    CircleX => "icons/ui/circle-x.svg",
+    Check => "icons/ui/check.svg",
+    ExternalLink => "icons/ui/external-link.svg",
+    Globe => "icons/ui/globe.svg",
+    TriangleAlert => "icons/ui/triangle-alert.svg",
+    Code => "icons/ui/code.svg",
+    Table => "icons/ui/table.svg",
+    Columns => "icons/ui/columns.svg",
+    Rows3 => "icons/ui/rows-3.svg",
+    ArrowUp => "icons/ui/arrow-up.svg",
+    ArrowDown => "icons/ui/arrow-down.svg",
+    Star => "icons/ui/star.svg",
+    Clock => "icons/ui/clock.svg",
+    Zap => "icons/ui/zap.svg",
+    Hash => "icons/ui/hash.svg",
+    Lock => "icons/ui/lock.svg",
+    Layers => "icons/ui/layers.svg",
+    Keyboard => "icons/ui/keyboard.svg",
+    FingerprintPattern => "icons/ui/fingerprint-pattern.svg",
+    Maximize2 => "icons/ui/maximize-2.svg",
+    Minimize2 => "icons/ui/minimize-2.svg",
+    PanelBottomClose => "icons/ui/panel-bottom-close.svg",
+    PanelBottomOpen => "icons/ui/panel-bottom-open.svg",
+    PanelBottom => "icons/ui/panel-bottom.svg",
+    PanelRight => "icons/ui/panel-right.svg",
+    PanelRightClose => "icons/ui/panel-right-close.svg",
+    PanelRightOpen => "icons/ui/panel-right-open.svg",
+    FileSpreadsheet => "icons/ui/file-spreadsheet.svg",
+    KeyRound => "icons/ui/key-round.svg",
+    Cable => "icons/ui/cable.svg",
+    Link2 => "icons/ui/link-2.svg",
+    CaseSensitive => "icons/ui/case-sensitive.svg",
+    ScrollText => "icons/ui/scroll-text.svg",
+    ListFilter => "icons/ui/list-filter.svg",
+    Tag => "icons/ui/tag.svg",
+    Activity => "icons/ui/activity.svg",
+    FileDown => "icons/ui/file-down.svg",
+    FileScan => "icons/ui/file-scan.svg",
+    SquareFunction => "icons/ui/square-function.svg",
+    ArrowUpDown => "icons/ui/arrow-up-down.svg",
+    Plug => "icons/ui/plug.svg",
+    Unplug => "icons/ui/unplug.svg",
+    Server => "icons/ui/server.svg",
+    HardDrive => "icons/ui/hard-drive.svg",
+    File => "icons/ui/file.svg",
+    FileCode => "icons/ui/file-code-corner.svg",
+    Image => "icons/ui/image.svg",
+    Folder => "icons/ui/folder.svg",
+    Box => "icons/ui/box.svg",
+    Boxes => "icons/ui/boxes.svg",
+    Braces => "icons/ui/braces.svg",
+    SquareTerminal => "icons/ui/square-terminal.svg",
+    Parentheses => "icons/ui/parentheses.svg",
+    Sigma => "icons/ui/sigma.svg",
+    Database => "icons/ui/database.svg",
+    DatabaseZap => "icons/ui/database-zap.svg",
+    ZoomIn => "icons/ui/zoom-in.svg",
+    ZoomOut => "icons/ui/zoom-out.svg",
+    Minus => "icons/ui/minus.svg",
+    Grid3x3 => "icons/ui/grid-3x3.svg",
+    Snowflake => "icons/ui/snowflake.svg",
+    Scale => "icons/ui/scale.svg",
+    ArrowLeftRight => "icons/ui/arrow-left-right.svg",
+    Clipboard => "icons/ui/clipboard.svg",
+    Pin => "icons/ui/pin.svg",
+    Logs => "icons/ui/logs.svg",
+    ChartSpline => "icons/ui/chart-spline.svg",
+    ChartArea => "icons/ui/chart-area.svg",
+    ChartColumnBig => "icons/ui/chart-column-big.svg",
+    ChartNoAxesColumn => "icons/ui/chart-no-axes-column.svg",
+    ChartBar => "icons/ui/chart-bar.svg",
+    ChartPie => "icons/ui/chart-pie.svg",
+    ChartScatter => "icons/ui/chart-scatter.svg",
+    Crosshair => "icons/ui/crosshair.svg",
+    ChartNetwork => "icons/ui/chart-network.svg",
+    BrandPostgres => "icons/brand-color/postgresql.png",
+    BrandMysql => "icons/brand-color/mysql.png",
+    BrandMariadb => "icons/brand/mariadb.svg",
+    BrandSqlite => "icons/brand-color/sqlite.png",
+    BrandMongodb => "icons/brand-color/mongodb.png",
+    BrandRedis => "icons/brand-color/redis.png",
+    BrandClickhouse => "icons/brand-color/clickhouse.png",
+    BrandTurso => "icons/brand/turso.svg",
+    BrandDuckdb => "icons/brand-color/duckdb.png",
+    BrandDynamodb => "icons/brand-color/dynamodb.png",
+    BrandLua => "icons/brand/lua.svg",
+    BrandPython => "icons/brand/python.svg",
+    BrandBash => "icons/brand/gnubash.svg",
+    BrandJavaScript => "icons/brand/javascript.svg",
+    BrandInfluxDb => "icons/brand/influxdb.svg",
+    DbFlux => "icons/dbflux.svg" from "branding/glyph.svg",
+    BrainCircuit => "icons/ui/brain-circuit.svg",
+    Bot => "icons/ui/bot.svg",
+    Bell => "icons/ui/bell.svg",
 }
 
 impl AppIcon {
-    /// Returns the asset path for this icon.
-    pub const fn path(self) -> &'static str {
-        match self {
-            Self::ChevronDown => "icons/ui/chevron-down.svg",
-            Self::ChevronLeft => "icons/ui/chevron-left.svg",
-            Self::ChevronRight => "icons/ui/chevron-right.svg",
-            Self::ChevronUp => "icons/ui/chevron-up.svg",
-            Self::Play => "icons/ui/play.svg",
-            Self::SquarePlay => "icons/ui/square-play.svg",
-            Self::Plus => "icons/ui/plus.svg",
-            Self::Power => "icons/ui/power.svg",
-            Self::Save => "icons/ui/save.svg",
-            Self::Delete => "icons/ui/delete.svg",
-            Self::Pencil => "icons/ui/pencil.svg",
-            Self::Copy => "icons/ui/copy.svg",
-            Self::RefreshCcw => "icons/ui/refresh-ccw.svg",
-            Self::RotateCcw => "icons/ui/rotate-ccw.svg",
-            Self::Download => "icons/ui/download.svg",
-            Self::Search => "icons/ui/search.svg",
-            Self::Settings => "icons/ui/settings.svg",
-            Self::History => "icons/ui/history.svg",
-            Self::Undo => "icons/ui/undo.svg",
-            Self::Redo => "icons/ui/redo.svg",
-            Self::X => "icons/ui/x.svg",
-            Self::Eye => "icons/ui/eye.svg",
-            Self::EyeOff => "icons/ui/eye-off.svg",
-            Self::Loader => "icons/ui/loader.svg",
-            Self::Info => "icons/ui/info.svg",
-            Self::Check => "icons/ui/check.svg",
-            Self::CircleAlert => "icons/ui/circle-alert.svg",
-            Self::CircleCheck => "icons/ui/circle-check.svg",
-            Self::CircleX => "icons/ui/circle-x.svg",
-            Self::TriangleAlert => "icons/ui/triangle-alert.svg",
-            Self::ExternalLink => "icons/ui/external-link.svg",
-            Self::Globe => "icons/ui/globe.svg",
-            Self::Code => "icons/ui/code.svg",
-            Self::Table => "icons/ui/table.svg",
-            Self::Columns => "icons/ui/columns.svg",
-            Self::Rows3 => "icons/ui/rows-3.svg",
-            Self::ArrowUp => "icons/ui/arrow-up.svg",
-            Self::ArrowDown => "icons/ui/arrow-down.svg",
-            Self::Star => "icons/ui/star.svg",
-            Self::Clock => "icons/ui/clock.svg",
-            Self::Zap => "icons/ui/zap.svg",
-            Self::Hash => "icons/ui/hash.svg",
-            Self::Lock => "icons/ui/lock.svg",
-            Self::Layers => "icons/ui/layers.svg",
-            Self::Keyboard => "icons/ui/keyboard.svg",
-            Self::FingerprintPattern => "icons/ui/fingerprint-pattern.svg",
-            Self::Maximize2 => "icons/ui/maximize-2.svg",
-            Self::Minimize2 => "icons/ui/minimize-2.svg",
-            Self::PanelBottomClose => "icons/ui/panel-bottom-close.svg",
-            Self::PanelBottomOpen => "icons/ui/panel-bottom-open.svg",
-            Self::PanelBottom => "icons/ui/panel-bottom.svg",
-            Self::PanelRight => "icons/ui/panel-right.svg",
-            Self::PanelRightClose => "icons/ui/panel-right-close.svg",
-            Self::PanelRightOpen => "icons/ui/panel-right-open.svg",
-            Self::FileSpreadsheet => "icons/ui/file-spreadsheet.svg",
-            Self::KeyRound => "icons/ui/key-round.svg",
-            Self::Cable => "icons/ui/cable.svg",
-            Self::Link2 => "icons/ui/link-2.svg",
-            Self::CaseSensitive => "icons/ui/case-sensitive.svg",
-            Self::ScrollText => "icons/ui/scroll-text.svg",
-            Self::ListFilter => "icons/ui/list-filter.svg",
-            Self::Tag => "icons/ui/tag.svg",
-            Self::Activity => "icons/ui/activity.svg",
-            Self::FileDown => "icons/ui/file-down.svg",
-            Self::FileScan => "icons/ui/file-scan.svg",
-            Self::SquareFunction => "icons/ui/square-function.svg",
-            Self::ArrowUpDown => "icons/ui/arrow-up-down.svg",
-            Self::Plug => "icons/ui/plug.svg",
-            Self::Unplug => "icons/ui/unplug.svg",
-            Self::Server => "icons/ui/server.svg",
-            Self::HardDrive => "icons/ui/hard-drive.svg",
-            Self::File => "icons/ui/file.svg",
-            Self::FileCode => "icons/ui/file-code-corner.svg",
-            Self::Image => "icons/ui/image.svg",
-            Self::Folder => "icons/ui/folder.svg",
-            Self::Box => "icons/ui/box.svg",
-            Self::Boxes => "icons/ui/boxes.svg",
-            Self::Braces => "icons/ui/braces.svg",
-            Self::SquareTerminal => "icons/ui/square-terminal.svg",
-            Self::Parentheses => "icons/ui/parentheses.svg",
-            Self::Sigma => "icons/ui/sigma.svg",
-            Self::Database => "icons/ui/database.svg",
-            Self::DatabaseZap => "icons/ui/database-zap.svg",
-            Self::ZoomIn => "icons/ui/zoom-in.svg",
-            Self::ZoomOut => "icons/ui/zoom-out.svg",
-            Self::Minus => "icons/ui/minus.svg",
-            Self::Grid3x3 => "icons/ui/grid-3x3.svg",
-            Self::Snowflake => "icons/ui/snowflake.svg",
-            Self::Scale => "icons/ui/scale.svg",
-            Self::ArrowLeftRight => "icons/ui/arrow-left-right.svg",
-            Self::Clipboard => "icons/ui/clipboard.svg",
-            Self::Pin => "icons/ui/pin.svg",
-            Self::Logs => "icons/ui/logs.svg",
-            Self::ChartSpline => "icons/ui/chart-spline.svg",
-            Self::ChartArea => "icons/ui/chart-area.svg",
-            Self::ChartColumnBig => "icons/ui/chart-column-big.svg",
-            Self::ChartNoAxesColumn => "icons/ui/chart-no-axes-column.svg",
-            Self::ChartBar => "icons/ui/chart-bar.svg",
-            Self::ChartPie => "icons/ui/chart-pie.svg",
-            Self::ChartScatter => "icons/ui/chart-scatter.svg",
-            Self::Crosshair => "icons/ui/crosshair.svg",
-            Self::ChartNetwork => "icons/ui/chart-network.svg",
-            Self::BrandPostgres => "icons/brand-color/postgresql.png",
-            Self::BrandMysql => "icons/brand-color/mysql.png",
-            Self::BrandMariadb => "icons/brand/mariadb.svg",
-            Self::BrandSqlite => "icons/brand-color/sqlite.png",
-            Self::BrandMongodb => "icons/brand/mongodb.svg",
-            Self::BrandRedis => "icons/brand-color/redis.png",
-            Self::BrandClickhouse => "icons/brand/clickhouse.svg",
-            Self::BrandTurso => "icons/brand/turso.svg",
-            Self::BrandDuckdb => "icons/brand-color/duckdb.png",
-            Self::BrandLua => "icons/brand/lua.svg",
-            Self::BrandPython => "icons/brand/python.svg",
-            Self::BrandBash => "icons/brand/gnubash.svg",
-            Self::BrandJavaScript => "icons/brand/javascript.svg",
-            Self::BrandInfluxDb => "icons/brand/influxdb.svg",
-            Self::DbFlux => "icons/dbflux.svg",
-            Self::BrainCircuit => "icons/ui/brain-circuit.svg",
-            Self::Bot => "icons/ui/bot.svg",
-            Self::Bell => "icons/ui/bell.svg",
-        }
-    }
-
     /// Returns the best icon for a given query language.
     ///
     /// Languages with a dedicated brand SVG get their own icon. Languages that
@@ -338,7 +228,7 @@ impl AppIcon {
             Icon::Sqlite => Self::BrandSqlite,
             Icon::Mongodb => Self::BrandMongodb,
             Icon::Redis => Self::BrandRedis,
-            Icon::Dynamodb => Self::Braces,
+            Icon::Dynamodb => Self::BrandDynamodb,
             Icon::Redshift => Self::ChartNoAxesColumn,
             Icon::S3 => Self::Boxes,
             Icon::Clickhouse => Self::BrandClickhouse,
@@ -468,7 +358,7 @@ mod tests {
         );
         assert_eq!(
             AppIcon::for_driver(Icon::Dynamodb, DatabaseCategory::Document),
-            AppIcon::Braces
+            AppIcon::BrandDynamodb
         );
         assert_eq!(
             AppIcon::for_driver(Icon::S3, DatabaseCategory::ObjectStorage),

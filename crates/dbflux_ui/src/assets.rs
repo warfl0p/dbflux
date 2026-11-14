@@ -1,7 +1,7 @@
 use gpui::{AssetSource, SharedString};
 use std::borrow::Cow;
 
-use crate::ui::icons::{ALL_ICONS, embedded_bytes};
+use crate::ui::icons::AppIcon;
 
 pub struct Assets;
 
@@ -35,8 +35,8 @@ impl AssetSource for Assets {
             _ => {}
         }
 
-        if let Some(icon) = ALL_ICONS.iter().find(|icon| icon.path() == path) {
-            return Ok(Some(Cow::Borrowed(embedded_bytes(*icon))));
+        if let Some(icon) = AppIcon::ALL.iter().find(|icon| icon.path() == path) {
+            return Ok(Some(Cow::Borrowed(icon.embedded_bytes())));
         }
 
         // gpui_component icons resolve via paths like "icons/<file>.svg" without
@@ -47,8 +47,8 @@ impl AssetSource for Assets {
             && !rest.starts_with("brand/")
         {
             let aliased = format!("icons/ui/{rest}");
-            if let Some(icon) = ALL_ICONS.iter().find(|icon| icon.path() == aliased) {
-                return Ok(Some(Cow::Borrowed(embedded_bytes(*icon))));
+            if let Some(icon) = AppIcon::ALL.iter().find(|icon| icon.path() == aliased) {
+                return Ok(Some(Cow::Borrowed(icon.embedded_bytes())));
             }
         }
 
@@ -56,7 +56,7 @@ impl AssetSource for Assets {
     }
 
     fn list(&self, path: &str) -> gpui::Result<Vec<SharedString>> {
-        let entries: Vec<SharedString> = ALL_ICONS
+        let entries: Vec<SharedString> = AppIcon::ALL
             .iter()
             .filter(|icon| {
                 let p = icon.path();
