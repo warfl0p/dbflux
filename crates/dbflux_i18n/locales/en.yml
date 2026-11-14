@@ -4168,7 +4168,7 @@ palette:
   connection:
     connected: "connected"
   search:
-    placeholder: Search commands, connections, tables, scripts…
+    placeholder: "Search commands, connections, tables, scripts (> commands only, @ tables only)"
   empty: No matching items
   section:
     editors: "Open editors"

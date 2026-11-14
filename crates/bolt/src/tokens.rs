@@ -1217,46 +1217,41 @@ impl MigrateRunMetrics {
 pub struct PaletteMetrics;
 
 impl PaletteMetrics {
-    /// Card width (640 px) and its distance from the top of the window (90 px).
-    pub const WIDTH: Rems = ui(640.0);
-    pub const TOP_OFFSET: Pixels = px(90.0);
+    /// Card width (600 px), its distance from the top of the window (40 px,
+    /// just under the title row, as VS Code's quick input) and its inner
+    /// padding (6 px).
+    pub const WIDTH: Rems = ui(600.0);
+    pub const TOP_OFFSET: Pixels = px(40.0);
+    pub const CARD_PADDING: Pixels = px(6.0);
 
-    /// Search row: 56 px tall, 18 px sides, 12 px gap, 18 px search icon,
-    /// 17 px query text, 11.5 px mono match counter.
-    pub const SEARCH_HEIGHT: Rems = ui(56.0);
-    pub const PADDING_X: Pixels = px(18.0);
-    pub const SEARCH_GAP: Pixels = px(12.0);
-    pub const SEARCH_ICON: Rems = ui(18.0);
-    pub const QUERY_FONT: Rems = ui(17.0);
-    pub const COUNT_FONT: Rems = ui(11.5);
+    /// Query field: 28 px tall, 6 px sides, 13 px text.
+    pub const SEARCH_HEIGHT: Rems = ui(28.0);
+    pub const SEARCH_PADDING_X: Pixels = px(6.0);
+    pub const QUERY_FONT: Rems = ui(13.0);
+    /// Space between the query field and the first row. (6 px)
+    pub const LIST_GAP: Pixels = px(6.0);
 
-    /// Section header: 12 px above, 6 px below, 10 px expanded caps.
-    pub const SECTION_PADDING_TOP: Pixels = px(12.0);
-    pub const SECTION_PADDING_BOTTOM: Pixels = px(6.0);
-    pub const SECTION_FONT: Rems = ui(10.0);
-
-    /// Result row: 38 px tall, 12 px gap, 16 px icon, 14 px name, 11.5 px
-    /// qualifiers.
-    pub const ROW_HEIGHT: Rems = ui(38.0);
-    pub const ROW_GAP: Pixels = px(12.0);
+    /// Result row: 24 px tall, 6 px sides and gap, 16 px icon, 13 px name and
+    /// qualifiers, 3 px corners (shared with the query field).
+    pub const ROW_HEIGHT: Rems = ui(24.0);
+    pub const ROW_PADDING_X: Pixels = px(6.0);
+    pub const ROW_GAP: Pixels = px(6.0);
     pub const ROW_ICON: Rems = ui(16.0);
-    pub const ROW_FONT: Rems = ui(14.0);
-    pub const QUALIFIER_FONT: Rems = ui(11.5);
-    /// Alpha of the tint wash behind the selected row, and the width of its
-    /// leading tint bar (2 px).
+    pub const ROW_FONT: Rems = ui(13.0);
+    pub const QUALIFIER_FONT: Rems = ui(12.5);
+    pub const ROW_RADIUS: Pixels = px(3.0);
+    /// Alpha of the accent fill behind the palette's selected row.
+    pub const SELECTED_FILL_ALPHA: f32 = 0.55;
+
+    /// Alpha of the tint wash behind a selected wizard row, and the width of
+    /// its leading tint bar (2 px).
     pub const SELECTED_ALPHA: f32 = 0.12;
     pub const SELECTION_BAR: Pixels = px(2.0);
-    /// Space under the last result row. (8 px)
-    pub const LIST_PADDING_BOTTOM: Pixels = px(8.0);
-    /// Scrollbar thumb along the list's right edge: 4 px wide, 3 px in.
+    /// Scrollbar thumb along the list's right edge: 4 px wide, 1 px in, in a
+    /// 8 px gutter the rows keep clear.
     pub const SCROLLBAR_WIDTH: Pixels = px(4.0);
-    pub const SCROLLBAR_INSET: Pixels = px(3.0);
-
-    /// Footer hints: 38 px tall, 14 px between every keycap and label, 12 px
-    /// text.
-    pub const FOOTER_HEIGHT: Rems = ui(38.0);
-    pub const FOOTER_GAP: Pixels = px(14.0);
-    pub const FOOTER_FONT: Rems = ui(12.0);
+    pub const SCROLLBAR_INSET: Pixels = px(1.0);
+    pub const SCROLLBAR_GUTTER: Pixels = px(8.0);
 }
 
 /// Geometry of the wizard stepper (`composites::wizard_rail`), from the wizard

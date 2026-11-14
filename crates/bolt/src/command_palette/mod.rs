@@ -34,10 +34,9 @@ use gpui_component::ActiveTheme as _;
 use gpui_component::IconName;
 
 use crate::controls::{GpuiInput as Input, InputEvent, InputState};
-use crate::fonts::editor_family;
 use crate::icon::IconSource;
 use crate::keymap::{Command as KeymapCommand, CommandSet};
-use crate::primitives::{Chamfer, Icon, Kbd, SurfaceRole, Text, inspect_surface_role, overlay_bg};
+use crate::primitives::{Chamfer, Icon, Kbd, SurfaceRole, Text, inspect_surface_role};
 use crate::strings;
 use crate::tokens::{ChamferCut, ChromeColors, PaletteMetrics};
 
@@ -339,7 +338,7 @@ struct FilteredItem {
     score: i64,
 }
 
-const VISIBLE_ITEMS: usize = 8;
+const VISIBLE_ITEMS: usize = 16;
 
 /// Most commands a mixed query (no `>` or `@` prefix) keeps, so the
 /// connections and tables it also matches stay on screen.
@@ -381,19 +380,6 @@ fn match_ranges(matcher: &SkimMatcherV2, name: &str, query: &str) -> Vec<Range<u
 enum OpenPlacement {
     ReuseTab,
     NewTab,
-}
-
-/// Render row produced by section grouping.
-///
-/// `Item.display_idx` is the position in the filtered list (i.e. the value
-/// `selected_index` compares against). `palette_idx` is the index into
-/// `items`. `SectionHeader` rows are not selectable.
-enum PaletteRow {
-    SectionHeader(SharedString),
-    Item {
-        display_idx: usize,
-        palette_idx: usize,
-    },
 }
 
 /// The palette engine over the product's items (`T`) and keymap facts
@@ -716,26 +702,39 @@ where
         }
     }
 
+    /// One result row, laid out as a VS Code quick pick: icon, name, the muted
+    /// folder after it, then right-aligned the qualifier, keycaps, the
+    /// `section_label` on the first row of a group, and the remove button.
     fn render_palette_item(
         &self,
         display_idx: usize,
         item: &T,
         is_selected: bool,
+        section_label: Option<SharedString>,
         cx: &Context<Self>,
     ) -> Stateful<Div> {
         let theme = cx.theme();
         let tint = ChromeColors::tint(theme);
         let (_, name) = item.display_label();
 
+        // The selected row is a solid accent fill, as VS Code's focused
+        // quick pick row; everything on it takes the text color.
+        let selected_text = ChromeColors::strong(theme);
+        let muted = if is_selected {
+            selected_text.opacity(0.8)
+        } else {
+            theme.muted_foreground
+        };
+
         let (icon, icon_tone) = item.icon(cx);
         let icon_color = match icon_tone {
             Some(color) => color,
-            None if is_selected => tint,
+            None if is_selected => selected_text,
             None => theme.muted_foreground,
         };
 
         let name_color = if is_selected {
-            ChromeColors::strong(theme)
+            selected_text
         } else {
             theme.foreground
         };
@@ -747,7 +746,7 @@ where
                     (
                         range,
                         HighlightStyle {
-                            color: Some(tint),
+                            color: Some(if is_selected { selected_text } else { tint }),
                             font_weight: Some(FontWeight::BOLD),
                             ..Default::default()
                         },
@@ -760,8 +759,6 @@ where
             .into_iter()
             .map(|part| Kbd::new(part).into_any_element())
             .collect();
-
-        let wash = tint.opacity(PaletteMetrics::SELECTED_ALPHA);
 
         // Shown on the selected row and on hover, as VS Code's remove button.
         // Transparent rather than invisible elsewhere, so a click on its spot
@@ -781,7 +778,7 @@ where
                 .child(
                     Icon::new(IconSource::from(IconName::Close))
                         .size(PaletteMetrics::ROW_ICON)
-                        .color(theme.muted_foreground),
+                        .color(muted),
                 )
                 .on_click(cx.listener(move |this, _, _, cx| {
                     cx.stop_propagation();
@@ -793,24 +790,16 @@ where
         div()
             .id(("cmd", display_idx))
             .group(PALETTE_ROW_GROUP)
-            .relative()
             .flex()
             .flex_shrink_0()
             .items_center()
             .gap(PaletteMetrics::ROW_GAP)
             .h(PaletteMetrics::ROW_HEIGHT)
-            .px(PaletteMetrics::PADDING_X)
+            .px(PaletteMetrics::ROW_PADDING_X)
+            .rounded(PaletteMetrics::ROW_RADIUS)
             .cursor_pointer()
             .when(is_selected, |row| {
-                row.bg(wash).child(
-                    div()
-                        .absolute()
-                        .left_0()
-                        .top_0()
-                        .bottom_0()
-                        .w(PaletteMetrics::SELECTION_BAR)
-                        .bg(tint),
-                )
+                row.bg(theme.primary.opacity(PaletteMetrics::SELECTED_FILL_ALPHA))
             })
             .when(!is_selected, |row| {
                 row.hover(|row| row.bg(theme.list_hover))
@@ -839,7 +828,7 @@ where
                         .min_w_0()
                         .truncate()
                         .text_size(PaletteMetrics::QUALIFIER_FONT)
-                        .text_color(theme.muted_foreground)
+                        .text_color(muted)
                         .child(qualifier),
                 )
             })
@@ -848,16 +837,26 @@ where
                 row.child(
                     div()
                         .flex_shrink_0()
-                        .font_family(editor_family(cx))
                         .text_size(PaletteMetrics::QUALIFIER_FONT)
-                        .text_color(theme.muted_foreground)
+                        .text_color(muted)
                         .child(qualifier),
                 )
             })
             .children(keycaps)
+            .when_some(section_label, |row, label| {
+                row.child(
+                    div()
+                        .flex_shrink_0()
+                        .text_size(PaletteMetrics::QUALIFIER_FONT)
+                        .text_color(muted)
+                        .child(label),
+                )
+            })
             .children(remove_button)
     }
 
+    /// The query field: a bordered input in the focus color, as VS Code's
+    /// quick input box.
     fn render_search_row(&self, cx: &App) -> Div {
         let theme = cx.theme();
 
@@ -865,125 +864,21 @@ where
             .flex()
             .flex_shrink_0()
             .items_center()
-            .gap(PaletteMetrics::SEARCH_GAP)
             .h(PaletteMetrics::SEARCH_HEIGHT)
-            .px(PaletteMetrics::PADDING_X)
-            .border_b_1()
-            .border_color(theme.border)
-            .child(
-                Icon::new(IconSource::from(IconName::Search))
-                    .size(PaletteMetrics::SEARCH_ICON)
-                    .color(ChromeColors::tint(theme)),
-            )
+            .px(PaletteMetrics::SEARCH_PADDING_X)
+            .rounded(PaletteMetrics::ROW_RADIUS)
+            .border_1()
+            .border_color(theme.primary)
+            .bg(theme.background)
             .child(
                 div().flex_1().min_w_0().child(
                     Input::new(&self.input_state)
                         .appearance(false)
                         .text_size(PaletteMetrics::QUERY_FONT)
-                        .text_color(ChromeColors::strong(theme))
+                        .text_color(theme.foreground)
                         .px_0(),
                 ),
             )
-            .child(
-                div()
-                    .flex_shrink_0()
-                    .font_family(editor_family(cx))
-                    .text_size(PaletteMetrics::COUNT_FONT)
-                    .text_color(theme.muted_foreground)
-                    .child(format!("{} / {}", self.filtered.len(), self.items.len())),
-            )
-            .when_some(H::key_label(KeymapCommand::Cancel), |header, label| {
-                header.child(Kbd::new(label))
-            })
-    }
-
-    /// `removable` adds the remove key hint, for a list of removable entries.
-    fn render_footer(removable: bool, cx: &App) -> Div {
-        let theme = cx.theme();
-        let navigate_keys = palette_navigate_label(
-            H::key_label(KeymapCommand::SelectPrev),
-            H::key_label(KeymapCommand::SelectNext),
-        );
-
-        let hint = |label: String| div().flex_shrink_0().child(label);
-
-        div()
-            .flex()
-            .flex_shrink_0()
-            .items_center()
-            .gap(PaletteMetrics::FOOTER_GAP)
-            .h(PaletteMetrics::FOOTER_HEIGHT)
-            .px(PaletteMetrics::PADDING_X)
-            .border_t_1()
-            .border_color(theme.border)
-            .text_size(PaletteMetrics::FOOTER_FONT)
-            .text_color(theme.muted_foreground)
-            .when_some(navigate_keys, |footer, keys| {
-                footer.child(Kbd::new(keys)).child(hint(
-                    strings::text(cx, "palette.footer.navigate").to_string(),
-                ))
-            })
-            .when_some(H::key_label(KeymapCommand::Execute), |footer, label| {
-                footer
-                    .child(Kbd::new(footer_key_label(&label)))
-                    .child(hint(strings::text(cx, "palette.footer.run").to_string()))
-            })
-            // A removable list has nothing to open in a new tab; its remove
-            // hint takes that place so the footer still fits.
-            .when_some(
-                H::key_label(KeymapCommand::OpenInNewTab).filter(|_| !removable),
-                |footer, label| {
-                    footer.child(Kbd::new(label)).child(hint(
-                        strings::text(cx, "palette.footer.open_in_new_tab").to_string(),
-                    ))
-                },
-            )
-            .when_some(
-                H::key_label(KeymapCommand::Delete).filter(|_| removable),
-                |footer, label| {
-                    footer.child(Kbd::new(label)).child(hint(
-                        strings::text(cx, "palette.footer.remove_from_recent").to_string(),
-                    ))
-                },
-            )
-            .child(div().flex_1())
-            .child(Kbd::new(">"))
-            .child(hint(
-                strings::text(cx, "palette.footer.commands_only").to_string(),
-            ))
-            .child(Kbd::new("@"))
-            .child(hint(
-                strings::text(cx, "palette.footer.tables_only").to_string(),
-            ))
-    }
-}
-
-/// The footer's move keycap: the previous and next keys side by side in one
-/// keycap (`↑↓`), or whichever of them is bound.
-fn palette_navigate_label(
-    previous: Option<SharedString>,
-    next: Option<SharedString>,
-) -> Option<SharedString> {
-    match (previous, next) {
-        (None, None) => None,
-        (previous, next) => Some(
-            previous
-                .into_iter()
-                .chain(next)
-                .map(|label| label.to_string())
-                .collect::<String>()
-                .into(),
-        ),
-    }
-}
-
-/// A lone Enter reads `↵` in the footer, like the new-tab chord next to it
-/// (`Ctrl ↵`).
-fn footer_key_label(label: &str) -> SharedString {
-    if label == "Enter" {
-        "\u{21b5}".into()
-    } else {
-        label.to_string().into()
     }
 }
 
@@ -999,8 +894,8 @@ mod tests {
 
     use super::{
         CommandPalette, MIXED_QUERY_COMMAND_LIMIT, OpenPlacement, PaletteEntry, PaletteHost,
-        PaletteScope, PaletteSection, arrange_results, filter_items, footer_key_label,
-        match_ranges, palette_navigate_label, palette_shortcut_parts,
+        PaletteScope, PaletteSection, arrange_results, filter_items, match_ranges,
+        palette_shortcut_parts,
     };
     use crate::icon::IconSource;
     use crate::keymap::{Command as KeymapCommand, CommandSet};
@@ -1294,17 +1189,6 @@ mod tests {
     }
 
     #[test]
-    fn footer_shows_arrows_in_one_keycap_and_enter_as_a_glyph() {
-        assert_eq!(
-            palette_navigate_label(Some("↑".into()), Some("↓".into())).as_deref(),
-            Some("↑↓")
-        );
-        assert_eq!(palette_navigate_label(None, None), None);
-        assert_eq!(footer_key_label("Enter").as_ref(), "\u{21b5}");
-        assert_eq!(footer_key_label("Ctrl ↵").as_ref(), "Ctrl ↵");
-    }
-
-    #[test]
     fn match_ranges_cover_the_matched_characters_of_the_name() {
         let matcher = SkimMatcherV2::default();
 
@@ -1314,10 +1198,11 @@ mod tests {
     }
 
     #[test]
-    fn command_palette_card_uses_the_modal_surface_on_the_shared_scrim() {
+    fn command_palette_card_uses_the_modal_surface_without_a_scrim() {
         let source = command_palette_source();
 
-        assert!(source.contains(".bg(overlay_bg(theme))"));
+        // As VS Code's quick input, the palette floats over an undimmed window.
+        assert!(!source.contains("overlay_bg("));
         assert!(source.contains("inspect_surface_role(SurfaceRole::Modal)"));
         assert!(source.contains("Chamfer::new(ChamferCut::CARD)"));
         assert!(source.contains(".id(\"command-palette-container\")"));

@@ -22,7 +22,6 @@ where
         }
 
         let theme = cx.theme();
-        let removable = self.items.iter().any(PaletteEntry::removable);
 
         // The list shows a window of VISIBLE_ITEMS rows; the thumb shows
         // where that window sits in the whole result.
@@ -39,82 +38,57 @@ where
                 .bg(theme.scrollbar_thumb)
         });
 
-        // Build the windowed list (scroll_offset..+VISIBLE_ITEMS) then group
-        // the resulting items by section. Section headers are interleaved
-        // before the first item of each section but are NOT counted in the
-        // `display_idx` that compares against `selected_index`.
-        let windowed: Vec<(usize, usize)> = self
+        // `filtered` is already in section order, so the window is too. The
+        // first row of each section carries the section's name on its right,
+        // and a section after the first starts under a separator line, as
+        // VS Code labels its "recently opened" group.
+        #[expect(
+            clippy::indexing_slicing,
+            reason = "every `FilteredItem` index comes from `.enumerate()` over \
+                      `self.items`, so it stays below `self.items.len()`"
+        )]
+        let list_rows: Vec<AnyElement> = self
             .filtered
             .iter()
             .enumerate()
             .skip(self.scroll_offset)
             .take(VISIBLE_ITEMS)
-            .map(|(display_idx, filtered)| (display_idx, filtered.index))
-            .collect();
+            .map(|(display_idx, filtered)| {
+                let item = &self.items[filtered.index];
+                let section = item.section();
+                let starts_section = display_idx == 0
+                    || self
+                        .filtered
+                        .get(display_idx - 1)
+                        .map(|previous| self.items[previous.index].section())
+                        != Some(section);
+                let is_selected = display_idx == self.selected_index;
 
-        let mut rows: Vec<PaletteRow> =
-            Vec::with_capacity(windowed.len() + PaletteSection::ORDER.len());
+                let row = self
+                    .render_palette_item(
+                        display_idx,
+                        item,
+                        is_selected,
+                        starts_section.then(|| section.label(cx)),
+                        cx,
+                    )
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.selected_index = display_idx;
+                        this.execute_selected(OpenPlacement::ReuseTab, window, cx);
+                    }));
 
-        for section in PaletteSection::ORDER {
-            let mut header_pushed = false;
-
-            for &(display_idx, palette_idx) in &windowed {
-                #[expect(
-                    clippy::indexing_slicing,
-                    reason = "`palette_idx` is a `FilteredItem` index; the three \
-                              construction sites of `FilteredItem` (`filter_items`, \
-                              `open_with_items` and `toggle`) each pair the index \
-                              with `.enumerate()` over `self.items`, so \
-                              `palette_idx` stays below `self.items.len()`"
-                )]
-                if self.items[palette_idx].section() != section {
-                    continue;
-                }
-
-                if !header_pushed {
-                    rows.push(PaletteRow::SectionHeader(section.label(cx)));
-                    header_pushed = true;
-                }
-
-                rows.push(PaletteRow::Item {
-                    display_idx,
-                    palette_idx,
-                });
-            }
-        }
-
-        let list_rows: Vec<AnyElement> = rows
-            .into_iter()
-            .map(|row| match row {
-                PaletteRow::SectionHeader(label) => div()
-                    .pt(PaletteMetrics::SECTION_PADDING_TOP)
-                    .pb(PaletteMetrics::SECTION_PADDING_BOTTOM)
-                    .px(PaletteMetrics::PADDING_X)
-                    .child(Text::label(label).font_size(PaletteMetrics::SECTION_FONT))
-                    .into_any_element(),
-                PaletteRow::Item {
-                    display_idx,
-                    palette_idx,
-                } => {
-                    let is_selected = display_idx == self.selected_index;
-
-                    #[expect(
-                        clippy::indexing_slicing,
-                        reason = "`palette_idx` is a `FilteredItem` index; the three \
-                                  construction sites of `FilteredItem` (`filter_items`, \
-                                  `open_with_items` and `toggle`) each pair the index \
-                                  with `.enumerate()` over `self.items`, so \
-                                  `palette_idx` stays below `self.items.len()`"
-                    )]
-                    self.render_palette_item(display_idx, &self.items[palette_idx], is_selected, cx)
-                        .on_mouse_down(MouseButton::Left, |_, _, cx| {
-                            cx.stop_propagation();
-                        })
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.selected_index = display_idx;
-                            this.execute_selected(OpenPlacement::ReuseTab, window, cx);
-                        }))
+                if starts_section && display_idx > 0 {
+                    div()
+                        .flex_shrink_0()
+                        .border_t_1()
+                        .border_color(theme.border)
+                        .child(row)
                         .into_any_element()
+                } else {
+                    row.into_any_element()
                 }
             })
             .collect();
@@ -135,7 +109,6 @@ where
             .justify_center()
             .items_start()
             .pt(PaletteMetrics::TOP_OFFSET)
-            .bg(overlay_bg(theme))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
@@ -176,6 +149,9 @@ where
                     .flex()
                     .flex_col()
                     .overflow_hidden()
+                    .p(PaletteMetrics::CARD_PADDING)
+                    .gap(PaletteMetrics::LIST_GAP)
+                    .shadow_lg()
                     .on_mouse_down(MouseButton::Left, |_, _, cx| {
                         cx.stop_propagation();
                     })
@@ -190,7 +166,10 @@ where
                             .flex_1()
                             .min_h_0()
                             .overflow_y_hidden()
-                            .pb(PaletteMetrics::LIST_PADDING_BOTTOM)
+                            // Room for the thumb, so it never covers a label.
+                            .when(scrollbar_thumb.is_some(), |list| {
+                                list.pr(PaletteMetrics::SCROLLBAR_GUTTER)
+                            })
                             .on_scroll_wheel(cx.listener(
                                 |this, event: &ScrollWheelEvent, _window, cx| {
                                     let delta = event.delta.pixel_delta(px(1.0));
@@ -208,7 +187,7 @@ where
                                     div()
                                         .flex()
                                         .justify_center()
-                                        .h(PaletteMetrics::SEARCH_HEIGHT)
+                                        .h(PaletteMetrics::ROW_HEIGHT)
                                         .items_center()
                                         .child(
                                             Text::body(
@@ -218,8 +197,7 @@ where
                                         ),
                                 )
                             }),
-                    )
-                    .child(Self::render_footer(removable, cx)),
+                    ),
             )
             .into_any_element()
     }
