@@ -126,8 +126,9 @@ pub struct DataTableState {
     /// so the request is raised here and consumed by `DataTable::render`.
     pending_refocus: bool,
 
-    /// The row count `DataTableEvent::ReachedEnd` was last emitted for.
-    reached_end_rows: Option<usize>,
+    /// Whether the last row was in view at the previous `report_reached_end`
+    /// call, so the event fires when it comes into view, not on every render.
+    end_in_view: bool,
 
     /// The row count of the previous `report_reached_end` call. The scroll
     /// offset is laid out for that count, so it is not trusted while the
@@ -217,7 +218,7 @@ impl DataTableState {
             enum_dropdown: None,
             _editing_subs: Vec::new(),
             pending_refocus: false,
-            reached_end_rows: None,
+            end_in_view: false,
             reached_end_checked_rows: 0,
             edit_buffer,
             pk_columns: Vec::new(),
@@ -398,14 +399,18 @@ impl DataTableState {
         self.reload_header_annotations(&previous_titles);
         self.edit_buffer.reset_for_base(self.model.row_count());
         self.enum_options.clear();
-        // A new row set has its own end, even at the same row count.
-        self.reached_end_rows = None;
 
         match swap {
             ModelSwap::KeepCursor => self.clamp_selection(),
             ModelSwap::ResetCursor => {
                 self.selection.clear();
                 self.scroll_to_first_row();
+                // A new row set addressed from the top has its own end, which
+                // is reported when it comes into view. A swap that keeps the
+                // cursor leaves this alone: the end it was already at has been
+                // answered for, and re-arming it would have a host fetch page
+                // after page with no user action.
+                self.end_in_view = false;
             }
         }
 
@@ -1589,17 +1594,22 @@ impl DataTableState {
         std::mem::take(&mut self.pending_refocus)
     }
 
-    /// Emits `DataTableEvent::ReachedEnd` the first time the last row is in
-    /// view at the current row count. Called by `DataTable::render`, after a
-    /// scroll or cursor move has re-rendered the table.
+    /// Emits `DataTableEvent::ReachedEnd` when the last row comes into view.
+    /// Called by `DataTable::render`, after a scroll or cursor move has
+    /// re-rendered the table. The event fires on the move into the end, not
+    /// while it stays in view: a host whose response failed hears about it
+    /// again only once the user leaves the end and comes back.
+    ///
+    /// A model swap that installs a different row set and drops the cursor
+    /// (`ModelSwap::ResetCursor`) clears the marker, so the new end is
+    /// reported when it comes into view. A swap that keeps the cursor
+    /// (`ModelSwap::KeepCursor`) leaves it set, because that swap carries the
+    /// end the host has just answered for; a page a host appends or replaces
+    /// must not fetch the next one on its own.
     pub fn report_reached_end(&mut self, cx: &mut Context<Self>) {
         let row_count = self.row_count();
         let scroll_laid_out = self.reached_end_checked_rows == row_count;
         self.reached_end_checked_rows = row_count;
-
-        if row_count == 0 || self.reached_end_rows == Some(row_count) {
-            return;
-        }
 
         let cursor_on_last_row = self
             .selection
@@ -1607,17 +1617,13 @@ impl DataTableState {
             .is_some_and(|cell| cell.row + 1 == row_count);
         let scrolled_to_end =
             scroll_laid_out && self.vertical_scroll_handle.is_scrolled_to_end() == Some(true);
+        let in_view = row_count > 0 && (cursor_on_last_row || scrolled_to_end);
 
-        if cursor_on_last_row || scrolled_to_end {
-            self.reached_end_rows = Some(row_count);
+        let came_into_view = in_view && !self.end_in_view;
+        self.end_in_view = in_view;
+        if came_into_view {
             cx.emit(DataTableEvent::ReachedEnd);
         }
-    }
-
-    /// Lets `report_reached_end` emit again at the current row count, for a
-    /// host whose response to the last one failed.
-    pub fn forget_reached_end(&mut self) {
-        self.reached_end_rows = None;
     }
 
     /// Cancel editing without applying changes.
@@ -1914,10 +1920,10 @@ mod tests {
         std::sync::Arc::new(TableModel::new(columns, rows))
     }
 
-    /// Reaching the last row is reported once per row count, and again after
-    /// the host forgets it.
+    /// Reaching the last row is reported when it comes into view, not again
+    /// while it stays there.
     #[gpui::test]
-    fn reached_end_is_reported_once_until_forgotten(cx: &mut gpui::TestAppContext) {
+    fn reached_end_is_reported_when_the_end_comes_into_view(cx: &mut gpui::TestAppContext) {
         use super::super::selection::CellCoord;
 
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
@@ -1940,32 +1946,70 @@ mod tests {
         });
 
         let report = |window: &mut gpui::VisualTestContext| {
-            window.update(|_, app| state.update(app, |s, cx| s.report_reached_end(cx)));
+            window.update(|_, app| {
+                state.update(app, |table_state, cx| table_state.report_reached_end(cx))
+            });
         };
 
-        window.update(|_, app| state.update(app, |s, cx| s.select_cell(CellCoord::new(0, 0), cx)));
+        let select_row = |window: &mut gpui::VisualTestContext, row: usize| {
+            window.update(|_, app| {
+                state.update(app, |table_state, cx| {
+                    table_state.select_cell(CellCoord::new(row, 0), cx)
+                })
+            });
+        };
+
+        select_row(window, 0);
         report(window);
         assert_eq!(reports.get(), 0, "the first row is not the end");
 
-        window.update(|_, app| state.update(app, |s, cx| s.select_cell(CellCoord::new(1, 0), cx)));
+        select_row(window, 1);
         report(window);
         report(window);
-        assert_eq!(reports.get(), 1, "the end is reported once per row count");
+        assert_eq!(reports.get(), 1, "the end is reported once while in view");
 
-        window.update(|_, app| state.update(app, |s, _| s.forget_reached_end()));
+        select_row(window, 0);
         report(window);
-        assert_eq!(reports.get(), 2, "a forgotten end is reported again");
+        select_row(window, 1);
+        report(window);
+        assert_eq!(reports.get(), 2, "coming back to the end reports it again");
 
         window.update(|_, app| {
-            state.update(app, |s, cx| {
-                s.set_model(two_row_model(), super::ModelSwap::KeepCursor, cx)
+            state.update(app, |table_state, cx| {
+                table_state.set_model(two_row_model(), super::ModelSwap::KeepCursor, cx)
             })
         });
         report(window);
         assert_eq!(
             reports.get(),
+            2,
+            "a swap that keeps the cursor does not report the end it already answered for"
+        );
+
+        select_row(window, 0);
+        report(window);
+        select_row(window, 1);
+        report(window);
+        assert_eq!(
+            reports.get(),
             3,
-            "a new model of the same size has its own end"
+            "leaving the end and coming back reports it again, so a failed page is retried"
+        );
+
+        window.update(|_, app| {
+            state.update(app, |table_state, cx| {
+                table_state.set_model(two_row_model(), super::ModelSwap::ResetCursor, cx)
+            })
+        });
+        report(window);
+        assert_eq!(reports.get(), 3, "a reset cursor does not sit at the end");
+
+        select_row(window, 1);
+        report(window);
+        assert_eq!(
+            reports.get(),
+            4,
+            "the end of a freshly installed row set is reported once"
         );
     }
 

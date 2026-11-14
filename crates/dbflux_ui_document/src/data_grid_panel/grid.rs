@@ -138,45 +138,49 @@ impl DataGridPanel {
             return;
         };
 
-        // A different shape means the data changed under the query; keep what
-        // is shown rather than mixing two shapes.
-        if rerun.columns.len() != result.columns.len() {
-            cx.notify();
-            return;
-        }
-
-        // Rows that changed between the two runs shift the rerun, so its rows
-        // past the loaded count are not the next ones; show the rerun whole.
+        // Columns that changed mean the rerun is not the loaded rows carried
+        // on, so it replaces the result whole. Rows that changed mean the same,
+        // and that is common: a statement without `ORDER BY` has no guaranteed
+        // order, and a `NaN` cell is not equal to itself. Either way the page
+        // the user is reading keeps the cursor and the scroll, because jumping
+        // back to row 1 at the end of every page loses their place. A swap that
+        // keeps the cursor does not re-arm the end-of-list report, so the
+        // replacement does not fetch the next page on its own.
+        let same_columns = rerun.columns.len() == result.columns.len()
+            && rerun
+                .columns
+                .iter()
+                .zip(&result.columns)
+                .all(|(new, old)| new.name == old.name && new.type_name == old.type_name);
         let loaded = result.rows.len();
-        let appended = rerun.rows.get(..loaded) == Some(result.rows.as_slice());
+        let appended = same_columns && rerun.rows.get(..loaded) == Some(result.rows.as_slice());
         let combined = if appended {
-            let mut combined = (**result).clone();
+            // Extended in place: `result` is the grid's own result, so the copy
+            // made to keep it while the swap runs is the last one.
+            let combined = Arc::make_mut(result);
             let truncated = rerun.rows_truncated();
             combined.rows.extend(rerun.rows.into_iter().skip(loaded));
             combined.set_rows_truncated(truncated);
-            combined
+            (**result).clone()
         } else {
-            rerun
+            // The rerun replaces the rows this grid came from too, so the
+            // source and the grid never disagree about what is loaded.
+            *result = Arc::new(rerun);
+            (**result).clone()
         };
-        *result = Arc::new(combined.clone());
 
-        // A replaced result starts at the top, so its end is not in view and
-        // does not fetch another page on its own.
-        self.grid_table.reload = if appended {
+        self.grid_table.reload = if same_columns {
             TableReload::Preserve
         } else {
-            TableReload::ResetRows
+            TableReload::NewColumns
         };
         self.set_result(combined, cx);
     }
 
-    /// The host could not fetch the next rows; the next time the last row
-    /// comes into view tries again.
+    /// The host could not fetch the next rows; scrolling away from the last
+    /// row and back to it tries again.
     pub(crate) fn next_rows_failed(&mut self, cx: &mut Context<Self>) {
         self.limited_rows.loading_next = false;
-        if let Some(table_state) = &self.grid_table.table_state {
-            table_state.update(cx, |state, _cx| state.forget_reached_end());
-        }
         cx.notify();
     }
 
