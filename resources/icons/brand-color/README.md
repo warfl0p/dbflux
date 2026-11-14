@@ -8,3 +8,6 @@ without mipmaps, so a larger PNG drawn at tree-icon size comes out jagged.
 The MySQL dolphin is filled and stroked (3 units of 128) in MySQL's brand
 blue `#4479A1` instead of devicon's `#00618A`: the thin dark outline was
 barely visible on a dark sidebar.
+
+MariaDB and InfluxDB keep their tinted glyphs: devicon's dark navy and teal
+originals almost vanish on a dark sidebar.
