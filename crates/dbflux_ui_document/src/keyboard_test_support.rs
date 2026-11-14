@@ -68,15 +68,8 @@ impl<D: Render> Render for KeymapHost<D> {
 /// Registers the component defaults, the theme, the app keymap and a toast
 /// host.
 pub(crate) fn init_keyboard_runtime(cx: &mut TestAppContext) {
-    // `theme::init` runs `gpui_component::init` itself; running it twice
-    // registers every input binding twice, and an input action that
-    // propagates (Enter) then runs once per copy.
-    cx.update(dbflux_components::theme::init);
+    dbflux_ui_base::toast::init_test_ui(cx);
     cx.update(init_keymap);
-    cx.update(|cx| {
-        let host = cx.new(|_cx| ToastHost::new());
-        cx.set_global(ToastGlobal { host });
-    });
 }
 
 /// Opens a window whose root hosts the document `build` returns, under the

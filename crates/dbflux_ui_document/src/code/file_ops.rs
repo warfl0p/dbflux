@@ -941,13 +941,8 @@ mod tests {
         RequestClose,
     }
 
-    fn init_test_runtime(cx: &mut TestAppContext) {
-        cx.update(gpui_component::init);
-        cx.update(theme::init);
-        cx.update(|cx| {
-            let host = cx.new(|_| ToastHost::new());
-            cx.set_global(ToastGlobal { host });
-        });
+    fn init_test_runtime(cx: &mut gpui::TestAppContext) {
+        dbflux_ui_base::toast::init_test_ui(cx);
     }
 
     /// A `report_error`-observable app state: the `AppStateGlobal` registration is

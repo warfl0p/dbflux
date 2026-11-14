@@ -230,13 +230,8 @@ mod tests {
     use std::rc::Rc;
     use uuid::Uuid;
 
-    fn init_test_runtime(cx: &mut TestAppContext) {
-        cx.update(gpui_component::init);
-        cx.update(theme::init);
-        cx.update(|cx| {
-            let host = cx.new(|_cx| ToastHost::new());
-            cx.set_global(ToastGlobal { host });
-        });
+    fn init_test_runtime(cx: &mut gpui::TestAppContext) {
+        dbflux_ui_base::toast::init_test_ui(cx);
     }
 
     fn isolated_test_app_state(cx: &mut TestAppContext) -> gpui::Entity<AppStateEntity> {

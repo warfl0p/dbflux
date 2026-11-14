@@ -57,6 +57,23 @@ pub fn install_toast_icons(cx: &mut App) {
     cx.set_global(product_toast_icons());
 }
 
+/// The runtime most UI tests need: the theme and component defaults, and a
+/// toast host installed as the global.
+///
+/// `theme::init` already runs `gpui_component::init`; calling that again
+/// registers every input binding twice.
+#[cfg(any(test, feature = "test-support"))]
+pub fn init_test_ui(cx: &mut gpui::TestAppContext) -> Entity<ToastHost> {
+    use gpui::AppContext as _;
+
+    cx.update(dbflux_components::theme::init);
+    cx.update(|cx| {
+        let host = cx.new(|_cx| ToastHost::new());
+        cx.set_global(ToastGlobal { host: host.clone() });
+        host
+    })
+}
+
 pub struct PendingToast {
     pub message: String,
     pub is_error: bool,

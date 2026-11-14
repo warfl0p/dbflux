@@ -88,13 +88,8 @@ fn key_column(name: &str, is_primary_key: bool) -> ColumnMeta {
     }
 }
 
-fn init_test_runtime(cx: &mut TestAppContext) {
-    cx.update(gpui_component::init);
-    cx.update(theme::init);
-    cx.update(|cx| {
-        let host = cx.new(|_cx| ToastHost::new());
-        cx.set_global(ToastGlobal { host });
-    });
+fn init_test_runtime(cx: &mut gpui::TestAppContext) {
+    dbflux_ui_base::toast::init_test_ui(cx);
 }
 
 /// Connection stub for tests that only need a connected profile to hang

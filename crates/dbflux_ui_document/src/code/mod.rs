@@ -2306,13 +2306,8 @@ mod language_binding_tests {
         })
     }
 
-    fn init_test_runtime(cx: &mut TestAppContext) {
-        cx.update(gpui_component::init);
-        cx.update(theme::init);
-        cx.update(|cx| {
-            let host = cx.new(|_| ToastHost::new());
-            cx.set_global(ToastGlobal { host });
-        });
+    fn init_test_runtime(cx: &mut gpui::TestAppContext) {
+        dbflux_ui_base::toast::init_test_ui(cx);
     }
 
     /// Build a document and report the language binding it ended up with.
@@ -2437,13 +2432,8 @@ mod tests {
         })
     }
 
-    fn init_test_runtime(cx: &mut TestAppContext) {
-        cx.update(gpui_component::init);
-        cx.update(theme::init);
-        cx.update(|cx| {
-            let host = cx.new(|_cx| ToastHost::new());
-            cx.set_global(ToastGlobal { host });
-        });
+    fn init_test_runtime(cx: &mut gpui::TestAppContext) {
+        dbflux_ui_base::toast::init_test_ui(cx);
     }
 
     /// Constructing a read-only CodeDocument must not hang, and run_query must

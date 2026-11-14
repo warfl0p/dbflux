@@ -2739,12 +2739,7 @@ mod tests {
     // ---- REQ-DOC-2: runtime drop-cancel test ----
 
     fn init_test_runtime(cx: &mut gpui::TestAppContext) {
-        cx.update(gpui_component::init);
-        cx.update(dbflux_components::theme::init);
-        cx.update(|cx| {
-            let host = cx.new(|_cx| dbflux_ui_base::toast::ToastHost::new());
-            cx.set_global(dbflux_ui_base::toast::ToastGlobal { host });
-        });
+        dbflux_ui_base::toast::init_test_ui(cx);
     }
 
     fn isolated_test_app_state(cx: &mut gpui::TestAppContext) -> gpui::Entity<AppStateEntity> {
