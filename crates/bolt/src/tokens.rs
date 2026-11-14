@@ -979,16 +979,16 @@ impl Feedback {
 pub struct MenuMetrics;
 
 impl MenuMetrics {
-    /// Vertical padding inside the menu frame. (8 px)
-    pub const PADDING_Y: Pixels = px(8.0);
-    /// Row height. (30 px)
-    pub const ROW_HEIGHT: Rems = ui(30.0);
+    /// Vertical padding inside the menu frame. (4 px)
+    pub const PADDING_Y: Pixels = px(4.0);
+    /// Row height, as VS Code's menus. (26 px)
+    pub const ROW_HEIGHT: Rems = ui(26.0);
     /// Horizontal inset of a row inside the menu frame. (6 px)
     pub const ROW_INSET: Pixels = px(6.0);
     /// Horizontal padding inside a row. (10 px)
     pub const ROW_PADDING_X: Pixels = px(10.0);
-    /// Gap between the icon, the label and the trailing shortcut. (11 px)
-    pub const ROW_GAP: Pixels = px(11.0);
+    /// Gap between the icon, the label and the trailing shortcut. (8 px)
+    pub const ROW_GAP: Pixels = px(8.0);
     /// Row label size. (13 px)
     pub const ROW_FONT: Rems = ui(13.0);
     /// Leading row icon. (15 px)
@@ -1130,10 +1130,10 @@ impl DocumentTreeMetrics {
 pub struct GridMetrics;
 
 impl GridMetrics {
-    /// Header row height, including its 1 px line-2 bottom edge. (40 px)
-    pub const HEADER_HEIGHT: Pixels = px(40.0);
-    /// Row height: 30 px of content plus a 1 px divider. (31 px)
-    pub const ROW_HEIGHT: Pixels = px(31.0);
+    /// Header row height, including its 1 px line-2 bottom edge. (30 px)
+    pub const HEADER_HEIGHT: Pixels = px(30.0);
+    /// Row height: 26 px of content plus a 1 px divider. (27 px)
+    pub const ROW_HEIGHT: Pixels = px(27.0);
     /// Horizontal cell padding. (10 px)
     pub const CELL_PADDING_X: Pixels = px(10.0);
     /// Width a column falls back to when the host has not sized it. (120 px)
@@ -1164,8 +1164,8 @@ impl GridMetrics {
 pub struct ResultMetrics;
 
 impl ResultMetrics {
-    /// Footer height. (36 px)
-    pub const FOOTER_HEIGHT: Rems = ui(36.0);
+    /// Footer height. (30 px)
+    pub const FOOTER_HEIGHT: Rems = ui(30.0);
     /// Footer horizontal padding. (12 px)
     pub const FOOTER_PADDING_X: Pixels = px(12.0);
     /// Gap between footer groups. (14 px)
@@ -1179,9 +1179,9 @@ impl ResultMetrics {
     /// Gap between the pager chevrons and the page label. (10 px)
     pub const PAGER_GAP: Pixels = px(10.0);
 
-    /// View-switch row under the result tabs: height (42 px), gap (12 px),
+    /// View-switch row under the result tabs: height (32 px), gap (12 px),
     /// statement range size (11.5 px, mono).
-    pub const VIEW_ROW_HEIGHT: Rems = ui(42.0);
+    pub const VIEW_ROW_HEIGHT: Rems = ui(32.0);
     pub const VIEW_ROW_GAP: Pixels = px(12.0);
     pub const STATEMENT_FONT: Rems = ui(11.5);
     /// Search-in-results field width. (240 px)

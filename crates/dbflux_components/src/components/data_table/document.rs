@@ -181,7 +181,7 @@ mod tests {
     fn header_height_adds_the_group_row(cx: &mut gpui::TestAppContext) {
         cx.update(|cx| {
             let plain = DocumentPresentation::default();
-            assert_eq!(plain.header_height(cx), gpui::px(40.0));
+            assert_eq!(plain.header_height(cx), gpui::px(30.0));
 
             assert_eq!(
                 with_group().header_height(cx),

@@ -1081,6 +1081,7 @@ pub(crate) fn refresh_split(
         ids.0,
         Button::new(ids.1, label)
             .icon(icon)
+            .ghost()
             .focused(focused)
             .tab_stop(false)
             .on_click(on_click),
@@ -3831,6 +3832,7 @@ impl DataGridPanel {
                 )
                 .icon(AppIcon::FileSpreadsheet)
                 .trailing_icon(AppIcon::ChevronDown)
+                .ghost()
                 .tab_stop(false)
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.export_results(window, cx);

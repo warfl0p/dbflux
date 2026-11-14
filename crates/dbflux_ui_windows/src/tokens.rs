@@ -16,10 +16,11 @@ impl SettingsMetrics {
     pub(crate) const NAV_GROUP_PADDING_TOP: Pixels = px(12.0);
     pub(crate) const NAV_GROUP_PADDING_X: Pixels = px(16.0);
     pub(crate) const NAV_GROUP_PADDING_BOTTOM: Pixels = px(6.0);
-    /// Navigation row: 32 px tall, 16 px side padding, 10 px gap, 15 px icon.
-    pub(crate) const NAV_ROW_HEIGHT: Rems = ui(32.0);
+    /// Navigation row, as VS Code's settings table of contents: 26 px tall,
+    /// 16 px side padding, 8 px gap, 15 px icon.
+    pub(crate) const NAV_ROW_HEIGHT: Rems = ui(26.0);
     pub(crate) const NAV_ROW_PADDING_X: Pixels = px(16.0);
-    pub(crate) const NAV_ROW_GAP: Pixels = px(10.0);
+    pub(crate) const NAV_ROW_GAP: Pixels = px(8.0);
     pub(crate) const NAV_ICON: Rems = ui(15.0);
     /// Search icon of the navigation search field. (14 px)
     pub(crate) const NAV_SEARCH_ICON: Rems = ui(14.0);

@@ -154,10 +154,10 @@ impl SettingsCoordinator {
             .into_any_element()
     }
 
-    /// Entry of the navigation: icon and label on a 32 px row. The active
-    /// section gets the tint wash and the left bar; the keyboard cursor
-    /// draws the focus ring on any other row while the navigation holds
-    /// focus.
+    /// Entry of the navigation: icon and label on a 26 px row. The active
+    /// section takes the neutral selected wash and strong text, as a VS Code
+    /// list selection; the keyboard cursor marks any other row while the
+    /// navigation holds focus.
     fn render_item_row(
         &self,
         row: &FlatRow,
@@ -169,7 +169,7 @@ impl SettingsCoordinator {
         let is_active = Self::section_for_tree_id(row.id.as_ref()) == Some(self.active_section);
 
         let icon_color = if is_active {
-            ChromeColors::tint(theme)
+            theme.foreground
         } else {
             theme.muted_foreground
         };
@@ -181,7 +181,6 @@ impl SettingsCoordinator {
 
         ListRow::new(SharedString::from(format!("settings-nav-{}", row.id)))
             .selected(is_active)
-            .selection_bar(true)
             .focused(is_cursor && !is_active)
             .build(cx)
             .flex()

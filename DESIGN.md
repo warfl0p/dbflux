@@ -69,7 +69,9 @@ spacing:
   sidebar-header: 35px
   filter-field: 26px
   status-bar: 24px
-  grid-row: 31px
+  grid-row: 27px
+  grid-header: 30px
+  menu-row: 26px
   rail-button: 28px
   palette-row: 24px
 icons:
@@ -223,7 +225,14 @@ flowchart TB
   and the hover wash when clickable, in the interface font. Only the connection
   item keeps a tone wash, so a production connection still stands out.
 - **Results**: Refresh and the pane buttons sit in the result toolbar; the
-  result tab row only appears with more than one result.
+  result tab row only appears with more than one result. Refresh and Export
+  are ghost buttons. The grid has a 30 px header and 27 px rows; the view row
+  above it is 32 px and the footer under it 30 px.
+- **Menus** (context menus, add menus, dropdown lists): 26 px rows, 4 px
+  vertical padding, 8 px between icon, label and shortcut.
+- **Settings**: the navigation is a VS Code list: 26 px rows, the neutral
+  selected wash and strong text on the active section, no accent bar or
+  accent icon.
 
 ## Pickers: the command palette
 

@@ -471,8 +471,8 @@ mod tests {
 
             assert_eq!(ui_scale(cx), 1.0);
             assert_eq!(editor_line_height(cx), px(22.0));
-            assert_eq!(grid_row_height(cx), px(31.0));
-            assert_eq!(grid_header_height(cx), px(40.0));
+            assert_eq!(grid_row_height(cx), px(27.0));
+            assert_eq!(grid_header_height(cx), px(30.0));
         });
     }
 
@@ -497,8 +497,8 @@ mod tests {
             assert_eq!(grid_type_font_size(cx), px(21.0));
             assert_eq!(grid_px(cx, ui(13.0)), px(26.0));
             assert_eq!(grid_px(cx, px(11.5)), px(23.0));
-            assert_eq!(grid_row_height(cx), px(62.0));
-            assert_eq!(grid_header_height(cx), px(80.0));
+            assert_eq!(grid_row_height(cx), px(54.0));
+            assert_eq!(grid_header_height(cx), px(60.0));
             assert_eq!(grid_record_row_height(cx), px(60.0));
             assert_eq!(grid_char_advance(cx), 25.0 * 0.6);
             assert_eq!(grid_type_char_advance(cx), 21.0 * 0.6);
