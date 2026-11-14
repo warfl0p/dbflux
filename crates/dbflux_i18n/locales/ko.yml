@@ -4171,6 +4171,7 @@ palette:
     placeholder: 명령, 연결, 테이블, 스크립트 검색…
   empty: 일치하는 항목이 없습니다
   section:
+    recently_opened: "최근에 열림"
     editors: "열린 편집기"
     workspaces: "Workspaces"
     connections: 연결

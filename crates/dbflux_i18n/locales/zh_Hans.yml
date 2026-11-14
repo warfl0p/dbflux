@@ -4171,6 +4171,7 @@ palette:
     placeholder: 搜索命令、连接、表、脚本…
   empty: 没有匹配项
   section:
+    recently_opened: "最近打开"
     editors: "打开的编辑器"
     workspaces: "Workspaces"
     connections: 连接

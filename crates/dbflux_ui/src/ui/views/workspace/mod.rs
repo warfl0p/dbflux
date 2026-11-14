@@ -2662,6 +2662,8 @@ impl Workspace {
             }
         }
 
+        self.promote_recent_scripts(&mut items, cx);
+
         // Add the "Import Dashboard from JSON" entry only when the active
         // connection advertises the DASHBOARD_IMPORT capability.
         if app_state.active_connection().is_some_and(|a| {
@@ -2696,6 +2698,63 @@ impl Workspace {
     /// Lists the openable scripts under `scripts_root` as palette items. An
     /// external folder passes its label as `root_label`, so its scripts read
     /// `label/relative/path` and stay apart from same-named managed scripts.
+    /// Marks the scripts opened lately and moves them to the front, most
+    /// recent first, as VS Code's Go to file lists "recently opened": the
+    /// open editors in most recently used order, then the files opened
+    /// before them.
+    fn promote_recent_scripts(&self, items: &mut Vec<PaletteItem>, cx: &Context<Self>) {
+        let manager = self.tab_manager.read(cx);
+        let open_tabs: Vec<&Tab> = manager
+            .mru_ids()
+            .iter()
+            .filter_map(|id| manager.document(*id))
+            .collect();
+        let recent_files = self.app_state.read(cx).recent_files();
+
+        // ponytail: one dedup check per script per open tab; index the open
+        // paths if a workspace with many thousands of files feels slow.
+        let rank = |path: &std::path::Path| {
+            let key = crate::ui::document::DocumentKey::File {
+                path: path.to_path_buf(),
+            };
+            open_tabs
+                .iter()
+                .position(|tab| tab.matches_dedup_key(&key, cx))
+                .or_else(|| {
+                    recent_files
+                        .iter()
+                        .position(|file| file.path == path)
+                        .map(|position| open_tabs.len() + position)
+                })
+        };
+
+        Self::order_recent_first(items, rank);
+    }
+
+    /// Marks each script `rank` places and moves those to the front by rank;
+    /// every other item keeps its place relative to the rest.
+    pub(super) fn order_recent_first(
+        items: &mut Vec<PaletteItem>,
+        rank: impl Fn(&std::path::Path) -> Option<usize>,
+    ) {
+        let mut ranked: Vec<(Option<usize>, PaletteItem)> = items
+            .drain(..)
+            .map(|mut item| {
+                let item_rank = match &mut item {
+                    PaletteItem::Script { path, recent, .. } => {
+                        let item_rank = rank(path);
+                        *recent = item_rank.is_some();
+                        item_rank
+                    }
+                    _ => None,
+                };
+                (item_rank, item)
+            })
+            .collect();
+        ranked.sort_by_key(|(item_rank, _)| item_rank.map_or((1, 0), |position| (0, position)));
+        items.extend(ranked.into_iter().map(|(_, item)| item));
+    }
+
     fn flatten_script_entries(
         entries: &[dbflux_core::ScriptEntry],
         scripts_root: &std::path::Path,
@@ -2725,6 +2784,7 @@ impl Workspace {
                         path: path.clone(),
                         name: name.clone(),
                         relative_path,
+                        recent: false,
                     });
                 }
                 ScriptEntry::Folder { children, .. } => {

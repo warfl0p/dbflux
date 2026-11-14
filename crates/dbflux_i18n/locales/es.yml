@@ -4171,6 +4171,7 @@ palette:
     placeholder: Buscar comandos, conexiones, tablas, scripts…
   empty: No hay coincidencias
   section:
+    recently_opened: "Abiertos recientemente"
     editors: "Editores abiertos"
     workspaces: "Workspaces"
     connections: Conexiones

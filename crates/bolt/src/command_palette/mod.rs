@@ -176,17 +176,21 @@ pub enum PaletteSection {
     Connections,
     Charts,
     Tables,
+    /// Files opened lately, most recent first, as VS Code's "recently
+    /// opened" group of Go to file.
+    RecentlyOpened,
     Scripts,
     Workspaces,
 }
 
 impl PaletteSection {
-    const ORDER: [PaletteSection; 7] = [
+    const ORDER: [PaletteSection; 8] = [
         Self::Editors,
         Self::Commands,
         Self::Connections,
         Self::Charts,
         Self::Tables,
+        Self::RecentlyOpened,
         Self::Scripts,
         Self::Workspaces,
     ];
@@ -201,6 +205,7 @@ impl PaletteSection {
                 Self::Commands => "palette.section.commands",
                 Self::Charts => "palette.section.charts",
                 Self::Tables => "palette.section.tables",
+                Self::RecentlyOpened => "palette.section.recently_opened",
                 Self::Scripts => "palette.section.scripts",
                 Self::Workspaces => "palette.section.workspaces",
             },
@@ -396,7 +401,7 @@ pub struct CommandPalette<T: PaletteEntry, H: PaletteHost> {
     match_query: String,
     /// The one section a query without a `>` or `@` prefix searches: scripts
     /// for Go to file, open documents for the editor switcher.
-    default_section: Option<PaletteSection>,
+    default_sections: &'static [PaletteSection],
     /// Opened by the editor switcher while Ctrl was held: releasing Ctrl
     /// opens the selected document, as VS Code's Ctrl+Tab does.
     commit_on_ctrl_release: bool,
@@ -449,7 +454,7 @@ where
             input_state,
             matcher: SkimMatcherV2::default(),
             match_query: String::new(),
-            default_section: None,
+            default_sections: &[],
             commit_on_ctrl_release: false,
             host: PhantomData,
         }
@@ -458,7 +463,7 @@ where
     /// Set items and reset filter state. Called on each toggle.
     pub fn open_with_items(&mut self, items: Vec<T>, window: &mut Window, cx: &mut Context<Self>) {
         self.items = items;
-        self.default_section = None;
+        self.default_sections = &[];
         self.commit_on_ctrl_release = false;
         self.filtered = self
             .items
@@ -485,7 +490,7 @@ where
     /// commands and tables, but an unprefixed query lists only scripts.
     pub fn open_files(&mut self, items: Vec<T>, window: &mut Window, cx: &mut Context<Self>) {
         self.open_with_items(items, window, cx);
-        self.default_section = Some(PaletteSection::Scripts);
+        self.default_sections = &[PaletteSection::RecentlyOpened, PaletteSection::Scripts];
         self.update_filter("", cx);
     }
 
@@ -501,7 +506,7 @@ where
         cx: &mut Context<Self>,
     ) {
         self.open_with_items(items, window, cx);
-        self.default_section = Some(PaletteSection::Editors);
+        self.default_sections = &[PaletteSection::Editors];
         self.update_filter("", cx);
         self.commit_on_ctrl_release = window.modifiers().control;
 
@@ -560,15 +565,16 @@ where
     fn update_filter(&mut self, query: &str, cx: &mut Context<Self>) {
         let mut filtered = filter_items(&self.items, &self.matcher, query);
 
-        if let Some(section) = self.default_section
-            && PaletteScope::parse(query).0 == PaletteScope::All
-        {
+        if !self.default_sections.is_empty() && PaletteScope::parse(query).0 == PaletteScope::All {
             #[expect(
                 clippy::indexing_slicing,
                 reason = "`filter_items` pairs each index with `.enumerate()` over \
                           `self.items`, so `item.index` stays below its length"
             )]
-            filtered.retain(|item| self.items[item.index].section() == section);
+            filtered.retain(|item| {
+                self.default_sections
+                    .contains(&self.items[item.index].section())
+            });
         }
 
         self.filtered = arrange_results(&self.items, filtered, query);

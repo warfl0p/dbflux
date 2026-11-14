@@ -260,7 +260,43 @@ mod tests {
             path: PathBuf::from(format!("{}.sql", name)),
             name: name.to_string(),
             relative_path: format!("{}.sql", name),
+            recent: false,
         }
+    }
+
+    #[test]
+    fn recently_opened_scripts_come_first_in_recency_order() {
+        let mut items = vec![
+            sample_action(),
+            sample_script("a"),
+            sample_script("b"),
+            sample_script("c"),
+            sample_script("d"),
+        ];
+
+        Workspace::order_recent_first(&mut items, |path| match path.to_str() {
+            Some("c.sql") => Some(0),
+            Some("a.sql") => Some(1),
+            _ => None,
+        });
+
+        let order: Vec<(String, bool)> = items
+            .iter()
+            .map(|item| match item {
+                PaletteItem::Script { name, recent, .. } => (name.clone(), *recent),
+                _ => ("action".to_string(), false),
+            })
+            .collect();
+        assert_eq!(
+            order,
+            [
+                ("c".to_string(), true),
+                ("a".to_string(), true),
+                ("action".to_string(), false),
+                ("b".to_string(), false),
+                ("d".to_string(), false),
+            ]
+        );
     }
 
     #[test]
@@ -964,6 +1000,7 @@ mod tests {
             path: path.clone(),
             name: "health-check".to_string(),
             relative_path: "health-check.sql".to_string(),
+            recent: false,
         };
 
         let sel = map_item_to_selection(&item).unwrap();
@@ -1183,6 +1220,7 @@ mod tests {
                 path: PathBuf::from(format!("/scripts/script_{}.sql", i)),
                 name: format!("script_{}", i),
                 relative_path: format!("script_{}.sql", i),
+                recent: false,
             });
         }
 

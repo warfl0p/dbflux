@@ -64,6 +64,8 @@ pub enum PaletteItem {
         name: String,
         /// Path relative to the scripts root directory (for display/search).
         relative_path: String,
+        /// Opened lately: listed under "Recently opened", ahead of the rest.
+        recent: bool,
     },
     /// A saved chart record surfaced by the "Open chart..." command.
     SavedChart {
@@ -538,6 +540,7 @@ fn item_section(item: &PaletteItem) -> PaletteSection {
         PaletteItem::Action { .. } => PaletteSection::Commands,
         PaletteItem::SavedChart { .. } | PaletteItem::ImportDashboard => PaletteSection::Charts,
         PaletteItem::Resource(_) => PaletteSection::Tables,
+        PaletteItem::Script { recent: true, .. } => PaletteSection::RecentlyOpened,
         PaletteItem::Script { .. } => PaletteSection::Scripts,
         PaletteItem::Workspace { .. } => PaletteSection::Workspaces,
         PaletteItem::Editor { .. } => PaletteSection::Editors,
@@ -823,6 +826,7 @@ mod tests {
                 path: "/tmp/x.sql".into(),
                 name: "x.sql".into(),
                 relative_path: "x.sql".into(),
+                recent: false,
             }
             .section(),
             PaletteSection::Scripts
@@ -1004,6 +1008,7 @@ mod tests {
         "palette.section.tables",
         "palette.section.scripts",
         "palette.section.editors",
+        "palette.section.recently_opened",
         "palette.kind.connection",
         "palette.kind.chart",
         "palette.kind.table",
