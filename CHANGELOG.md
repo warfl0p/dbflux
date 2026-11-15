@@ -11,6 +11,7 @@ All notable changes to DBFlux will be documented in this file.
 
 ### Fixed
 
+* **Filter by value keeps a relaxed-JSON collection filter** — On a document collection, **Filter by value** read the current filter as strict JSON, so a filter typed the way the filter bar accepts it, such as `{status: "open"}`, was silently replaced by the new condition. The current filter is now read the same way the filter bar reads it and the new condition is added to it; a filter that does not parse is reported and left as typed.
 * **A rejected custom time range says why** — Applying a custom time range in a data grid's chart source or in the query editor's context bar did nothing when the range was invalid, for example a start after its end. It now shows the validation error, as the chart document already did.
 * **Connection URIs with IPv6 hosts, encoded database names or a password fill the form correctly** — Switching a PostgreSQL, MySQL/MariaDB, SQL Server or MongoDB connection from URI to form fields now reads a bracketed IPv6 host (`[::1]`) without its brackets, percent-decodes the database name and keeps the URI's password, as SQL Server already did. Switching back writes the IPv6 host in brackets and percent-encodes the database name, so the URI parses again.
 * **CloudWatch and DynamoDB recognise an IPv6 loopback endpoint as local** — A custom endpoint such as `http://[::1]:4566` now gets the dummy local credentials that `localhost` and `127.0.0.1` get when no AWS credentials are configured, instead of failing for lack of credentials.
