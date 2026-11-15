@@ -11,6 +11,7 @@ All notable changes to DBFlux will be documented in this file.
 
 ### Fixed
 
+* **A cancelled export lists its tables** — After cancelling an export, the Done screen only said "Export cancelled". It now lists each table, as import and migrate do: which tables were written, how many rows the cancel left in the table it stopped, and which were never started.
 * **Documents with a numeric `_id` can be edited and deleted from the grid** — Editing, saving or deleting a document whose `_id` is a number, a boolean or a float failed with "unsupported _id value", although copying it as a query worked. A result without an `_id` column no longer uses its first column as the document key; the edit or delete is refused with that message instead of targeting the wrong document.
 * **Filter by value keeps a relaxed-JSON collection filter** — On a document collection, **Filter by value** read the current filter as strict JSON, so a filter typed the way the filter bar accepts it, such as `{status: "open"}`, was silently replaced by the new condition. The current filter is now read the same way the filter bar reads it and the new condition is added to it; a filter that does not parse is reported and left as typed.
 * **A rejected custom time range says why** — Applying a custom time range in a data grid's chart source or in the query editor's context bar did nothing when the range was invalid, for example a start after its end. It now shows the validation error, as the chart document already did.
