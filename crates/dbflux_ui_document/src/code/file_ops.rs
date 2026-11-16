@@ -451,16 +451,12 @@ impl CodeDocument {
 
         let entity = cx.entity().clone();
         let save_target_override = self.app_state.read(cx).save_target_override();
-        // Start where the last Save As wrote, else in the workspace folder.
-        let app_state = self.app_state.clone();
-        let default_directory = {
-            let state = app_state.read(cx);
-            state.last_save_directory().or_else(|| {
-                state
-                    .scripts_directory()
-                    .map(|dir| dir.default_root().to_path_buf())
-            })
-        };
+        // New files land in the open workspace folder by default.
+        let default_directory = self
+            .app_state
+            .read(cx)
+            .scripts_directory()
+            .map(|dir| dir.default_root().to_path_buf());
 
         self._pending_save = Some(cx.spawn(async move |_this, cx| {
             let outcome = dbflux_ui_base::file_dialog::resolve_save_target(
@@ -522,9 +518,6 @@ impl CodeDocument {
             // lands on the background executor after any save in flight, and
             // the queue's completion retargets the document at the new path.
             cx.update(|cx| {
-                if let Some(directory) = path.parent() {
-                    app_state.read(cx).set_last_save_directory(directory);
-                }
                 entity.update(cx, |doc, cx| {
                     doc.enqueue_save_as_write(path, content, saved_input, used_fallback, cx);
                 });
