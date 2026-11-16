@@ -103,6 +103,7 @@ where
         let handle = cx.entity().downgrade();
         let overlay = div()
             .id("command-palette-overlay")
+            .debug_selector(|| "command-palette-overlay".to_string())
             .absolute()
             .inset_0()
             .flex()

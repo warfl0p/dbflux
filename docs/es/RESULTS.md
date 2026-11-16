@@ -279,6 +279,75 @@ tablas siguientes no se intentan. XML escribe un `<row>` por fila y un
 `<field name="...">` por columna, con `null="true"` para un NULL, de modo que se
 distingue de un valor vacío.
 
+El asistente de exportación (**Export Table…** en la barra lateral) escribe cada
+tabla seleccionada en su propio archivo dentro de una carpeta nueva, junto a un
+`manifest.json`. Su paso Format ofrece las opciones que usa el formato y oculta
+las demás:
+
+- **Delimitador** (solo CSV): coma, punto y coma, tabulador o barra vertical.
+- **Codificación** (solo CSV): UTF-8, UTF-8 con BOM, UTF-16LE (con BOM) o
+  Windows-1252. Un carácter que Windows-1252 no puede representar detiene la
+  exportación con un error que lo nombra, en lugar de sustituirlo.
+- **Texto para NULL** (CSV, HTML y Markdown): el texto que se escribe para NULL,
+  vacío por defecto. JSON y JSON Lines siempre escriben `null`, y XML marca un
+  NULL con `null="true"`. Un valor cuyo texto es igual a un texto para NULL no vacío se
+  leería como NULL, así que la exportación se detiene con un error que nombra el
+  valor y la columna; elige otro texto para NULL. Con el texto para NULL vacío
+  por defecto, un string vacío y NULL se escriben igual, así que al importar un
+  CSV ambos vuelven como NULL; usa un texto para NULL no vacío, como `\N`, para
+  conservar los strings vacíos.
+- **Fechas** (todos los formatos excepto SQL): RFC 3339 (por defecto), `YYYY-MM-DD HH:MM:SS`
+  en UTC o segundos epoch, que JSON y JSON Lines escriben como número. Una fecha
+  se escribe como `YYYY-MM-DD` con los dos primeros y como su medianoche (UTC)
+  con epoch, y una hora como `HH:MM:SS` con `YYYY-MM-DD HH:MM:SS` y como
+  segundos desde medianoche con epoch.
+- **Filas por INSERT** (solo SQL): cuántas filas entran en cada sentencia
+  `INSERT`, 500 por defecto y como mínimo 1. Un driver que limita las filas por
+  sentencia, como SQL Server con 1000, acota el valor.
+
+SQL se ofrece en el asistente de exportación solo cuando el driver de la
+conexión de origen puede generar sentencias `INSERT` masivas. Escribe un archivo
+`<esquema>.<tabla>.sql` por tabla con sentencias `INSERT` en el dialecto de esa
+conexión: cada sentencia contiene un lote de filas, nombra la tabla como lo hace
+el dialecto y termina con `;`. El script se reproduce en una copia vacía de la
+tabla; ejecutarlo dos veces falla por claves únicas o duplica las filas. Una
+columna `GENERATED ALWAYS AS IDENTITY` de PostgreSQL se escribe con
+`OVERRIDING SYSTEM VALUE`, y una tabla de SQL Server con una columna `IDENTITY`
+se envuelve en `SET IDENTITY_INSERT ... ON;` y `OFF;`, de modo que se conservan
+los ids originales. Tras la última sentencia de una tabla de PostgreSQL, el
+script mueve la secuencia de cada columna de identidad o serial más allá de los
+valores exportados (`setval`): al mayor si la secuencia es ascendente y al menor
+si es descendente, de modo que una inserción por defecto posterior a la
+reproducción no reutilice un id; SQL Server avanza por sí mismo la semilla de
+identidad al insertar valores explícitos. Las columnas que calcula la base de datos (columnas
+generadas de PostgreSQL y MySQL/MariaDB, columnas calculadas, `rowversion` y columnas
+de período temporal `GENERATED ALWAYS AS ROW START/END` de SQL Server) se
+omiten de las sentencias para que la base de datos las calcule de nuevo al
+reproducir el script. Una tabla sin filas escribe un archivo vacío. El dialecto decide cómo se escriben NULL y las fechas, así que el texto
+para NULL, el delimitador, la codificación y las opciones de fecha no se aplican
+y se ocultan. Los archivos SQL aún no se pueden importar: al importar una
+carpeta que contiene uno, esa tabla falla con el mensaje de que el formato no se
+puede importar. **Exportar todas las filas a un archivo** no ofrece SQL.
+
+Cuando la conexión de origen no puede escribir SQL, el paso Formato no lo
+lista y explica el motivo bajo el selector de formato: su driver no puede
+generar sentencias `INSERT`, así que exporta como CSV o JSON. Cada estado que
+desactiva **Continuar** explica por qué. El pie nombra qué corregir (**Filas por
+INSERT**, **Tamaño de bloque**, la carpeta o una selección de tablas vacía), y
+un campo no válido muestra un marco de peligro, un icono de alerta y una
+pista. Cuando termina la ejecución, el diálogo lista una fila por tabla con su
+resultado. Una tabla que la ejecución no alcanzó tras un fallo lo indica, y una
+ejecución fallida dice qué hacer a continuación: los archivos ya escritos
+permanecen en la carpeta, una ejecución fallida no escribe `manifest.json`, así
+que la carpeta no se puede importar completa, y cada archivo CSV o JSON
+terminado todavía se puede importar con **Elegir archivo…**.
+
+Los valores por defecto escriben exactamente lo que escribían las versiones
+anteriores. El manifiesto registra las opciones que dieron forma a un archivo,
+de modo que importar la carpeta lo lee igual; un manifiesto sin ellas significa
+los valores por defecto. **Exportar todas las filas a un archivo** usa siempre
+los valores por defecto.
+
 Una colección de documentos exportada como JSON o JSON Lines escribe cada
 documento completo, un objeto por línea, con todos sus campos. Como CSV, HTML,
 Markdown o XML se escribe con las columnas que la cuadrícula muestra para la
@@ -292,3 +361,75 @@ Un resultado de consulta ofrece solo las filas cargadas, porque exportarlas
 todas implicaría volver a ejecutar la consulta. Lo mismo ocurre con una búsqueda
 de vecinos más cercanos: devuelve un número fijo de las filas más próximas, y la
 cuadrícula ya las tiene todas.
+
+## Importar un archivo
+
+El asistente de importación también lee un archivo suelto. Elige **Elegir
+archivo…** en su primer paso, junto al selector de carpeta, y selecciona un
+archivo `.csv`, `.json`, `.jsonl`, `.xml` o de hoja de cálculo (`.xlsx`, `.xlsm`, `.xls` o `.ods`); los archivos HTML, Markdown y SQL no se
+ofrecen. El asistente lee las columnas de la fila de encabezado del CSV, de
+las claves de los primeros 100 registros JSON, del `name` de los elementos
+`<field>` de las primeras 100 filas XML (todas las claves vistas, en el
+orden en que aparecen), o de la fila 1 de una hoja de cálculo. Una clave que aparece por primera vez después de esas
+filas detiene la importación con un error que indica la clave y su fila. Un objeto o array anidado se importa como texto JSON.
+
+La tabla de destino es por defecto el nombre del archivo sin extensión; escribe
+otro nombre y elige **Usar tabla** (o pulsa Enter) para apuntar la importación a
+una tabla existente. El mapeo de columnas y los modos de tabla (crear,
+existente, recrear, truncar, omitir) son los mismos que para una carpeta. Un
+archivo no trae tipos de columna, así que los valores que van a una tabla
+existente se leen según los tipos de esa tabla, y una tabla nueva se crea con
+una columna de texto por cada campo (`TEXT`, o el tipo de texto amplio propio del
+motor, como `NVARCHAR(MAX)` en SQL Server o `LONGTEXT` en MySQL), de modo que los valores se guardan
+como texto.
+
+Un archivo CSV ofrece el delimitador, la codificación y el texto que representa
+NULL, las mismas opciones que el asistente de exportación; JSON, JSON Lines y XML no
+tienen opciones. Un archivo XML debe tener la forma que escribe la exportación:
+una raíz `<rows>` con elementos `<row>`, cada uno con un
+`<field name="...">texto</field>` por columna. Un campo escrito como
+`<field name="..." null="true"/>` es NULL, un `<field>` vacío es una cadena
+vacía y las referencias de carácter como `&#10;` se decodifican. Cualquier otra
+forma de XML se rechaza con un mensaje que indica la esperada. Cambiar el delimitador o la codificación vuelve a leer el
+archivo. Todo el archivo se lee una vez antes de escribir nada, así que una fila
+o registro mal formado detiene la importación sin tocar el destino.
+
+Una hoja de cálculo se importa una hoja cada vez. El paso Configurar añade un
+desplegable **Hoja** que lista las hojas visibles del libro y empieza en la
+primera; las hojas ocultas y las hojas de gráfico no aparecen, y al elegir otra
+hoja el archivo se lee de nuevo al instante y se rehace el mapeo de columnas. Un
+libro con una sola hoja visible la muestra con el desplegable desactivado e indica
+que no hay nada que elegir. La fila 1 de la hoja es el encabezado, así que cada
+columna necesita un nombre único y no vacío; una hoja de cálculo no tiene opciones de
+delimitador, codificación ni NULL. Los números, booleanos, fechas, fechas con hora
+y textos se leen como valores de esos tipos, una celda vacía es NULL y una
+fórmula se lee como el último resultado guardado en el archivo. Los libros con el
+sistema de fechas 1904 leen bien sus fechas, pero una hora del día en uno de
+ellos llega como una marca de tiempo del 1904-01-01 en lugar de una hora. La hoja
+entera se lee en memoria, así que se rechaza una hoja de más de 10.000.000 de
+celdas (filas × columnas, contadas desde la celda A1). Una hoja que no se puede
+importar mantiene el archivo elegido en Configurar y muestra un bloque de peligro
+con qué hacer a continuación: la hoja está vacía, la fila 1 tiene un nombre vacío
+o repetido (el bloque lista las columnas), una celda contiene un valor de error
+como `#DIV/0!` (el bloque indica la hoja, la fila y la columna; cuenta también una celda de la fila 1, así que un valor de error nunca se toma por un nombre de columna), o la hoja supera
+el límite (expórtala como CSV e importa ese CSV, o elige una hoja más pequeña).
+Elegir otra hoja es una salida en cada caso, y cuando el libro no tiene otra hoja
+visible el bloque indica en su lugar que corrijas la hoja en la aplicación de hojas
+de cálculo, guardes y vuelvas a elegir el archivo. El pie explica por qué **Continuar**
+está desactivado.
+
+El diálogo de importación usa el mismo indicador de pasos superior y el mismo
+pie que el asistente de exportación: **Cancelar** en los dos primeros pasos,
+**Atrás** y **Cancelar** en la confirmación, y **Continuar** como botón
+principal. Un archivo o una carpeta que no se puede leer muestra un único bloque
+de peligro con el error y qué hacer a continuación. Un CSV cuyo encabezado no se
+decodifica se queda en Configurar, donde otro delimitador o codificación lo lee
+de nuevo; un JSON roto se queda en el primer paso hasta que se elige otro
+archivo; y una consulta fallida de la tabla de destino lo indica y se reintenta
+con **Usar tabla**. El pie explica por qué **Continuar** está desactivado (se
+está leyendo un archivo o no se pudo leer). JSON y JSON Lines muestran una línea
+que dice que no tienen opciones, y en una conexión que no puede truncar tablas
+una línea explica por qué Truncate no aparece. En los campos de texto, `Escape`
+sale del campo y devuelve las teclas al diálogo; un segundo `Escape` cierra el
+asistente. Cuando termina la ejecución, una fila por tabla lista su resultado, y
+una ejecución fallida dice qué hacer a continuación.
