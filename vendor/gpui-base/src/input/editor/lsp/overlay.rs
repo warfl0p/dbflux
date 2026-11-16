@@ -13,6 +13,9 @@ pub struct CompletionMenuState {
     pub trigger_start_offset: Option<usize>,
     pub query: String,
     pub items: Vec<CompletionItem>,
+    /// A completion request is in flight. A renderer keeps a menu it already
+    /// shows on screen until the answer arrives, so typing does not flicker.
+    pub pending: bool,
     revision: u64,
 }
 

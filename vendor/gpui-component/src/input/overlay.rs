@@ -53,10 +53,16 @@ struct SearchSignature {
 /// with its own documentation. The engine bumps a revision when it swaps the
 /// content, and the popovers are keyed by cheap identity instead — a revision,
 /// an `Rc` pointer, or a range.
-#[derive(PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 struct OverlaySignature {
     open: bool,
     revision: u64,
+}
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+struct CompletionSignature {
+    overlay: OverlaySignature,
+    pending: bool,
 }
 
 /// The popovers driven by language features: completion, code actions, hover
@@ -67,7 +73,7 @@ pub(crate) struct LspOverlays {
     code_actions: Entity<CodeActionMenu>,
     hover: Option<Entity<HoverPopover>>,
     diagnostic: Option<Entity<DiagnosticPopover>>,
-    completion_signature: OverlaySignature,
+    completion_signature: CompletionSignature,
     code_action_signature: OverlaySignature,
     hover_signature: Option<std::ops::Range<usize>>,
     diagnostic_signature: Option<std::rc::Rc<gpui_base::input::DiagnosticEntry>>,
@@ -79,7 +85,7 @@ pub(crate) struct LspOverlays {
 /// popover is shown and whether it changed. The content is read from the state
 /// again, on the frames where it actually did.
 pub(crate) struct LspSnapshot {
-    completion: OverlaySignature,
+    completion: CompletionSignature,
     completion_start: Option<usize>,
     code_action: OverlaySignature,
     hover: Option<std::ops::Range<usize>>,
@@ -89,7 +95,8 @@ pub(crate) struct LspSnapshot {
 
 impl LspSnapshot {
     fn has_overlay(&self) -> bool {
-        self.completion.open
+        self.completion.overlay.open
+            || self.completion.pending
             || self.code_action.open
             || self.hover.is_some()
             || self.diagnostic.is_some()
@@ -169,9 +176,12 @@ impl OverlayMode for crate::input::EditorMode {
         let completion = state.completion_menu_state();
         let code_actions = state.code_action_menu_state();
         Some(LspSnapshot {
-            completion: OverlaySignature {
-                open: completion.open,
-                revision: completion.revision(),
+            completion: CompletionSignature {
+                overlay: OverlaySignature {
+                    open: completion.open,
+                    revision: completion.revision(),
+                },
+                pending: completion.pending,
             },
             completion_start: completion.trigger_start_offset,
             code_action: OverlaySignature {
@@ -196,7 +206,7 @@ impl OverlayMode for crate::input::EditorMode {
             code_actions: CodeActionMenu::new(state.clone(), window, cx),
             hover: None,
             diagnostic: None,
-            completion_signature: OverlaySignature::default(),
+            completion_signature: CompletionSignature::default(),
             code_action_signature: OverlaySignature::default(),
             hover_signature: None,
             diagnostic_signature: None,
@@ -213,11 +223,9 @@ impl OverlayMode for crate::input::EditorMode {
         let cursor = snapshot.cursor;
 
         if snapshot.completion != lsp.completion_signature {
-            lsp.completion_signature = OverlaySignature {
-                open: snapshot.completion.open,
-                revision: snapshot.completion.revision,
-            };
-            let open = snapshot.completion.open;
+            lsp.completion_signature = snapshot.completion;
+            let open = snapshot.completion.overlay.open;
+            let pending = snapshot.completion.pending;
             let start = snapshot.completion_start;
             // Read the items only now, on a frame where they changed.
             let (query, items) = {
@@ -228,6 +236,10 @@ impl OverlayMode for crate::input::EditorMode {
                 if open {
                     menu.update_query(start.unwrap_or(cursor), query);
                     menu.show(cursor, items, window, cx);
+                } else if pending {
+                    // Each keystroke closes the menu and asks again. Keep the
+                    // previous list on screen until the new one arrives.
+                    menu.follow_cursor(cursor, cx);
                 } else {
                     menu.hide(cx);
                 }
@@ -386,7 +398,7 @@ impl<M: OverlayMode> InputOverlayHost<M> {
         let search = search_open.then(|| self.search.clone().into_any_element());
         let mut floating = Vec::with_capacity(4);
         if let (Some(lsp), Some(snapshot)) = (self.lsp.as_ref(), snapshot.as_ref()) {
-            if snapshot.completion.open {
+            if snapshot.completion.overlay.open || snapshot.completion.pending {
                 floating.push(lsp.completion.clone().into_any_element());
             }
             if snapshot.code_action.open {
@@ -589,12 +601,12 @@ mod tests {
 
             let mut host = InputOverlayHost::new(state.clone(), window, cx);
             host.sync(&state, false, window, cx);
-            let after_first = host.lsp.as_ref().unwrap().completion_signature.revision;
+            let after_first = host.lsp.as_ref().unwrap().completion_signature.overlay.revision;
 
             // A second pass over untouched content.
             host.sync(&state, false, window, cx);
             assert_eq!(
-                host.lsp.as_ref().unwrap().completion_signature.revision,
+                host.lsp.as_ref().unwrap().completion_signature.overlay.revision,
                 after_first,
                 "an unchanged frame must not bump the signature"
             );
@@ -613,7 +625,7 @@ mod tests {
             });
             host.sync(&state, false, window, cx);
             assert_ne!(
-                host.lsp.as_ref().unwrap().completion_signature.revision,
+                host.lsp.as_ref().unwrap().completion_signature.overlay.revision,
                 after_first,
                 "new items must be noticed"
             );

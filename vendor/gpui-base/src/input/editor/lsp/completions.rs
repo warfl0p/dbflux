@@ -281,6 +281,7 @@ impl InputBaseState<EditorMode> {
             .completion
             .query
             .clone_from(&query);
+        self.extras.context_menu_content.completion.pending = true;
 
         let provider_responses =
             provider.completions(&self.text, new_offset, completion_context, window, cx);
@@ -295,6 +296,8 @@ impl InputBaseState<EditorMode> {
 
             editor
                 .update_in(cx, |editor, window, cx| {
+                    editor.extras.context_menu_content.completion.pending = false;
+                    cx.notify();
                     if !editor.focus_handle.is_focused(window)
                         || editor.document_revision != revision
                         || editor.cursor() != new_offset
@@ -322,6 +325,7 @@ impl InputBaseState<EditorMode> {
             self.commit_completion_preview();
         }
         self.extras.context_menu_content.completion.open = false;
+        self.extras.context_menu_content.completion.pending = false;
         self.extras.context_menu_content.code_action.open = false;
         self.extras.context_menu_task = Task::ready(Ok(()));
         cx.notify();

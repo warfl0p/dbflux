@@ -437,6 +437,15 @@ impl CompletionMenu {
         .detach();
     }
 
+    /// Keeps a shown menu's insertion range at the caret while a refreshed
+    /// list is pending.
+    pub(crate) fn follow_cursor(&mut self, offset: usize, cx: &mut Context<Self>) {
+        if self.open {
+            self.offset = offset;
+            cx.notify();
+        }
+    }
+
     /// Sets the trigger start offset if it is not already set.
     pub(crate) fn update_query(&mut self, start_offset: usize, query: impl Into<SharedString>) {
         if self.trigger_start_offset.is_none() {
