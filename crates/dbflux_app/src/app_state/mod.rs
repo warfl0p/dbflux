@@ -63,6 +63,7 @@ pub use dbflux_core::{
 /// `st_ui_state` key of the Open Recent list, a JSON array of
 /// [`RecentWorkspace`].
 const RECENT_WORKSPACES_KEY: &str = "recent_workspaces";
+const LAST_SAVE_DIRECTORY_KEY: &str = "last_save_directory";
 
 /// Why an external scripts folder could not be added or removed.
 #[derive(Debug)]
@@ -2297,6 +2298,26 @@ impl AppState {
         {
             log::warn!("Failed to record the connected profiles at quit: {error}");
         }
+    }
+
+    /// The folder a file was last saved to with Save As, if it still exists.
+    pub fn last_save_directory(&self) -> Option<PathBuf> {
+        self.storage_runtime
+            .ui_state()
+            .get(LAST_SAVE_DIRECTORY_KEY)
+            .log_err()
+            .flatten()
+            .map(PathBuf::from)
+            .filter(|directory| directory.is_dir())
+    }
+
+    /// Remembers where Save As wrote last. A failed write only loses the
+    /// folder, so it is logged.
+    pub fn set_last_save_directory(&self, directory: &std::path::Path) {
+        self.storage_runtime
+            .ui_state()
+            .set(LAST_SAVE_DIRECTORY_KEY, &directory.to_string_lossy())
+            .log_err();
     }
 
     /// Profiles that were connected when the app last started quitting.
