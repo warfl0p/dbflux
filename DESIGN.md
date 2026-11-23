@@ -12,7 +12,7 @@ description: >-
   crates/bolt/src/{tokens.rs,theme.rs,brand.rs,fonts.rs,colors/mod.rs}, with
   the accent supplied by crates/dbflux_components/src/theme.rs.
 colors:
-  desk: "#121314"
+  desk: "#2A2B2C"
   background: "#191A1B"
   panel: "#191A1B"
   raised: "#232425"
@@ -113,8 +113,9 @@ crate. This look is fork-only: keep it out of upstream pull requests.
 
 | Role | Value | Theme field / accessor | Use |
 |---|---|---|---|
-| desk | `#121314` | `ChromeColors::desk` | the 1 px gaps between panes, status bar ground, window frames of Settings and Connection Manager |
-| background / panel | `#191A1B` | `background`, `popover`, `table` | every pane, the sidebar, the editor, cards, menus, modals |
+| desk | `#2A2B2C` | `ChromeColors::desk` | the 1 px gaps between panes, window frames of Settings and Connection Manager |
+| editor | `#121314` | `highlight_theme.style.editor_background` | the code editor text area |
+| background / panel | `#191A1B` | `background`, `popover`, `table` | every pane, the sidebar, the status bar, cards, menus, modals |
 | raised | `#232425` | `secondary` | secondary buttons, keycaps, chips |
 | line | `#2B2C2E` | `border` | separators inside a pane, input edges |
 | line-2 | `#3C3D40` | `input`, `muted` | control edges on raised surfaces, card and modal edges |
@@ -201,7 +202,7 @@ flowchart TB
             doc["The active document; results below with no tab for a single result"]
         end
     end
-    status["Status bar, 24 px: flat items on the desk"]
+    status["Status bar, 24 px: flat items on the pane background"]
     body --> status
 ```
 

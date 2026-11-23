@@ -429,6 +429,7 @@ impl Render for StatusBar {
             .px(ShellMetrics::STATUS_BAR_PADDING_X)
             .font_family(dbflux_components::fonts::ui_family(cx))
             .text_size(ShellMetrics::STATUS_FONT)
+            .bg(cx.theme().background)
             .text_color(cx.theme().muted_foreground)
             .overflow_hidden()
             .child(self.render_connection(cx))

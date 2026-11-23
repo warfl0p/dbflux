@@ -60,7 +60,7 @@ impl Colors {
     /// The roles of the dark palette.
     pub fn dark() -> Self {
         Self {
-            desk: rgb(0x121314).into(),
+            desk: rgb(0x2A2B2C).into(),
             background: rgb_to_hsla(0x191A1B),
             panel: rgb_to_hsla(0x191A1B),
             raised: rgb_to_hsla(0x232425),

@@ -187,7 +187,7 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         assert_eq!(theme.window_border, rgb_to_hsla(0x2B2C2E));
         assert_eq!(
             theme.highlight_theme.style.editor_background,
-            Some(rgb_to_hsla(0x191A1B))
+            Some(rgb_to_hsla(0x121314))
         );
         assert_eq!(
             theme.highlight_theme.style.editor_active_line,

@@ -424,6 +424,7 @@ struct Palette {
     overlay: Hsla,
     progress: Hsla,
 
+    editor: Hsla,
     syntax: SyntaxColors,
 }
 
@@ -468,6 +469,8 @@ impl Palette {
             overlay: rgb_to_hsla_alpha(0x121314, 0.62),
             progress: brand.accent_tint,
 
+            // VS Code's editor sits darker than the panes around it.
+            editor: rgb_to_hsla(0x121314),
             syntax: SyntaxColors::dark().with_keyword(brand.accent_tint),
         }
     }
@@ -512,6 +515,7 @@ impl Palette {
             overlay: rgb_to_hsla_alpha(0x1E1423, 0.28),
             progress: brand.accent,
 
+            editor: rgb_to_hsla(0xF6F4F7),
             syntax: SyntaxColors::light().with_keyword(brand.accent),
         }
     }
@@ -552,7 +556,7 @@ fn apply_palette(palette: &Palette, density: Density, cx: &mut App) {
     apply_style_radius(theme, density);
     apply_editor_chrome(
         theme,
-        palette.background,
+        palette.editor,
         palette.hover_wash,
         palette.text_muted,
         palette.text_strong,
@@ -958,7 +962,7 @@ mod tests {
         cx.update(gpui_component::init);
 
         for (mode, background, line_number) in [
-            (PaletteMode::Dark, 0x191A1B, 0x9A9B9F),
+            (PaletteMode::Dark, 0x121314, 0x9A9B9F),
             (PaletteMode::Light, 0xF6F4F7, 0x6B6572),
         ] {
             cx.update(|cx| install(test_brand(), mode, Density::Default, cx));
