@@ -11,6 +11,7 @@ lateral. La ventana está organizada en secciones a lo largo del lado izquierdo.
 | --------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [General](#general)                                 | Comportamiento a nivel de app: editor, inicio, refresh, seguridad de queries. |
 | [Apariencia](#apariencia) | Theme, densidad, idioma, fuentes, el color de acento y los colores de sintaxis del editor. |
+| [Actualizaciones y privacidad](#actualizaciones-y-privacidad) | Comprobaciones de actualizaciones, el changelog y los niveles de telemetría opcionales. |
 | [Audit](#audit)                                     | Qué captura el audit log y cuánto tiempo se conserva.                        |
 | [Keybindings](#keybindings)                         | Explora y cambia el keymap.                                                  |
 | [Auth Profiles](#auth-profiles-proxies-ssh-tunnels) | Perfiles AWS SSO / shared-credentials.                                       |
@@ -132,12 +133,8 @@ filas**, que ejecuta la sentencia dentro de `SELECT COUNT(*)` sin traer sus
 filas y muestra "10,000/52,310 filas cargadas" (solo conexiones SQL), y
 **Cargar todas las filas**, que vuelve a ejecutar la sentencia sin el límite en
 la misma pestaña de resultados. Ambas están también en el menú de la tabla
-(`m`). Al desplazarse hasta la última fila cargada, o mover el cursor sobre
-ella, se traen las siguientes filas de esa sentencia, tantas como el límite, y
-se añaden al final; esto se repite hasta que la sentencia no tiene más filas.
-Mientras una columna está ordenada en el grid, no se traen más filas. En un
-script con varias sentencias, el límite es un único presupuesto compartido por
-todos sus resultados, y todas las sentencias se ejecutan igual.
+(`m`). En un script con varias sentencias, el límite es un único presupuesto
+compartido por todos sus resultados, y todas las sentencias se ejecutan igual.
 
 El límite solo llega a un driver cuyo `execute` lo aplica: PostgreSQL,
 MySQL/MariaDB, SQL Server, SQLite, DuckDB, MongoDB, Redis, Turso, InfluxDB,
@@ -162,6 +159,188 @@ ejecuta sus comandos sin él en los demás.
 
 Ver [Data & Privacy](PRIVACY.md#ubicaciones-de-datos) para cómo se separan
 las bases de datos Nightly y stable.
+
+## Apariencia
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/settings/appearance-dark.webp">
+  <img src="../images/settings/appearance-light.webp" alt="La ventana de Settings en la sección Apariencia, con los ajustes de tema, densidad, idioma, fuentes y barras de desplazamiento">
+</picture>
+
+Theme, color de acento, densidad, idioma, fuentes y barras de desplazamiento. Guardar funciona como se describe en [General](#general): aplica los cambios al instante y los escribe en segundo plano.
+
+| Setting      | Opciones                 | Default |
+| ------------ | ------------------------ | ------- |
+| **Theme**    | Follow system, Dark, Light | Dark  |
+| **Color de acento** | Un color `#RRGGBB` para Dark y otro para Light | El de la paleta (`#7AA2F7` en Dark, `#702963` en Light) |
+| **Density**  | Default, Compact         | Default |
+| **Language** | System y todos los idiomas con un catálogo de traducción incluido | System  |
+| **Fuente de la interfaz** | Predeterminada (Archivo) o cualquier fuente instalada | Predeterminada |
+| **Tamaño de fuente de la interfaz** | De 8 a 32 px, admite decimales | 13 |
+| **Fuente del editor** | Predeterminada (JetBrains Mono) o cualquier fuente instalada | Predeterminada |
+| **Tamaño de fuente del editor** | De 8 a 32 px, admite decimales | 13 |
+| **Fuente de la tabla de datos** | Igual que el editor o cualquier fuente instalada | Igual que el editor |
+| **Tamaño de fuente de la tabla de datos** | De 8 a 32 px, admite decimales | 12.5 |
+| **Show scrollbars** | While scrolling, On hover, Always | While scrolling |
+
+**Color de acento** controla los botones primarios, las casillas marcadas, la
+barra de progreso, el cursor de texto, la selección, el anillo de foco y las
+filas seleccionadas (en la barra lateral y en la cuadrícula de datos), con sus
+tonos de hover, pressed y de texto. Cada paleta tiene su propio campo, con una
+muestra del color que aplica y un botón **Restablecer** (`R` sobre el campo) que
+devuelve el acento de la paleta; está deshabilitado mientras el campo ya lo
+contiene. Escribir el acento propio de la paleta cuenta como sin override. Lo que
+no sea `#RRGGBB` muestra «Usa un color como #RRGGBB.» bajo el campo, no se
+guarda y deja aplicado el acento que ya lo estaba (el personalizado guardado, o
+el de la paleta si no hay ninguno) hasta que el valor sea válido. El
+acento se aplica a todas las ventanas abiertas al guardar.
+
+Tu color es un punto de partida: DBFlux lo mueve hasta que se lee sobre el
+panel. Los rellenos (botones, casillas marcadas, barra de progreso, anillo de
+foco, cursor de texto y selección) se aclaran en Dark y se oscurecen en Light
+hasta alcanzar 3:1 contra el panel; el tono del texto hasta 4.5:1; y el texto de
+un botón primario pasa a casi negro cuando el blanco quedaría por debajo de 4.5:1
+sobre el relleno. El acento propio de la paleta se usa tal cual. Los colores de
+sintaxis, incluidas las keywords del editor y el árbol de esquemas, nunca siguen
+al acento.
+
+**Show scrollbars** decide cuándo aparecen las barras de desplazamiento de
+todas las ventanas: solo mientras el contenido se desplaza, mientras el puntero
+está sobre un área desplazable, o siempre. Se aplica a todas las ventanas
+abiertas en cuanto guardas.
+
+La barra horizontal de la cuadrícula de datos es la excepción: se muestra
+siempre, porque la mueve un desplazador aparte que nunca recibe eventos de la
+rueda y, de otro modo, quedaría oculta.
+
+Los cambios de fuente se aplican a todas las ventanas abiertas en cuanto
+guardas; no hace falta reiniciar. La fuente del editor también define el texto
+monoespaciado de la interfaz (metadatos, atajos de teclado, consola), y una
+fuente de interfaz personalizada también reemplaza la fuente expandida de las
+etiquetas de sección. Qué controla cada tamaño:
+
+- **Tamaño de fuente de la interfaz** escala todo el texto, las filas, los
+  controles y los íconos de la interfaz.
+- **Tamaño de fuente del editor** define el texto y la altura de línea del
+  editor de código, y el texto de la consola.
+- **Tamaño de fuente de la tabla de datos** define el texto de las celdas, la
+  altura de filas y encabezados, y el ancho automático de las columnas. Las
+  columnas que redimensionaste a mano conservan su ancho.
+
+`Ctrl+=` / `Cmd+=` y `Ctrl+-` / `Cmd+-` cambian los tres tamaños a la vez, 1 px
+cada uno, manteniendo sus proporciones, y `Ctrl+0` / `Cmd+0` restablece los
+valores predeterminados. Funcionan desde la ventana del espacio de trabajo,
+también están en la paleta de comandos y se pueden reasignar en
+[Keybindings](#keybindings). Un tamaño que ya está en 8 o 32 px se
+queda ahí mientras los demás siguen cambiando. Los nuevos tamaños se guardan
+como cualquier otra configuración, así que estos campos los muestran y se
+conservan al reiniciar.
+
+Las listas de fuentes tienen un campo de búsqueda, porque un sistema puede tener
+cientos de fuentes. Una fuente guardada que ya no está instalada sigue
+seleccionada, marcada como "(no instalada)", y DBFlux dibuja con la fuente
+predeterminada hasta que se vuelva a instalar; la tabla de datos recurre a la
+fuente del editor.
+
+La lista de idiomas se deriva de los catálogos de traducción incluidos con
+DBFlux: English aparece primero, seguido de los demás idiomas en un orden
+determinista y con sus nombres nativos. System sigue el locale del sistema
+operativo y recurre a English cuando ningún locale incluido coincide de forma no
+ambigua. Un cambio de idioma tiene efecto después de reiniciar DBFlux, por lo que
+el control muestra una nota permanente al respecto. Los catálogos parciales
+recurren a English para el texto general aún no traducido. Este release traduce,
+entre otras, las secciones General y Actualizaciones y privacidad; el resto de la
+UI se está convirtiendo crate por crate y permanece en English por ahora.
+
+---
+
+## Actualizaciones y privacidad
+
+Las preferencias de comprobación de actualizaciones y changelog, más los
+niveles de telemetría opcionales. Los cambios quedan en stages hasta que
+pulsas **Save** (Ctrl+S); **Reset to defaults** deja los valores por defecto
+en stages sin guardar.
+
+### Updates
+
+| Ajuste | Efecto |
+|--------|--------|
+| Check GitHub for a new release at startup | Ejecuta la comprobación de actualizaciones al iniciar la app. |
+| Show what is new after each update | Abre el changelog una vez, la primera vez que arranca una versión nueva. |
+| Check now | Ejecuta una comprobación inmediata. |
+| Open what is new / Show welcome again | Reabre los dos diálogos. |
+
+### Estadísticas de uso
+
+DBFlux tiene un módulo de telemetría opcional con tres niveles:
+
+- **Apagado** — no se envía nada: ni aviso, ni evento de actividad, ni informe
+  de uso. No se pone nada en cola.
+- **Mínimo** — un aviso por cada compilación publicada, más un evento de
+  actividad por semana: identificador aleatorio de instalación, versión, canal,
+  sistema operativo y arquitectura. Sin idioma del sistema, país ni recuentos
+  de uso.
+- **Básico** (preseleccionado en el diálogo de bienvenida) — el aviso de Mínimo,
+  más un informe semanal en lugar del evento de actividad. El informe añade
+  idioma del sistema (no el de la interfaz), país y recuentos acotados de
+  ejecuciones exitosas compatibles de
+  consultas, visual builder, aperturas de dashboards, scripts, operaciones MCP
+  e inspecciones de schema. Son recuentos de operaciones completas, incluidos
+  resultados exitosos con cero filas, no de filas ni de tiempos.
+
+No se pone nada en cola, no se envía nada y no se cuenta ningún uso hasta que
+confirmas el aviso de bienvenida con **Empezar**. Si habías desactivado el
+diálogo de bienvenida, se abre en cada arranque tras actualizar, siempre que las
+estadísticas de uso arranquen, hasta que confirmes; cerrarlo de otra forma, por
+ejemplo con Escape, no lo confirma.
+
+La app no envía país; envía el valor de relleno `ZZ`. Solo en los informes de
+Básico, el colector guarda el país aproximado que Cloudflare resuelve en su
+borde. El colector nunca guarda la dirección IP; Cloudflare y Fly.io conservan
+sus propios registros de peticiones.
+
+Las actualizaciones en segundo plano, fallos parciales, errores y cancelaciones
+no cuentan. Las aprobaciones del builder sin ejecución no cuentan, ni la
+creación, importación o restauración implícitas de dashboards. Los scripts
+requieren código de salida canónico 0 sin timeout ni ejecución detached; la
+inspección de schema requiere una carga nueva de metadatos completos, no
+reenfocar una pestaña existente.
+
+**MCP solo cuenta operaciones principales revisadas, compatibles y exitosas con
+un propietario de primer plano de una GUI existente, autenticada y en ejecución**,
+no todas las llamadas ni un servidor independiente sin ese propietario.
+`count_records`, `insert_record` y `list_scripts` se excluyen incluso si tienen
+éxito. `update_records` y `delete_records` requieren la finalización de la
+mutación principal con `QueryResult` tipado, no un `DocumentCrudResult` opaco
+exitoso; update/upsert/delete SQL tipados comprobados pueden contar con cero filas
+afectadas. Ayuda/protocolo, herramientas desconocidas, controles de aprobación y
+aprobaciones pendientes no cuentan. El permiso se adquiere después de Allow y
+antes del trabajo; el recuento llega tras completar el trabajo principal y
+registrar con éxito Audit de ejecución. Ver los límites completos en la política
+siguiente.
+
+Los eventos van a `https://telemetry.dbflux.dev`. Nunca se envían
+consultas, resultados, credenciales, rutas de archivos ni metadatos de
+conexión. Ver [Datos y privacidad](PRIVACY.md#telemetría-opcional) para la
+lista completa de lo que contiene un informe y los límites de cobertura.
+Básico debe estar activo y el aviso visible de bienvenida debe haberse confirmado
+antes de comenzar; fuentes no disponibles o Audit desactivado o
+degradado impiden contabilizar. Guardar Básico no garantiza un envío inmediato.
+Salir de Básico borra el informe Básico pendiente y los contadores, y Apagado
+también borra un aviso pendiente; un envío ya entregado a la red aún puede
+completarse. Confirmar la entrega conserva incrementos posteriores. Los UUID de instalación y entrega son
+seudónimos; no se envían identificadores de operaciones, consultas, clientes o
+personas, nombres de herramientas ni estadísticas por motor. El ID de instalación
+nunca rota por calendario; un reinicio conserva las compilaciones
+confirmadas y no envía vínculos entre IDs viejos y nuevos ni avisos de retirada.
+Las etiquetas legibles no alteran el almacenamiento, la copia, la exportación
+ni el envío del contenido sin procesar.
+
+| Control | Efecto |
+|---------|--------|
+| Nivel (Apagado / Mínimo / Básico) | El nivel en stages; Left y Right o un clic lo cambian, Save lo aplica. |
+| Id de instalación | Vista enmascarada del identificador seudónimo. **Reiniciar id** lo reemplaza de inmediato, cancela los envíos pendientes y conserva las compilaciones confirmadas. |
+| Informes | El último informe confirmado, leído del audit log duradero. **Ver el último informe** abre un visor de solo lectura sobre el contenido almacenado; **Abrir en auditoría** abre el visor de auditoría con la correlación del informe. |
 
 ---
 
@@ -228,23 +407,6 @@ recurren a English para el texto general aún no traducido. Este release solo
 traduce la sección General; el resto de la UI se está convirtiendo crate por crate
 y permanece en English por ahora.
 
-### Color de acento
-
-**Color de acento** reemplaza el color principal del theme, Byzantine
-(`#702963`). Rellena los botones principales, las casillas marcadas y la barra
-de progreso, y tiñe el cursor de texto, la selección, el anillo de foco y las
-filas seleccionadas del sidebar y del data grid. La fila está bajo **Colores
-para**, así que Oscuro y Claro guardan cada uno su propio acento, y tiene la
-misma muestra, campo y botón **Restablecer** (`R` en la fila) que los colores
-de sintaxis.
-
-Los tonos alrededor del acento lo siguen: los estados al pasar el puntero y al
-pulsar son algo más claros y más oscuros, y el tinte del texto se aclara en
-Oscuro o se oscurece en Claro cuando el acento sería difícil de leer sobre el
-fondo de ese theme. El texto de un botón principal pasa a oscuro cuando el
-acento es demasiado claro para texto blanco. El acento se aplica a todas las
-ventanas abiertas al guardar.
-
 ### Colores de sintaxis
 
 Los colores del resaltado de sintaxis del editor de código se pueden cambiar por
@@ -259,7 +421,7 @@ muestra el color en uso, el predeterminado hasta que lo cambies, así que se pue
 copiar. Escribe un color como `#RRGGBB` (el `#` es opcional); un campo vacío, o el
 color predeterminado, mantiene el predeterminado. **Restablecer** (o `R` en
 la fila) restaura el color predeterminado de ese rol, y **Restaurar valores
-predeterminados** (o `Shift+R`) restaura todos los colores del theme mostrado, el acento incluido.
+predeterminados** (o `Shift+R`) restaura todos los colores del theme mostrado.
 Los cambios se aplican a los editores abiertos al guardar. Los mismos colores
 tiñen los iconos del árbol de schema y los valores NULL del data grid.
 

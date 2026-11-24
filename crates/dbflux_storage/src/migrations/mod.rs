@@ -192,6 +192,8 @@ impl MigrationRegistry {
         registry.register(mod_047_general_settings_grid_fk_labels::MigrationImpl);
         registry.register(mod_048_general_settings_scrollbar_visibility::MigrationImpl);
         registry.register(mod_049_general_settings_inspector_width::MigrationImpl);
+        registry.register(mod_050_cfg_telemetry::MigrationImpl);
+        registry.register(mod_051_general_settings_accent_color::MigrationImpl);
         registry.register(mod_048_general_settings_syntax_colors::MigrationImpl);
         registry.register(mod_049_general_settings_accent_colors::MigrationImpl);
         registry.register(mod_050_general_settings_blank_line_delimiter::MigrationImpl);
@@ -437,7 +439,9 @@ mod mod_048_general_settings_scrollbar_visibility;
 mod mod_048_general_settings_syntax_colors;
 mod mod_049_general_settings_accent_colors;
 mod mod_049_general_settings_inspector_width;
+mod mod_050_cfg_telemetry;
 mod mod_050_general_settings_blank_line_delimiter;
+mod mod_051_general_settings_accent_color;
 mod mod_051_general_settings_error_toasts;
 
 pub use mod_001_initial::MigrationImpl;
@@ -1301,6 +1305,8 @@ mod tests {
             "047_general_settings_grid_fk_labels",
             "048_general_settings_scrollbar_visibility",
             "049_general_settings_inspector_width",
+            "050_cfg_telemetry",
+            "051_general_settings_accent_color",
             "048_general_settings_syntax_colors",
             "049_general_settings_accent_colors",
             "050_general_settings_blank_line_delimiter",

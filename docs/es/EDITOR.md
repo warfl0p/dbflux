@@ -110,25 +110,60 @@ se ejecuta tal cual.
   <img src="../images/editor/multi-statement-light.webp" alt="Una pestaña de query que ejecutó tres sentencias como script, con una pestaña de resultado por sentencia">
 </picture>
 
+## Autocompletado
+
+En un editor SQL cada sugerencia dice qué es: una palabra a la derecha de la
+fila indica **tabla**, **vista**, **esquema**, **columna**, **alias**,
+**palabra clave** o **cte**. Un nombre de la cláusula `WITH` de la propia query
+dice **cte**, aunque una tabla o vista tenga el mismo nombre. La etiqueta se
+dibuja con el color que tiene el mismo token en el editor: tablas, vistas y CTE
+con el color de tipo, esquemas con el de espacio de nombres, columnas con el de
+campo, y alias y palabras clave con los suyos. La fila resaltada conserva sus
+colores de acento.
+
+El menú crece hasta caber su fila más larga, palabra incluida, hasta un ancho
+que sigue el tamaño de fuente de la interfaz, también en los editores que ya
+estaban abiertos. Los editores de MongoDB, Redis y Lua colorean sus sugerencias
+igual (métodos, funciones, clases y operadores con el color del mismo token en
+su editor), sin palabra de tipo. Una sugerencia de cualquier otro tipo conserva
+el estilo plano.
+
 ## Formatear
 
-`Ctrl+Shift+F` (`Cmd+Option+L` en macOS, donde `Cmd+Shift+F` es buscar y
-reemplazar) — **Format query**. El botón Format de la barra de herramientas, el
-menú de acciones del panel y **Format query** en la paleta de comandos hacen lo
-mismo.
+- `Ctrl+Shift+F` (`Cmd+Option+L` en macOS) — **Formatear consulta**.
 
-Con una selección, Format formatea la selección. Sin selección, formatea la
-sentencia bajo el cursor, la misma que ejecuta `Ctrl+Enter`, así que las demás
-sentencias del buffer no cambian. Para formatear todas las sentencias,
-selecciona todo (`Ctrl+A`) primero. Las palabras clave pasan a mayúsculas y las
-cláusulas se sangran con dos espacios; el espacio en blanco alrededor del texto
-formateado se conserva.
+Formatear también es el botón Formatear de la barra de herramientas, una entrada
+del menú de acciones del panel y un comando de la paleta de comandos. Con una
+selección, reformatea el texto seleccionado. Sin selección, reformatea el
+statement bajo el cursor, con los mismos límites que **Ejecutar query**, así que
+un buffer con un solo statement se formatea entero. Para formatear todos los
+statements, selecciona todo (`Ctrl+A`, o `Cmd+A` en macOS) primero. Las palabras clave pasan a
+mayúsculas y cada cláusula se sangra con dos espacios.
 
-El formateador viene del language service del driver conectado. PostgreSQL,
-MySQL/MariaDB, SQLite, ClickHouse, DuckDB, Redshift y Turso tienen uno. Sin
-conexión, o con un driver sin formateador (SQL Server, cuyos identificadores
-entre corchetes el formateador rompería, y los lenguajes no SQL), el botón Format
-queda deshabilitado y muestra **Formatter unavailable**.
+Formatear está disponible en conexiones SQL cuyo servicio de lenguaje puede
+formatear: PostgreSQL, MySQL/MariaDB, SQLite, SQL Server y los demás drivers SQL
+incluidos. Los documentos de script y los demás lenguajes de consulta mantienen
+el botón deshabilitado. En las conexiones que la ofrecen, la code action **Format statement** (`Ctrl+.` /
+`Cmd+.`) sigue haciendo el mismo cambio para el statement bajo el cursor.
+
+## Errores de query
+
+Cuando una query falla y la base de datos indica dónde, el editor subraya como
+error el token que rechazó, y la notificación del error ofrece **Ir al error**
+junto a **Copiar error**. La misma acción es **Ir al error de la consulta** en
+el menú de acciones del panel y en la paleta de comandos, y solo está habilitada
+mientras exista una marca. No tiene atajo de teclado por defecto. Nada se mueve
+solo: el cursor y el foco se quedan donde estaban hasta que la invocas, y
+entonces el cursor aterriza en el token marcado del editor.
+
+La marca se coloca en el statement que se ejecutó, ya sea el statement bajo el
+cursor, todo el buffer o la selección, y en un script está en el statement que
+falló. Desaparece con tu primera edición y cuando vuelves a ejecutar. No hay
+marca cuando la base de datos no da una posición, cuando el texto enviado difiere
+del texto del editor (las macros de tiempo se sustituyen antes de enviar la
+query) o cuando cambiaste el editor mientras la query se ejecutaba. PostgreSQL,
+Redshift y SQLite informan posiciones; los demás drivers muestran el error sin
+marca. La marca aparece solo mientras el texto enviado siga coincidiendo con el del editor, así que una edición antes de que vuelva el error, o un cambio del texto antes de enviarlo, no deja marca. La posición nunca forma parte del texto de la notificación.
 
 ## Confirmación de queries peligrosas
 

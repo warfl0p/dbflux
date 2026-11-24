@@ -89,6 +89,15 @@ pub(crate) fn pk_details_fetch_failed_error(error: &str) -> String {
     )
 }
 
+/// Error text when the check of a table's primary key, run before a save or
+/// delete, fails for a reason other than the table being gone.
+pub(crate) fn edit_guard_check_failed_error(error: &str) -> String {
+    dbflux_i18n::t!(
+        "document.data.grid.error.edit_guard_check_failed",
+        error = error
+    )
+}
+
 /// Error/toast text for a failed query run against the data grid.
 pub(crate) fn query_failed_error(error: &str) -> String {
     dbflux_i18n::t!("document.data.grid.error.query_failed", error = error)
@@ -571,11 +580,6 @@ pub(crate) fn mutation_delete_document_task_label() -> String {
     dbflux_i18n::t!("document.data.mutation.task.delete_document")
 }
 
-/// Task-panel description for deleting a single row.
-pub(crate) fn mutation_delete_row_task_label() -> String {
-    dbflux_i18n::t!("document.data.mutation.task.delete_row")
-}
-
 /// Label for the context menu's "Copy as ..." submenu trigger, keyed by the
 /// active connection's query language.
 ///
@@ -620,6 +624,11 @@ pub(crate) fn delete_confirm_copy(count: usize) -> (String, String) {
             ),
         )
     }
+}
+
+/// Error shown when the dragged editor/results split cannot be saved.
+pub(crate) fn results_split_save_failed_error(error: &str) -> String {
+    dbflux_i18n::t!("document.code.layout.split_save_failed", error = error)
 }
 
 /// Task-panel description for a running script, with the query language's
@@ -766,6 +775,9 @@ pub(crate) fn dangerous_query_title(kind: dbflux_core::DangerousQueryKind) -> St
         DangerousQueryKind::Script => {
             dbflux_i18n::t!("document.code.dangerous_query.kind.script.title")
         }
+        DangerousQueryKind::AdminScript => {
+            dbflux_i18n::t!("document.code.dangerous_query.kind.admin_script.title")
+        }
         DangerousQueryKind::MongoDeleteMany => {
             dbflux_i18n::t!("document.code.dangerous_query.kind.mongo_delete_many.title")
         }
@@ -826,6 +838,9 @@ pub(crate) fn dangerous_query_body(kind: dbflux_core::DangerousQueryKind) -> Str
         }
         DangerousQueryKind::Script => {
             dbflux_i18n::t!("document.code.dangerous_query.kind.script.body")
+        }
+        DangerousQueryKind::AdminScript => {
+            dbflux_i18n::t!("document.code.dangerous_query.kind.admin_script.body")
         }
         DangerousQueryKind::MongoDeleteMany => {
             dbflux_i18n::t!("document.code.dangerous_query.kind.mongo_delete_many.body")
@@ -3885,14 +3900,8 @@ pub(crate) fn delimited_record_count_status(
     }
 }
 
-/// Summary of the last run at the end of the editor toolbar
-/// ("last run 0.32 s").
-pub(crate) fn code_toolbar_last_run_label(seconds: f64) -> String {
-    dbflux_i18n::t!(
-        "document.code.toolbar.last_run",
-        seconds = format!("{seconds:.2}")
-    )
-}
+#[cfg(test)]
+mod script_catalog_tests;
 
 #[cfg(test)]
 mod tests {
@@ -3936,11 +3945,10 @@ mod tests {
         migrate_wizard_target_schema_read_failed_error, migrate_wizard_task_label,
         mutation_chunk_size_adjusted_toast, mutation_chunk_size_reduced_toast,
         mutation_chunked_execution_failed_error, mutation_delete_document_task_label,
-        mutation_delete_row_task_label, mutation_delete_task_label,
-        mutation_execution_cancelled_toast, mutation_execution_completed_toast,
-        mutation_execution_failed_error, mutation_insert_document_task_label,
-        mutation_insert_row_task_label, mutation_read_only_error,
-        mutation_save_document_task_label, mutation_save_row_task_label,
+        mutation_delete_task_label, mutation_execution_cancelled_toast,
+        mutation_execution_completed_toast, mutation_execution_failed_error,
+        mutation_insert_document_task_label, mutation_insert_row_task_label,
+        mutation_read_only_error, mutation_save_document_task_label, mutation_save_row_task_label,
         mutation_update_document_field_task_label, object_browser_copied_uri_toast,
         object_browser_status_summary, object_browser_versions_count_label, partial_delete_label,
         pending_change_count_label, pending_edits_summary, pk_details_fetch_failed_error,
@@ -3973,6 +3981,7 @@ mod tests {
         DangerousQueryKind::Drop,
         DangerousQueryKind::Alter,
         DangerousQueryKind::Script,
+        DangerousQueryKind::AdminScript,
         DangerousQueryKind::MongoDeleteMany,
         DangerousQueryKind::MongoUpdateMany,
         DangerousQueryKind::MongoDropCollection,
@@ -4389,6 +4398,17 @@ mod tests {
             "document.data.context_menu.item.edit_in_modal",
             "document.data.context_menu.item.set_default",
             "document.data.context_menu.item.set_null",
+            "document.data.context_menu.item.set_value",
+            "document.data.context_menu.item.set_expression",
+            "document.data.context_menu.item.set_value_column_default",
+            "document.data.context_menu.item.set_value_type_values",
+            "document.data.context_menu.item.set_value_expression",
+            "document.data.context_menu.item.set_value_null",
+            "document.data.context_menu.item.set_value_no_default",
+            "document.data.context_menu.expression_confirm.list",
+            "document.data.context_menu.expression_confirm.cancel",
+            "document.data.context_menu.expression_confirm.confirm",
+            "document.data.grid.expression.placeholder",
             "document.data.context_menu.item.add_row",
             "document.data.context_menu.item.inspect_row",
             "document.data.context_menu.item.duplicate_row",
@@ -4406,7 +4426,7 @@ mod tests {
         ];
 
         for key in keys {
-            for locale in ["en", "es"] {
+            for locale in ["en", "es", "ko", "pt_BR", "zh_Hans"] {
                 let value = dbflux_i18n::t!(key, locale = locale);
 
                 assert!(!value.is_empty(), "{key} resolved empty in {locale}");
@@ -4440,7 +4460,6 @@ mod tests {
             "document.code.toolbar.refresh",
             "document.code.toolbar.cancel",
             "document.code.toolbar.run",
-            "document.code.toolbar.last_run",
             "document.code.toolbar.run_in_new_tab",
             "document.code.toolbar.read_only",
             "document.code.toolbar.saved",
@@ -4706,6 +4725,9 @@ mod tests {
             DangerousQueryKind::Drop => "document.code.dangerous_query.kind.drop.title",
             DangerousQueryKind::Alter => "document.code.dangerous_query.kind.alter.title",
             DangerousQueryKind::Script => "document.code.dangerous_query.kind.script.title",
+            DangerousQueryKind::AdminScript => {
+                "document.code.dangerous_query.kind.admin_script.title"
+            }
             DangerousQueryKind::MongoDeleteMany => {
                 "document.code.dangerous_query.kind.mongo_delete_many.title"
             }
@@ -4751,6 +4773,9 @@ mod tests {
             DangerousQueryKind::Drop => "document.code.dangerous_query.kind.drop.body",
             DangerousQueryKind::Alter => "document.code.dangerous_query.kind.alter.body",
             DangerousQueryKind::Script => "document.code.dangerous_query.kind.script.body",
+            DangerousQueryKind::AdminScript => {
+                "document.code.dangerous_query.kind.admin_script.body"
+            }
             DangerousQueryKind::MongoDeleteMany => {
                 "document.code.dangerous_query.kind.mongo_delete_many.body"
             }
@@ -8074,10 +8099,6 @@ mod tests {
             (
                 mutation_delete_document_task_label,
                 "document.data.mutation.task.delete_document",
-            ),
-            (
-                mutation_delete_row_task_label,
-                "document.data.mutation.task.delete_row",
             ),
             (
                 audit_export_unsupported_source_toast,

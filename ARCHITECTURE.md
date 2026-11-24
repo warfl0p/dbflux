@@ -295,7 +295,8 @@ crates/
         form_nav.rs         # FormGridNav<F> generic 2D grid navigation
         form_section.rs     # FormSection trait for keyboard navigation
         section_trait.rs    # SettingsSection trait
-        general.rs          # General settings (theme, safety toggles)
+        general.rs          # General settings (safety toggles, startup, refresh)
+        appearance_section.rs # Appearance page (theme, density, language, fonts)
         keybindings.rs      # Keybindings settings section
         auth_profiles_section.rs # Dynamic auth profile CRUD by provider form definition
         proxies.rs          # Proxy CRUD form with FormGridNav
@@ -773,7 +774,7 @@ See `docs/DASHBOARDS.md` for the full reference (including instance metrics and 
 
 ### Settings Window
 
-- Settings is organized into the following sections: General, Keybindings, Auth Profiles, Proxies, SSH Tunnels, Services, Hooks, Drivers, Audit, and About. MCP sections (trusted clients, roles, policies) are feature-gated under the `mcp` feature.
+- Settings is organized into the following sections: General, Appearance, Keybindings, Auth Profiles, Proxies, SSH Tunnels, Services, Hooks, Drivers, Audit, and About. MCP sections (trusted clients, roles, policies) are feature-gated under the `mcp` feature.
 - Sidebar uses `TreeNav` component with collapsible Network/Connection categories.
 - `UiStateStore` persists sidebar collapse state to `st_ui_state` table in `~/.local/share/dbflux/dbflux.db`.
 - Auth Profiles section is provider-driven (`DynAuthProvider::form_def`) and supports importing provider-discovered profiles (for AWS, from `~/.aws/config`).
@@ -917,7 +918,7 @@ The channel/branding model is a runtime seam: UI and app code read `ReleaseChann
 - Tunnel infrastructure: `crates/dbflux_tunnel_core/` provides RAII `Tunnel` with `TunnelConnector` trait and `ForwardingConnection<R>` bidirectional forwarder.
 - Proxy tunneling: `crates/dbflux_proxy/` implements SOCKS5 and HTTP CONNECT proxy tunnels via `TunnelConnector`.
 - SSH tunneling: `crates/dbflux_ssh/src/lib.rs` implements SSH tunnel via `TunnelConnector`, all operations serialized to one thread for libssh2 safety.
-- Export: `crates/dbflux_export/` provides shape-based export (CSV, JSON pretty/compact, Text, Binary/Hex/Base64). Format availability is determined by `QueryResultShape`, not by driver. Each format has its own module (`binary.rs`, `csv.rs`, `json.rs`, `text.rs`). File-dialog availability is probed at runtime via `dbflux_ui_base/src/file_dialog.rs::is_native_file_dialog_available()` (on Linux: checks `PATH` for `xdg-desktop-portal`, `zenity`, `kdialog`); when no backend is available, exports fall back to `fallback_export_dir()` (`~/.local/share/dbflux/exports/`) with `unique_path_in()` deconfliction. A clipboard export path is also available as an alternative target.
+- Export: `crates/dbflux_export/` provides shape-based export (CSV, JSON pretty/compact, Text, Binary/Hex/Base64). Format availability is determined by `QueryResultShape`, not by driver. Each format has its own module (`binary.rs`, `csv.rs`, `json.rs`, `text.rs`). File-dialog availability is probed at runtime via `dbflux_ui_base/src/file_dialog.rs::is_native_file_dialog_available()` (on Linux: counts the XDG portal only when its `org.freedesktop.portal.Desktop` D-Bus session service file is present and an installed backend declares `org.freedesktop.impl.portal.FileChooser`, or finds `zenity` / `kdialog` on `PATH`); when no backend is available, exports fall back to `fallback_export_dir()` (`~/.local/share/dbflux/exports/`) with `unique_path_in()` deconfliction. A clipboard export path is also available as an alternative target.
 - Test support: `crates/dbflux_test_support/` provides Docker container management and fixtures for live integration tests across all drivers. DynamoDB Local is used only for integration tests and local validation; production usage targets remote AWS DynamoDB endpoints.
 - Icon system: `AppIcon` enum defined in `crates/dbflux_components/src/icons/mod.rs`; embedded SVG bytes and the `ALL_ICONS` list remain at `crates/dbflux_ui/src/ui/icons/mod.rs` (resources live under `crates/dbflux_ui/resources/`), loaded via `assets.rs`.
 - Platform detection: `crates/dbflux_ui_base/src/platform.rs` handles X11/Wayland differences with `is_x11()`, `apply_main_window_options()` for the main window, `floating_window_kind()` / `apply_window_options()` for the secondary windows, and the window min size hints. (Shim at `crates/dbflux_ui/src/platform.rs`.)

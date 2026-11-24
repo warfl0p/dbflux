@@ -109,6 +109,36 @@ pub(crate) const DATA_GRID: SurfaceRegistry = SurfaceRegistry {
         ),
         // Every row of the table menu and its submenus.
         ("context-menu.*", KeyboardPath::Command(Command::MenuSelect)),
+        // The "Set value" trigger and the rows of its flyout.
+        (
+            "set-value-trigger",
+            KeyboardPath::Command(Command::MenuSelect),
+        ),
+        (
+            "set-value-entry-*",
+            KeyboardPath::Command(Command::MenuSelect),
+        ),
+        // The ƒx editor and its suggestions: Ctrl+Shift+I flips the mode,
+        // Up and Down step through the suggestions.
+        (
+            "cell-expression-*",
+            KeyboardPath::Command(Command::ResultsToggleExpression),
+        ),
+        // The confirmation a save with expressions waits on: Escape declines
+        // and Enter confirms.
+        (
+            "expression-cancel-btn",
+            KeyboardPath::Command(Command::Cancel),
+        ),
+        (
+            "expression-confirm-btn",
+            KeyboardPath::Command(Command::Execute),
+        ),
+        // The drift modal a save opens when the table's key changed: Escape
+        // cancels and Enter reloads the table.
+        ("modal-close", KeyboardPath::Command(Command::Cancel)),
+        ("drift-close", KeyboardPath::Command(Command::Cancel)),
+        ("drift-reload", KeyboardPath::Command(Command::Execute)),
         ("export-menu.*", KeyboardPath::Command(Command::MenuSelect)),
         (
             "export-trigger",
@@ -1476,7 +1506,10 @@ pub fn registries() -> Vec<SurfaceRegistry> {
 /// segments take no focus, so the `ImportWizard` context reaches them: J and
 /// K move a cursor over the configure step's choices, L and H pick the next
 /// or previous CSV delimiter and encoding, and Enter picks the next one or
-/// opens the dropdown under the cursor.
+/// opens the dropdown under the cursor. A SQL script's configure step has two
+/// choices on the same cursor: L, H and Enter pick the other "On error"
+/// segment, and Enter toggles the transaction checkbox, which is also a stop
+/// of the dialog.
 pub(crate) const IMPORT_WIZARD: SurfaceRegistry = SurfaceRegistry {
     name: "import wizard",
     contexts: &[ContextId::Modal, ContextId::ImportWizard],
@@ -1488,6 +1521,8 @@ pub(crate) const IMPORT_WIZARD: SurfaceRegistry = SurfaceRegistry {
         ("import-wizard-cancel", KeyboardPath::TabStop),
         ("import-wizard-cancel-confirm", KeyboardPath::TabStop),
         ("import-wizard-confirm-destructive", KeyboardPath::TabStop),
+        ("import-wizard-run-script", KeyboardPath::TabStop),
+        ("import-wizard-script-transaction", KeyboardPath::TabStop),
         ("import-wizard-cancel-run", KeyboardPath::TabStop),
         ("import-wizard-close", KeyboardPath::TabStop),
         ("import-apply-mapping-*", KeyboardPath::TabStop),
@@ -1515,6 +1550,10 @@ pub(crate) const IMPORT_WIZARD: SurfaceRegistry = SurfaceRegistry {
         ),
         (
             "segmented-import-file-encoding-*",
+            KeyboardPath::Command(Command::ColumnRight),
+        ),
+        (
+            "segmented-import-script-on-error-*",
             KeyboardPath::Command(Command::ColumnRight),
         ),
     ],

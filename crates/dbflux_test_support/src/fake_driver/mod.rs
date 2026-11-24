@@ -5,7 +5,7 @@ use dbflux_core::{
     DbKind, DdlCapabilities, DriverCapabilities, DriverFormDef, DriverLimits, DriverMetadata,
     FormFieldKind, FormSection, FormTab, FormValues, Icon, MutationCapabilities, QueryCapabilities,
     QueryHandle, QueryLanguage, QueryRequest, QueryResult, RowDelete, RowInsert, RowPatch,
-    SchemaLoadingStrategy, SchemaSnapshot, SqlDialect, SqlLanguageService, SyntaxInfo,
+    SchemaLoadingStrategy, SchemaSnapshot, SqlDialect, SqlLanguageService, SyntaxInfo, TableInfo,
     TransactionCapabilities, TransferFamily, field, field_required,
 };
 use dbflux_core::{DatabaseInfo, DefaultSqlDialect};
@@ -20,7 +20,7 @@ use dbflux_core::{
 use dbflux_driver_cloudwatch::CLOUDWATCH_FORM;
 use dbflux_driver_dynamodb::DYNAMODB_FORM;
 use dbflux_driver_influxdb::INFLUXDB_FORM;
-use dbflux_driver_mongodb::MONGODB_FORM;
+use dbflux_driver_mongodb::{MONGODB_FORM, MongoLanguageService};
 use dbflux_driver_mssql::SQLSERVER_FORM;
 use dbflux_driver_mysql::MYSQL_FORM;
 use dbflux_driver_postgres::POSTGRES_FORM;
@@ -54,6 +54,11 @@ pub enum FakeQueryOutcome {
     // Box to keep all variants at a similar size; QueryResult grew with metadata_extra.
     Success(Box<QueryResult>),
     Error(String),
+    /// A failure the server pinned to a byte offset of the SQL it received.
+    ErrorAt {
+        message: String,
+        position: usize,
+    },
     Timeout,
     Cancelled,
 }
@@ -67,10 +72,26 @@ impl FakeQueryOutcome {
         match self {
             Self::Success(result) => Ok(*result.clone()),
             Self::Error(message) => Err(Box::new(DbError::query_failed(message.clone()))),
+            Self::ErrorAt { message, position } => Err(Box::new(DbError::QueryFailed(
+                dbflux_core::FormattedError::new(message.clone()).with_position(*position),
+            ))),
             Self::Timeout => Err(Box::new(DbError::Timeout)),
             Self::Cancelled => Err(Box::new(DbError::Cancelled)),
         }
     }
+}
+
+/// What `FakeConnection::table_details` answers for one table.
+#[derive(Debug, Clone)]
+pub enum FakeTableDetails {
+    Info(Box<TableInfo>),
+    /// The table no longer exists.
+    NotFound,
+    /// The read fails the way a dropped network does.
+    Failure(String),
+    /// Answers the n-th read with the n-th entry; the last entry answers every
+    /// read after it. For a table whose details change between two checks.
+    Sequence(Vec<FakeTableDetails>),
 }
 
 /// A single recorded CRUD call made through `FakeConnection`.
@@ -97,6 +118,8 @@ struct FakeDriverState {
     default_outcome: RwLock<Option<FakeQueryOutcome>>,
     executed_requests: Mutex<Vec<QueryRequest>>,
     crud_ops: Mutex<Vec<CrudOp>>,
+    table_details: RwLock<HashMap<String, FakeTableDetails>>,
+    table_details_calls: AtomicUsize,
     cancelled_handles: Mutex<Vec<QueryHandle>>,
     cancel_active_calls: AtomicUsize,
     close_calls: AtomicUsize,
@@ -212,8 +235,32 @@ impl FakeDriver {
         self
     }
 
+    pub fn with_query_error_at(
+        self,
+        sql: impl Into<String>,
+        message: impl Into<String>,
+        position: usize,
+    ) -> Self {
+        rwlock_write(&self.state.query_outcomes).insert(
+            sql.into(),
+            FakeQueryOutcome::ErrorAt {
+                message: message.into(),
+                position,
+            },
+        );
+        self
+    }
+
     pub fn with_default_result(self, result: QueryResult) -> Self {
         *rwlock_write(&self.state.default_outcome) = Some(FakeQueryOutcome::success(result));
+        self
+    }
+
+    pub fn with_default_error_at(self, message: impl Into<String>, position: usize) -> Self {
+        *rwlock_write(&self.state.default_outcome) = Some(FakeQueryOutcome::ErrorAt {
+            message: message.into(),
+            position,
+        });
         self
     }
 
@@ -270,6 +317,24 @@ impl FakeDriver {
     /// connected.
     pub fn set_secret_versions_error(&self, name: impl Into<String>, message: impl Into<String>) {
         rwlock_write(&self.state.secret_version_errors).push((name.into(), message.into()));
+    }
+
+    /// Answers `table_details` for `table` with `outcome`. A table with no
+    /// answer keeps the trait default, which is "not supported".
+    pub fn with_table_details(self, table: impl Into<String>, outcome: FakeTableDetails) -> Self {
+        self.set_table_details(table, outcome);
+        self
+    }
+
+    /// [`Self::with_table_details`] for a driver that is already connected, to
+    /// change what the database reports between two reads.
+    pub fn set_table_details(&self, table: impl Into<String>, outcome: FakeTableDetails) {
+        rwlock_write(&self.state.table_details).insert(table.into(), outcome);
+    }
+
+    /// How many times `table_details` was asked for, answered or not.
+    pub fn table_details_calls(&self) -> usize {
+        self.state.table_details_calls.load(Ordering::Relaxed)
     }
 
     pub fn set_query_outcome(&self, sql: impl Into<String>, outcome: FakeQueryOutcome) {

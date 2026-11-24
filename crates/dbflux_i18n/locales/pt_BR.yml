@@ -1257,13 +1257,6 @@ document:
         connection_not_found: Conexão não encontrada ou inativa
         catalog_unsupported: A conexão não oferece suporte a catálogo de métricas
   code:
-    completion_kind:
-      table: "tabela"
-      view: "view"
-      schema: "esquema"
-      column: "coluna"
-      alias: "alias"
-      keyword: "palavra-chave"
     gutter:
       run_statement: Executar esta instrução
     history:
@@ -1282,12 +1275,12 @@ document:
       refresh: Atualizar
       cancel: Cancelar
       run: Executar
-      last_run: "última execução %{seconds} s"
       read_only: Somente leitura
       saved: Salvo
       save: Salvar
-      formatter_unavailable: Formatador indisponível
       format: Formatar
+      formatter_unavailable: Formatador indisponível
+      go_to_query_error: Ir para o erro da consulta
       query_history: Histórico de consultas
       explain_query: Explicar consulta
       open_in_chart: Abrir a consulta atual em um documento de gráfico
@@ -1302,6 +1295,16 @@ document:
       show_results: "Mostrar resultados"
       results_right: "Mostrar os resultados à direita"
       results_bottom: "Mostrar os resultados abaixo"
+    completion_kind:
+      table: "tabela"
+      view: "visão"
+      schema: "esquema"
+      column: "coluna"
+      alias: "alias"
+      keyword: "palavra-chave"
+      cte: "cte"
+    layout:
+      split_save_failed: "Não foi possível salvar a divisão entre o editor e os resultados: %{error}"
     vim:
       normal: "NORMAL"
       insert: "INSERT"
@@ -1368,6 +1371,9 @@ document:
         script:
           title: Script perigoso
           body: Este script contém instruções potencialmente destrutivas
+        admin_script:
+          title: Script de administração
+          body: Este script contém comandos de administração e requer confirmação de administrador
         mongo_delete_many:
           title: deleteMany com filtro vazio
           body: deleteMany com filtro vazio excluirá todos os documentos
@@ -1440,6 +1446,7 @@ document:
       task:
         run_script: "Executar script %{name}"
       copy_error: Copiar erro
+      go_to_error: Ir para o erro
       result_tab_title: "Resultado %{index}"
       count_rows_failed: Não foi possível contar as linhas da consulta
       next_rows_failed: "Não foi possível carregar mais linhas da consulta"
@@ -1626,6 +1633,13 @@ document:
         edit_in_modal: Editar em janela…
         set_default: Definir como padrão
         set_null: Definir como NULL
+        set_value: "Definir valor"
+        set_expression: "Definir como expressão…"
+        set_value_column_default: "Padrão da coluna"
+        set_value_type_values: "Valores do tipo · %{type}"
+        set_value_expression: "Expressão…"
+        set_value_null: "NULL"
+        set_value_no_default: "%{column} não tem valor padrão. Adicione um no design da tabela ou escolha um valor do tipo."
         add_row: Adicionar linha
         inspect_row: Inspecionar linha
         find_similar_rows: Encontrar linhas semelhantes
@@ -1647,6 +1661,10 @@ document:
           many: "%{count} linhas serão excluídas permanentemente. Isso não pode ser desfeito."
         cancel: Cancelar
         delete: Excluir
+      expression_confirm:
+        list: "Expressões escritas como SQL:"
+        cancel: "Cancelar"
+        confirm: "Salvar com expressões"
       filter:
         title: Filtrar
         cell_value: Valor da célula
@@ -1732,6 +1750,8 @@ document:
           insert_failed: "Falha ao inserir o documento: %{error}"
           update_failed: "Falha ao atualizar o documento: %{error}"
     grid:
+      expression:
+        placeholder: Expressão SQL
       edit_bar:
         clean: Nenhuma alteração não salva
         dirty:
@@ -1836,6 +1856,7 @@ document:
         invalid_json_filter: Filtro JSON inválido
         chart_save_failed: 'Falha ao salvar o gráfico "%{name}": %{error}'
         pk_details_fetch_failed: "Falha ao buscar os detalhes da tabela para a PK: %{error}"
+        edit_guard_check_failed: "Não foi possível verificar a chave primária da tabela, então nada foi enviado: %{error}"
         query_failed: "Falha na consulta: %{error}"
         chart_save_no_profile_binding: "Não é possível salvar o gráfico: a consulta não tem vínculo com um perfil"
       placeholder:
@@ -1914,7 +1935,6 @@ document:
         insert_document: Inserir documento
         insert_row: Inserir linha
         delete_document: Excluir documento
-        delete_row: Excluir linha
         visual_mutation_chunked: "Alteração visual (em blocos)"
         visual_mutation_direct: "Alteração visual (direta)"
         visual_mutation_single_transaction: "Alteração visual (transação única)"
@@ -1923,6 +1943,7 @@ document:
         update_document_failed: "Falha ao atualizar o documento: %{error}"
         save_row_unsupported_pk: "Não é possível salvar a linha: a chave primária usa um tipo de valor não compatível"
         save_row_identity_failed: "Não é possível salvar a linha: falha ao montar a identidade da linha a partir das colunas da chave primária"
+        staged_row_left_grid: "Uma linha com edições pendentes não está mais na grade, então o lote parou aí."
         save_row_unsupported_values: "Não é possível salvar a linha: valores não compatíveis são somente leitura"
         save_failed: "Falha ao salvar: %{error}"
         save_document_unsupported_id: "Não é possível salvar o documento: ele tem um valor de _id não compatível"
@@ -2511,12 +2532,15 @@ document:
       truncate_unavailable: "Esta conexão não consegue truncar tabelas, então Truncate não aparece. Escolha Recreate para substituir a tabela."
     pick_file:
       description: "Ou importe um único arquivo em uma tabela: CSV, JSON, JSON Lines, XML ou uma planilha."
+      description_sql: "Ou importe um único arquivo em uma tabela: CSV, JSON, JSON Lines, XML ou uma planilha. Um arquivo .sql é executado como script em uma conexão SQL."
       choose_file: "Escolher arquivo…"
       reading_file: "Lendo arquivo…"
       dialog_title: "Escolher arquivo para importar"
       filter_label: "CSV, JSON, JSON Lines, XML e planilhas"
+      filter_label_sql: "CSV, JSON, JSON Lines, XML, planilhas e SQL"
       error:
         unsupported: "Somente arquivos .csv, .json, .jsonl, .xml, .xlsx, .xlsm, .xls e .ods podem ser importados."
+        unsupported_sql: "Somente arquivos .csv, .json, .jsonl, .xml, .xlsx, .xlsm, .xls, .ods e .sql podem ser importados."
         invalid_file: "Não foi possível ler o arquivo: %{error}"
         unsupported_next: "Escolha um arquivo com uma dessas extensões."
         lookup_failed: "Não foi possível consultar a tabela de destino: %{error}"
@@ -2560,6 +2584,170 @@ document:
         next_single: "Exporte-a como CSV no aplicativo de planilhas (Salvar como → CSV) e importe o CSV."
       list_and: "%{head} e %{last}"
       list_more: "%{list} e mais %{count}"
+    script:
+      title: "Executar script SQL"
+      task: "Executar script SQL"
+      thousands_separator: "."
+      classification:
+        metadata: "Metadados"
+        read: "Leitura"
+        write: "Escrita"
+        destructive: "Destrutiva"
+        admin: "Admin"
+        admin_safe: "Admin (segura)"
+        admin_destructive: "Admin (destrutiva)"
+      error:
+        unreadable: "Não foi possível ler o arquivo: %{path}: %{message}"
+        unreadable_next: "Verifique se você pode ler o arquivo ou escolha outro."
+        not_utf8: "Não foi possível ler o script: ele não é UTF-8 válido (byte inválido na posição %{position}). Scripts SQL são lidos como UTF-8 e não têm opção de codificação."
+        not_utf8_next: "Salve o arquivo como UTF-8 no seu editor e escolha-o novamente."
+        too_large: "Este script tem %{size}, acima do limite de %{limit} para executar um script aqui."
+        too_large_next: "Execute-o com o cliente de linha de comando do próprio banco de dados. Dividi-lo em arquivos menores também funciona, mas cada arquivo é executado por conta própria: um arquivo posterior que falhe não pode desfazer um anterior."
+        empty: "O script não tem instruções: o arquivo está vazio ou contém apenas comentários."
+        empty_next: "Escolha um arquivo que tenha pelo menos uma instrução."
+        not_sql: "Não é possível executar um script SQL nesta conexão: ela usa a linguagem de consulta %{language}, não SQL."
+        not_sql_next: "Conecte-se a uma conexão SQL e abra a importação lá, ou escolha um arquivo CSV, JSON ou JSON Lines para importar dados nesta conexão."
+        other_next: "Verifique o script e as opções e tente novamente."
+        interrupt_failed: "Não foi possível parar a instrução em andamento: %{error}. Ela terminará antes de a execução parar."
+        session_open_failed: "Não foi possível abrir uma sessão separada para o script, então nada foi executado: %{error}"
+        session_cleanup_failed: "A sessão separada do script não pôde ser liberada corretamente: %{error}"
+        conditional_transaction: "Este script tem um comentário condicional por versão (linha %{line}) que controla transações, e se ele é executado depende do servidor."
+        conditional_transaction_next: "Execute o script com o cliente de linha de comando do próprio banco de dados."
+        session_commit: "Este script %{change} na linha %{line} (%{statement}), o que deixaria esta conexão em modo de confirmação manual após a execução."
+        session_commit_next: "Remova essa instrução, ou execute o script com o cliente de linha de comando do próprio banco de dados."
+        session_change_autocommit: "desativa o autocommit"
+        session_change_implicit: "ativa as transações implícitas"
+        client_directive: "Este script usa o comando de cliente %{directive} (linha %{line}), que só um cliente de linha de comando de banco de dados entende."
+        client_directive_next: "Execute o script com o cliente de linha de comando do próprio banco de dados, ou remova as linhas %{directive} e termine cada instrução com ponto e vírgula."
+        split_routine: "Este script tem um corpo de rotina que começa na linha %{line} e cujas instruções terminam com \";\", então ele não pode ser dividido em instruções aqui."
+        split_routine_next: "Execute o script com o cliente de linha de comando do próprio banco de dados."
+        copy_stdin: "Este script tem um bloco de dados COPY … FROM stdin (linha %{line}), que só o cliente de linha de comando psql consegue carregar."
+        copy_stdin_next: "Execute-o com o psql."
+        psql_meta: "Este script usa o comando do psql %{command} (linha %{line}), que só o cliente de linha de comando psql entende."
+        psql_meta_next: "Execute o script com o psql: removê-lo executaria as instruções restantes nesta conexão, que pode não ser o banco de dados que ele seleciona."
+        self_managed: "Este script gerencia suas próprias transações (%{keyword} na linha %{line}), então não pode ser executado em uma única transação."
+        self_managed_next: "Desative “Executar em uma única transação”; as próprias instruções do script decidem então o que é salvo."
+        read_only:
+          one: "Esta conexão é somente leitura, e %{count} instrução do script altera dados, estrutura ou permissões."
+          many: "Esta conexão é somente leitura, e %{count} instruções do script alteram dados, estrutura ou permissões."
+        read_only_next: "Abra uma conexão de leitura e escrita para executá-lo. Um script que apenas lê pode ser executado aqui."
+      configure:
+        file: "Arquivo: %{file} (script SQL)"
+        script_label: "Script"
+        script_summary:
+          one: "%{count} instrução, %{size}"
+          many: "%{count} instruções, %{size}"
+        preview_label: "Pré-visualização"
+        preview_more:
+          one: "e mais %{count} instrução"
+          many: "e mais %{count} instruções"
+        preview_hint: "A etiqueta é a classificação que o editor usa. DELETE e UPDATE sem WHERE estão marcados."
+        preview_sequence_hint: "Instruções que alteram uma sequência (setval, nextval, ALTER SEQUENCE) contam como Escrita, então uma conexão somente leitura as recusa."
+        no_where: "Sem WHERE"
+        on_error_label: "Em caso de erro"
+        on_error_stop: "Parar no primeiro erro"
+        on_error_continue: "Continuar após erros"
+        on_error_stop_hint: "A execução para na primeira instrução que falha. As instruções seguintes não são executadas."
+        on_error_continue_hint: "Todas as instruções são executadas. As que falham são listadas no final e as outras são mantidas."
+        transaction_label: "Transação"
+        transaction_checkbox: "Executar em uma única transação"
+        transaction_hint: "Se uma instrução falhar, as alterações feitas na transação são desfeitas. Nada é salvo até que a última instrução tenha sucesso. Alterações de sequências (setval, nextval) não são desfeitas por um rollback."
+        transaction_unchecked_hint: "Cada instrução é executada por conta própria e salva ao ser executada, então uma falha mantém as instruções que já foram executadas."
+        transaction_off_continue: "Desativada porque uma instrução com falha aborta a transação nesta conexão, então a execução não poderia continuar depois dela. Escolha “Parar no primeiro erro” para executar em uma única transação."
+        transaction_unavailable: "Uma única transação não está disponível: esta conexão não oferece suporte a transações. Cada instrução é executada por conta própria e salva ao ser executada, então uma falha mantém as instruções que já foram executadas."
+        transaction_self_managed_commit: "Desativada porque este script gerencia suas próprias transações (%{keyword} na linha %{line}). Ele é executado como está: cada %{keyword} nele salva as alterações anteriores."
+        transaction_self_managed: "Desativada porque este script gerencia suas próprias transações (%{keyword} na linha %{line}). Ele é executado como está: suas próprias instruções de transação decidem o que é salvo."
+        ddl_commits: "CREATE, ALTER e DROP são salvos ao serem executados nesta conexão e também salvam todas as instruções anteriores. Um rollback só desfaz as alterações feitas depois da última dessas instruções."
+      footer:
+        read_only: "Continuar está desativado: a conexão é somente leitura."
+        running_transaction: "Cancelar execução para após a instrução em andamento. As alterações transacionais são desfeitas; as alterações de sequências (setval, nextval) não."
+        running_kept: "Cancelar execução para após a instrução em andamento. As instruções já executadas são mantidas."
+        cancelling_transaction: "Aguardando a instrução em andamento parar. Depois a transação é desfeita."
+        cancelling_kept: "Aguardando a instrução em andamento parar. As instruções já executadas são mantidas."
+      confirm:
+        destructive_lead:
+          one: "Este script tem %{count} instrução destrutiva de %{total}:"
+          many: "Este script tem %{count} instruções destrutivas de %{total}:"
+        plain_lead:
+          one: "Este script tem %{count} instrução, nenhuma destrutiva. Ele será executado nesta conexão:"
+          many: "Este script tem %{count} instruções, nenhuma destrutiva. Ele será executado nesta conexão:"
+        warning: "Instruções destrutivas não podem ser desfeitas depois que o script termina. Confirme para continuar."
+        danger_line: "%{count} × %{message}"
+        first_label: "Primeiras %{shown} de %{total}"
+        first_line: "#%{index} %{snippet}"
+        how_transaction: "Ele é executado em uma única transação e para no primeiro erro."
+        how_each_stop: "Cada instrução é salva ao ser executada, e a execução para no primeiro erro."
+        how_each_continue: "Cada instrução é salva ao ser executada, e a execução continua após erros."
+        how_self_stop: "Ele é executado como está: as próprias instruções de transação do script decidem o que é salvo, e a execução para no primeiro erro."
+        how_self_continue: "Ele é executado como está: as próprias instruções de transação do script decidem o que é salvo, e a execução continua após erros."
+        run: "Executar script"
+        proceed: "Sim, executar script"
+      running:
+        title: "Executando a instrução %{index} de %{total}"
+        current: "Instrução atual"
+        starting: "Iniciando…"
+        transaction_line: "Uma única transação: nada é salvo até que a última instrução tenha sucesso."
+        no_transaction_line: "Sem transação: cada instrução é salva ao ser executada."
+        cancel: "Cancelar execução"
+        cancelling: "Cancelando…"
+      toast:
+        completed: "Script concluído"
+      done:
+        finished:
+          one: "Script concluído: %{count} instrução executada em %{elapsed}"
+          many: "Script concluído: %{count} instruções executadas em %{elapsed}"
+        committed: "Confirmado: as alterações estão salvas."
+        saved_as_run: "Cada instrução foi salva ao ser executada."
+        with_errors: "Script concluído com erros: %{ran} de %{total} instruções executadas, %{failed} falharam"
+        with_errors_next: "As instruções executadas foram mantidas; as %{failed} que falharam foram ignoradas. Revise as instruções com falha e as seguintes que dependem delas, concilie a execução parcial e mantenha ou restaure as configurações de sessão de que o script precisa (por exemplo SET search_path ou SET NAMES) antes de executar novamente as instruções corrigidas: uma instrução posterior pode ter sido executada sobre dados que uma com falha deveria ter alterado."
+        failure_label: "#%{index} · linha %{line}"
+        cancelled: "Script cancelado após %{ran} de %{total} instruções"
+        rolled_back_cancelled: "Desfeito: as alterações transacionais foram revertidas, então nada foi salvo. Alterações de sequências (setval, nextval) não são desfeitas por um rollback."
+        cancelled_rolled_back_next: "Escolha o arquivo e execute-o novamente quando quiser."
+        nothing_ran: "Nenhuma instrução foi executada, então nada mudou."
+        cancelled_kept:
+          one: "%{count} instrução foi executada e mantida: foi salva ao ser executada."
+          many: "%{count} instruções foram executadas e mantidas: cada uma foi salva ao ser executada."
+        cancelled_kept_next: "Apague-as do arquivo antes de executá-lo novamente, ou elas serão executadas duas vezes. Mantenha ou restaure as configurações de sessão de que o script precisa (por exemplo SET search_path ou SET NAMES) para o restante."
+        stopped: "Script parado na instrução %{index} de %{total}"
+        failed_statement: "Instrução com falha · linha %{line}"
+        database_error: "Erro do banco de dados: %{error}"
+        rolled_back_before:
+          one: "Desfeito: as alterações transacionais da %{count} instrução anterior foram revertidas. Alterações de sequências (setval, nextval) não são desfeitas por um rollback."
+          many: "Desfeito: as alterações transacionais das %{count} instruções anteriores foram revertidas. Alterações de sequências (setval, nextval) não são desfeitas por um rollback."
+        rolled_back_first: "Desfeito: nada foi salvo. Alterações de sequências (setval, nextval) não são desfeitas por um rollback."
+        rolled_back_nothing_saved: "Desfeito: nada foi salvo."
+        stopped_rolled_back_next: "Corrija essa instrução no arquivo, depois escolha o arquivo e execute-o novamente."
+        kept_before:
+          one: "A %{count} instrução anterior foi executada e mantida."
+          many: "As %{count} instruções anteriores foram executadas e mantidas."
+        nothing_before_it: "Nenhuma instrução foi executada antes dela."
+        not_run_range: "As instruções %{from} a %{total} não foram executadas."
+        not_run_single: "A instrução %{index} não foi executada."
+        stopped_kept_next: "Corrija a instrução %{index} e concilie as alterações que as primeiras %{before} instruções já fizeram. Antes de executar o restante, mantenha ou restaure as configurações de sessão de que o script precisa (por exemplo SET search_path ou SET NAMES) e execute apenas as instruções restantes, ou elas serão executadas duas vezes."
+        use_transaction_next: "Ative “Executar em uma única transação” da próxima vez para evitar uma execução parcial."
+        fix_first_next: "Corrija a instrução %{index} e execute o script novamente."
+        commit_failed: "Script parado: não foi possível confirmar a transação"
+        commit_failed_next: "Verifique a conexão, depois escolha o arquivo e execute-o novamente."
+        unresolved: "O script terminou sem um resultado claro"
+        unresolved_message: "Não foi possível encerrar a transação: %{error}"
+        unresolved_next: "Verifique o estado do banco de dados antes de executar qualquer outra coisa: a transação pode continuar aberta, ou parte do script pode estar salva. Feche a conexão para encerrar uma transação aberta."
+        ddl_not_undone: "CREATE, ALTER e DROP são salvos ao serem executados nesta conexão, então um rollback não os desfez."
+        not_run: "O script não foi executado"
+        not_run_next: "Nada foi executado. Corrija a causa indicada acima e execute o script novamente."
+        partially_kept: "Salvo em parte: tudo até a instrução %{index} (linha %{line}) foi salvo, porque ela confirma por conta própria nesta conexão, e as instruções seguintes também podem ter sido salvas."
+        partially_kept_no_line: "Salvo em parte: tudo até a instrução %{index} foi salvo, porque ela confirma por conta própria nesta conexão, e as instruções seguintes também podem ter sido salvas."
+        partially_kept_next: "Verifique o banco de dados e concilie o que foi salvo antes de executar o script novamente, ou as instruções salvas serão executadas duas vezes."
+        script_rolled_back: "As instruções que o script executou fora de suas próprias transações foram salvas ao serem executadas. A transação aberta do script foi desfeita, então o que ela havia alterado ali não foi salvo. Alterações de sequências (setval, nextval) não são desfeitas por um rollback."
+        stopped_own_transaction_next: "Corrija a instrução %{index}, verifique no banco de dados quais das anteriores foram salvas e concilie as alterações. Mantenha ou restaure as configurações de sessão de que o script precisa (por exemplo SET search_path ou SET NAMES) e execute apenas o que falta, ou as instruções salvas serão executadas duas vezes."
+        cancelled_own_transaction_next: "Verifique no banco de dados quais instruções foram salvas e concilie as alterações antes de executar o script novamente, ou as instruções salvas serão executadas duas vezes."
+        possibly_open_rolled_back: "O script usou SAVEPOINT fora de uma transação, então o DBFlux emitiu um ROLLBACK caso uma tivesse ficado aberta. As alterações que o banco de dados já havia confirmado permanecem."
+        ended_without_commit: "O script terminou sem COMMIT, então sua transação aberta foi desfeita."
+        ended_without_commit_next: "Adicione um COMMIT no final do script para salvar suas alterações."
+        ended_without_commit_next_or: "Adicione um COMMIT no final do script para salvar suas alterações, ou ative “Executar em uma única transação”."
+        left_open: "O script terminou com uma transação aberta"
+        left_open_message: "Não foi possível desfazer a transação do script: %{error}"
+        left_open_next: "Uma transação ainda pode estar aberta nesta conexão. Desconecte e reconecte para encerrá-la e verifique o estado do banco de dados antes de executar qualquer outra coisa."
     mapping_mode:
       create: Criar
       existing: Existente (somente inserir)
@@ -4206,8 +4394,6 @@ modals:
     cancel: Cancelar
     confirm: Renomear
   schema_drift:
-    lead: "%{table} difere do schema em cache."
-    title: O schema mudou desde que esta aba foi aberta
     column_header: Coluna
     local_header: Em cache
     remote_header: Agora
@@ -4226,10 +4412,13 @@ modals:
       primary_key: (chave primária)
       foreign_keys: (chaves estrangeiras)
       nullable: anulável
-    continue_stale: Continuar com o schema desatualizado
     cancel: Cancelar
-    refreshing: Atualizando…
-    refresh: Atualizar e executar novamente
+    edit:
+      title: "A tabela mudou desde que foi carregada"
+      pk_lead: "A chave primária de %{table} não é mais a que esta grade usa para salvar, então nada foi enviado."
+      gone_lead: "%{table} não existe mais, então nada foi enviado."
+      discard_note: "Recarregar a tabela descarta suas edições pendentes, porque as identidades das linhas foram tomadas com a chave antiga. Cancelar as mantém pendentes e não salvas."
+      reload: "Recarregar tabela"
   tunnel_auth:
     hide_passphrase: "Ocultar senha"
     show_passphrase: "Mostrar senha"
@@ -4319,6 +4508,8 @@ palette:
       name: Alternar comentário de linha
     format_query:
       name: Formatar consulta
+    go_to_query_error:
+      name: Ir para o erro da consulta
     open_history:
       name: Abrir histórico de consultas
     cancel_query:
@@ -4502,7 +4693,14 @@ settings:
       title: Geral
       subtitle: "Editor, inicialização, atualização e a rede de segurança para instruções perigosas."
     appearance:
-      group: Aparência
+      subtitle: "Tema, cor de destaque, densidade, idioma, fontes e barras de rolagem."
+      accent:
+        label: "Cor de destaque"
+        dark: "Escuro"
+        light: "Claro"
+        reset: "Redefinir"
+        error: "Use uma cor como #RRGGBB."
+        help: "Botões primários, caixas marcadas, a barra de progresso, o cursor de texto, a seleção, o anel de foco e as linhas selecionadas. As cores de sintaxe mantêm as suas."
     startup:
       group: "Inicialização e sessão"
     refresh:
@@ -4786,6 +4984,7 @@ settings:
       open_folder: "Abrir pasta…"
       toggle_comment: Alternar comentário de linha
       format_query: Formatar consulta
+      go_to_query_error: Ir para o erro da consulta
       export_results: Exportar resultados
       clear_filter: Limpar filtro
       next_result_tab: Próxima aba de resultado
@@ -4809,6 +5008,8 @@ settings:
       toggle_row_inspector: Alternar inspetor de linha
       find_similar_rows: Encontrar linhas semelhantes
       results_set_null: Definir célula como NULL
+      results_set_default: "Definir a célula como o padrão da coluna"
+      results_toggle_expression: "Alternar editor literal / expressão"
       open_context_menu: Abrir menu de contexto
       open_pane_actions: Abrir ações do painel
       menu_up: Menu para cima
@@ -5539,7 +5740,7 @@ settings:
     search_placeholder: "Buscar configurações"
     general_group: Geral
     general: Geral
-    appearance: "Aparência"
+    appearance: Aparência
     keybindings: Atalhos de teclado
     updates: Atualizações
     audit: Auditoria

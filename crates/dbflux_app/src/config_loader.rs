@@ -148,13 +148,13 @@ fn save_general_settings_to(
         grid_font_size: f64::from(settings.grid_font_size),
         toast_auto_dismiss_secs: i64::from(settings.toast_auto_dismiss_secs),
         syntax_colors_json,
-        accent_color_dark: settings.accent_colors.dark.clone(),
-        accent_color_light: settings.accent_colors.light.clone(),
         blank_line_delimits_statements: i32::from(settings.blank_line_delimits_statements),
         grid_fk_labels: if settings.grid_fk_labels { 1 } else { 0 },
         scrollbar_visibility: scrollbar_visibility_to_storage(settings.scrollbar_visibility)
             .to_string(),
         workspace_inspector_width_px: settings.workspace_inspector_width_px.map(f64::from),
+        accent_dark: settings.accent_dark.map(dbflux_core::AccentColor::to_hex),
+        accent_light: settings.accent_light.map(dbflux_core::AccentColor::to_hex),
         updated_at: String::new(),
     };
     repo.upsert(&dto)?;
@@ -1198,13 +1198,11 @@ fn load_general_settings(
         toast_auto_dismiss_secs: u32::try_from(dto.toast_auto_dismiss_secs)
             .unwrap_or(GeneralSettings::DEFAULT_TOAST_AUTO_DISMISS_SECS),
         syntax_colors: syntax_colors_from_storage(&dto.syntax_colors_json),
-        accent_colors: dbflux_core::AccentColorOverrides {
-            dark: dto.accent_color_dark.clone(),
-            light: dto.accent_color_light.clone(),
-        },
         blank_line_delimits_statements: dto.blank_line_delimits_statements != 0,
         grid_fk_labels: dto.grid_fk_labels != 0,
         scrollbar_visibility: scrollbar_visibility_from_storage(&dto.scrollbar_visibility),
+        accent_dark: accent_from_storage(dto.accent_dark.as_deref()),
+        accent_light: accent_from_storage(dto.accent_light.as_deref()),
     }
 }
 
@@ -1219,6 +1217,13 @@ fn syntax_colors_from_storage(json: &str) -> dbflux_core::SyntaxColorOverrides {
         log::warn!("Ignoring stored syntax colors that do not parse: {error}");
         dbflux_core::SyntaxColorOverrides::default()
     })
+}
+
+/// Reads a stored accent. A value that is not `#RRGGBB` (written by hand or
+/// by another build) reads as no override, so the palette accent applies and
+/// the rest of the settings still load.
+fn accent_from_storage(stored: Option<&str>) -> Option<dbflux_core::AccentColor> {
+    stored.and_then(dbflux_core::AccentColor::parse)
 }
 
 /// Converts a stored inspector width to the `f32` the settings carry. A
@@ -2887,8 +2892,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -2896,6 +2899,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -2992,8 +2997,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -3001,6 +3004,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
         runtime
@@ -3144,6 +3149,8 @@ mod tests {
 
         let settings = GeneralSettings {
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             ..Default::default()
         };
         super::save_general_settings(&runtime, &settings).expect("clear inspector width");
@@ -3163,6 +3170,44 @@ mod tests {
             super::inspector_width_from_storage(Some(420.5)),
             Some(420.5)
         );
+    }
+
+    #[test]
+    fn accent_colors_round_trip_through_save_and_load_and_null_keeps_the_palette() {
+        use dbflux_core::AccentColor;
+
+        let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
+        let loaded = load_config(&runtime).expect("load default configuration");
+        assert_eq!(loaded.general_settings.accent_dark, None);
+        assert_eq!(loaded.general_settings.accent_light, None);
+
+        let settings = GeneralSettings {
+            accent_dark: Some(AccentColor::from_rgb(0x2F7D6D)),
+            ..Default::default()
+        };
+        super::save_general_settings(&runtime, &settings).expect("save accent");
+
+        let dto = runtime
+            .general_settings()
+            .get()
+            .expect("load saved dto")
+            .expect("general settings row");
+        assert_eq!(dto.accent_dark.as_deref(), Some("#2F7D6D"));
+        assert_eq!(dto.accent_light, None);
+
+        let loaded = load_config(&runtime).expect("load configuration");
+        assert_eq!(
+            loaded.general_settings.accent_dark,
+            Some(AccentColor::from_rgb(0x2F7D6D))
+        );
+        assert_eq!(loaded.general_settings.accent_light, None);
+
+        super::save_general_settings(&runtime, &GeneralSettings::default()).expect("reset accent");
+        let dto = runtime.general_settings().get().expect("dto").expect("row");
+        assert_eq!(dto.accent_dark, None, "reset stores NULL");
+
+        assert_eq!(super::accent_from_storage(Some("not a color")), None);
+        assert_eq!(super::accent_from_storage(None), None);
     }
 
     #[test]
@@ -3401,24 +3446,6 @@ mod tests {
     }
 
     #[test]
-    fn accent_colors_round_trip() {
-        let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
-
-        let loaded = load_config(&runtime).expect("load configuration");
-        assert!(loaded.general_settings.accent_colors.is_empty());
-
-        let mut settings = GeneralSettings::default();
-        settings.accent_colors.light = Some("#1F5FD1".to_string());
-        super::save_general_settings(&runtime, &settings).expect("save accent colors");
-
-        let loaded = load_config(&runtime).expect("load configuration");
-        assert_eq!(
-            loaded.general_settings.accent_colors,
-            settings.accent_colors
-        );
-    }
-
-    #[test]
     fn show_error_toasts_defaults_on_and_round_trips() {
         let runtime = StorageRuntime::in_memory().expect("in-memory storage runtime");
 
@@ -3526,8 +3553,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -3535,6 +3560,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
         runtime

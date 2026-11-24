@@ -295,7 +295,8 @@ crates/
         form_nav.rs         # FormGridNav<F> 通用二维网格导航
         form_section.rs     # 用于键盘导航的 FormSection trait
         section_trait.rs    # SettingsSection trait
-        general.rs          # 常规设置（主题、安全开关）
+        general.rs          # 常规设置（安全开关、启动、刷新）
+        appearance_section.rs # 外观页面（主题、密度、语言、字体）
         keybindings.rs      # 键盘快捷键设置节
         auth_profiles_section.rs # 依据提供程序表单定义动态增删改查认证配置文件
         proxies.rs          # 带 FormGridNav 的代理增删改查表单
@@ -764,7 +765,7 @@ DBFlux 把图表配置持久化为**已保存图表**，并把它们组合成**�
 
 ### 设置窗口
 
-- 设置划分为以下各节：常规、键盘快捷键、认证配置文件、代理、SSH 隧道、服务、Hooks、驱动程序、审计与关于。MCP 各节（受信客户端、角色、策略）在 `mcp` feature 下按 feature 门控。
+- 设置划分为以下各节：常规、外观、键盘快捷键、认证配置文件、代理、SSH 隧道、服务、Hooks、驱动程序、审计与关于。MCP 各节（受信客户端、角色、策略）在 `mcp` feature 下按 feature 门控。
 - 侧边栏使用 `TreeNav` 组件，带有可折叠的网络/连接类别。
 - `UiStateStore` 把侧边栏折叠状态持久化到 `~/.local/share/dbflux/dbflux.db` 中的 `st_ui_state` 表。
 - 认证配置文件一节由提供程序驱动（`DynAuthProvider::form_def`），并支持导入提供程序发现的配置（对 AWS 而言来自 `~/.aws/config`）。
@@ -908,7 +909,7 @@ DBFlux 把图表配置持久化为**已保存图表**，并把它们组合成**�
 - 隧道基础设施：`crates/dbflux_tunnel_core/` 提供 RAII `Tunnel`，带 `TunnelConnector` trait 与 `ForwardingConnection<R>` 双向转发器。
 - 代理隧道：`crates/dbflux_proxy/` 经由 `TunnelConnector` 实现 SOCKS5 与 HTTP CONNECT 代理隧道。
 - SSH 隧道：`crates/dbflux_ssh/src/lib.rs` 经由 `TunnelConnector` 实现 SSH 隧道，为保障 libssh2 安全，所有操作串行到单个线程上。
-- 导出：`crates/dbflux_export/` 提供基于形状的导出（CSV、JSON 美化/紧凑、文本、二进制/Hex/Base64）。可用格式由 `QueryResultShape` 决定，而不是由驱动程序决定。每种格式各有自己的模块（`binary.rs`、`csv.rs`、`json.rs`、`text.rs`）。文件对话框的可用性在运行时通过 `dbflux_ui_base/src/file_dialog.rs::is_native_file_dialog_available()` 探测（在 Linux 上：检查 `PATH` 中是否有 `xdg-desktop-portal`、`zenity`、`kdialog`）；若没有可用的后端，导出会回退到 `fallback_export_dir()`（`~/.local/share/dbflux/exports/`），并用 `unique_path_in()` 去重。此外还有一条剪贴板导出路径可作为替代目标。
+- 导出：`crates/dbflux_export/` 提供基于形状的导出（CSV、JSON 美化/紧凑、文本、二进制/Hex/Base64）。可用格式由 `QueryResultShape` 决定，而不是由驱动程序决定。每种格式各有自己的模块（`binary.rs`、`csv.rs`、`json.rs`、`text.rs`）。文件对话框的可用性在运行时通过 `dbflux_ui_base/src/file_dialog.rs::is_native_file_dialog_available()` 探测（在 Linux 上：仅当存在 `org.freedesktop.portal.Desktop` 的 D-Bus 会话服务文件且已安装的后端声明了 `org.freedesktop.impl.portal.FileChooser` 时才认为 XDG portal 可用，否则检查 `PATH` 中是否有 `zenity`、`kdialog`）；若没有可用的后端，导出会回退到 `fallback_export_dir()`（`~/.local/share/dbflux/exports/`），并用 `unique_path_in()` 去重。此外还有一条剪贴板导出路径可作为替代目标。
 - 测试支撑：`crates/dbflux_test_support/` 提供 Docker 容器管理与固件（Fixture），用于跨所有驱动程序的真实集成测试。DynamoDB Local 仅用于集成测试与本地验证；生产环境使用的是远端 AWS DynamoDB 端点。
 - 图标系统：`AppIcon` 枚举定义在 `crates/dbflux_components/src/icons/mod.rs`；内嵌的 SVG 字节与 `ALL_ICONS` 列表仍位于 `crates/dbflux_ui/src/ui/icons/mod.rs`（资源文件在 `crates/dbflux_ui/resources/` 下），通过 `assets.rs` 加载。
 - 平台检测：`crates/dbflux_ui_base/src/platform.rs` 用 `is_x11()`、主窗口的 `apply_main_window_options()`，以及次要窗口的 `floating_window_kind()` 与 `apply_window_options()` 处理 X11/Wayland 差异，以正确设置窗口最小尺寸提示。（`crates/dbflux_ui/src/platform.rs` 处留有垫片。）

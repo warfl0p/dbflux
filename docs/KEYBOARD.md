@@ -136,8 +136,9 @@ from the editor text, in every Vim mode and without Vim. `Ctrl+k` moves focus to
 the execution context bar, where `m` (or `Shift+F10`) opens it too. A script
 editor (Lua, Python, Bash) has no connection controls, so its context bar holds
 only an **Actions** button, which `Ctrl+k` focuses and `Enter`, `m` or a click
-presses. The menu lists Run (Cancel while a query runs), Run in new tab, Save, Format, Query
-history, Explain and Chart, each with its shortcut when it has one. Move with
+presses. The menu lists Run (Cancel while a query runs), Run in new tab, Save, Format, Go to
+query error (enabled while a failed query's error is marked), Query history,
+Explain and Chart, each with its shortcut when it has one. Move with
 `j` / `k` and choose with `Enter`, as in any [context menu](#context-menu);
 `Escape` closes it. While the query has results, the menu goes on with the
 results header: Refresh and the auto-refresh interval, Next and Previous result
@@ -638,6 +639,8 @@ edited.
 | `d d` / `Delete` | Delete the row |
 | `a a` / `Shift+a Shift+a` | Add / duplicate a row |
 | `Ctrl+n` | Set the cell to NULL |
+| `Ctrl+Shift+0` | Set the cell to its column default (stages the default expression) |
+| `Ctrl+Shift+I` | Flip the inline editor between literal and SQL expression, or open it as an expression |
 | `u` / `Ctrl+z` / `Cmd+z` | Undo |
 | `Ctrl+r` / `Ctrl+Shift+z` / `Cmd+Shift+z` | Redo |
 | `e` | Expand or collapse a nested column (document grids) |
@@ -843,6 +846,8 @@ On the configure step, a cursor walks the choices that take no focus of their ow
 | `l` / `h` (or `Right` / `Left`) | On the delimiter or encoding: pick the next / previous one and read the file again |
 | `Enter` | On the delimiter or encoding: pick the next one. On the Sheet, a mapping mode, target column or source column: open its dropdown, which then takes `j` / `k` and `Enter` as in [Dropdowns](#dropdowns) |
 | `Escape` | In the target table or NULL text field: leave the field and give the keys above back to the dialog. On an open dropdown: close only the dropdown and give the keys back to the dialog. Anywhere else: close the wizard |
+
+On the configure step of a SQL script, the cursor visits **On error** and **Run in one transaction**: `l` / `h` and `Enter` on **On error** pick the other choice, and `Enter` on the transaction checkbox toggles it (it is skipped while "Continue after errors" or a connection without transactions turns it off).
 
 While a text field or an open dropdown has focus, these keys (including `Enter`) act on that field, not on the cursor. They are listed under the Import Wizard context in Settings > Keybindings.
 

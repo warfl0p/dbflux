@@ -1,4 +1,5 @@
 mod about_section;
+mod appearance_section;
 mod audit_section;
 mod auth_profiles_section;
 mod drivers;
@@ -38,6 +39,7 @@ use about_section::AboutSection;
 use audit_section::AuditSection;
 use auth_profiles_section::AuthProfilesSection;
 use dbflux_components::components::tree_nav::TreeNav;
+use dbflux_components::modals::{ConfirmOutcome, ModalConfirm};
 use dbflux_ui_base::AppStateEntity;
 use drivers_section::DriversSection;
 use general_section::{GeneralPage, GeneralSection};
@@ -84,6 +86,9 @@ enum ActiveSettingsSection {
     AuthProfiles(Entity<AuthProfilesSection>),
     Drivers(Entity<DriversSection>),
     General(Entity<GeneralSection>),
+    /// The Appearance page shares the General page's entity type: both edit
+    /// the same stored general settings, each showing its own fields.
+    Appearance(Entity<GeneralSection>),
     Hooks(Entity<HooksSection>),
     Keybindings(Entity<KeybindingsSection>),
     #[cfg(feature = "mcp")]
@@ -122,7 +127,7 @@ impl ActiveSettingsSection {
             Self::Audit(section) => AnyView::from(section.clone()),
             Self::AuthProfiles(section) => AnyView::from(section.clone()),
             Self::Drivers(section) => AnyView::from(section.clone()),
-            Self::General(section) => AnyView::from(section.clone()),
+            Self::General(section) | Self::Appearance(section) => AnyView::from(section.clone()),
             Self::Hooks(section) => AnyView::from(section.clone()),
             Self::Keybindings(section) => AnyView::from(section.clone()),
             #[cfg(feature = "mcp")]
@@ -163,7 +168,7 @@ impl ActiveSettingsSection {
                     section.handle_key_event(event, window, cx)
                 });
             }
-            Self::General(section) => {
+            Self::General(section) | Self::Appearance(section) => {
                 section.update(cx, |section, cx| {
                     section.handle_key_event(event, window, cx)
                 });
@@ -221,7 +226,7 @@ impl ActiveSettingsSection {
             Self::Drivers(section) => {
                 section.update(cx, |section, cx| section.focus_in(window, cx));
             }
-            Self::General(section) => {
+            Self::General(section) | Self::Appearance(section) => {
                 section.update(cx, |section, cx| section.focus_in(window, cx));
             }
             Self::Hooks(section) => {
@@ -263,7 +268,7 @@ impl ActiveSettingsSection {
             Self::Drivers(section) => {
                 section.update(cx, |section, cx| section.focus_out(window, cx));
             }
-            Self::General(section) => {
+            Self::General(section) | Self::Appearance(section) => {
                 section.update(cx, |section, cx| section.focus_out(window, cx));
             }
             Self::Hooks(section) => {
@@ -297,7 +302,7 @@ impl ActiveSettingsSection {
             Self::Audit(section) => section.read(cx).is_dirty(cx),
             Self::AuthProfiles(section) => section.read(cx).is_dirty(cx),
             Self::Drivers(section) => section.read(cx).is_dirty(cx),
-            Self::General(section) => section.read(cx).is_dirty(cx),
+            Self::General(section) | Self::Appearance(section) => section.read(cx).is_dirty(cx),
             Self::Hooks(section) => section.read(cx).is_dirty(cx),
             Self::Keybindings(section) => section.read(cx).is_dirty(cx),
             #[cfg(feature = "mcp")]
@@ -329,7 +334,7 @@ impl ActiveSettingsSection {
             Self::Drivers(section) => {
                 section.update(cx, |section, cx| section.render_footer_actions(window, cx))
             }
-            Self::General(section) => {
+            Self::General(section) | Self::Appearance(section) => {
                 section.update(cx, |section, cx| section.render_footer_actions(window, cx))
             }
             Self::Hooks(section) => {
@@ -363,7 +368,9 @@ impl ActiveSettingsSection {
             Self::Audit(section) => section.read(cx).unsaved_change_count(cx),
             Self::AuthProfiles(section) => section.read(cx).unsaved_change_count(cx),
             Self::Drivers(section) => section.read(cx).unsaved_change_count(cx),
-            Self::General(section) => section.read(cx).unsaved_change_count(cx),
+            Self::General(section) | Self::Appearance(section) => {
+                section.read(cx).unsaved_change_count(cx)
+            }
             Self::Hooks(section) => section.read(cx).unsaved_change_count(cx),
             Self::Keybindings(section) => section.read(cx).unsaved_change_count(cx),
             #[cfg(feature = "mcp")]
@@ -395,9 +402,10 @@ impl ActiveSettingsSection {
             Self::Drivers(section) => section.update(cx, |section, cx| {
                 section.render_footer_leading_actions(window, cx)
             }),
-            Self::General(section) => section.update(cx, |section, cx| {
-                section.render_footer_leading_actions(window, cx)
-            }),
+            Self::General(section) | Self::Appearance(section) => section
+                .update(cx, |section, cx| {
+                    section.render_footer_leading_actions(window, cx)
+                }),
             Self::Hooks(section) => section.update(cx, |section, cx| {
                 section.render_footer_leading_actions(window, cx)
             }),
@@ -439,7 +447,7 @@ impl ActiveSettingsSection {
             Self::Drivers(section) => {
                 section.update(cx, |section, cx| section.save_from_shortcut(window, cx));
             }
-            Self::General(section) => {
+            Self::General(section) | Self::Appearance(section) => {
                 section.update(cx, |section, cx| section.save_from_shortcut(window, cx));
             }
             Self::Hooks(section) => {
@@ -479,6 +487,12 @@ pub struct SettingsCoordinator {
     active_section_entity: ActiveSettingsSection,
     active_section_view: AnyView,
     pending_section_confirm: Option<SettingsSectionId>,
+    /// Shared confirmation modal; currently hosts the section-switch discard
+    /// confirmation rendered by `render`.
+    section_confirm: Entity<ModalConfirm>,
+    /// Outcome of `section_confirm`, drained in `render` where a `Window` is
+    /// available (the subscription that records it has none).
+    pending_section_confirm_resolution: Option<ConfirmOutcome>,
     pending_focus_return: bool,
     sidebar_width: Pixels,
     /// Set once the user drags the navigation; until then its width follows

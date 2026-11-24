@@ -284,7 +284,7 @@ impl CodeDocument {
         // clearing it here would be too early. Closing an open menu must not be
         // skipped with it, so that half of the cursor move happens here, before
         // the edit; only the reopening stays suppressed.
-        self.editor.rewriting_buffer = true;
+        self.editor.programmatic_edit = true;
         self.editor.input_state.update(cx, |state, cx| {
             let scroll_offset = state.scroll_offset();
             let cursor = state.cursor_position();

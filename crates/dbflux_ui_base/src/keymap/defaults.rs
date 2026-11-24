@@ -494,7 +494,22 @@ fn editor_layer() -> KeymapLayer {
         KeyChord::new("/", Modifiers::primary()),
         Command::ToggleComment,
     );
-    layer.bind(format_query_chord(), Command::FormatQuery);
+
+    // Format: Ctrl+Shift+F as in most SQL clients. On macOS Cmd+Shift+F is
+    // the editor's Replace, so Format takes Cmd+Option+L (JetBrains' Reformat
+    // Code) instead.
+    #[cfg(target_os = "macos")]
+    let format_query = KeyChord::new(
+        "l",
+        Modifiers {
+            platform: true,
+            alt: true,
+            ..Modifiers::none()
+        },
+    );
+    #[cfg(not(target_os = "macos"))]
+    let format_query = KeyChord::new("f", Modifiers::ctrl_shift());
+    layer.bind(format_query, Command::FormatQuery);
 
     // The toolbar menu from the text itself: Shift+F10 types nothing, so it
     // is free in every Vim mode and without Vim.
@@ -504,26 +519,6 @@ fn editor_layer() -> KeymapLayer {
     );
 
     layer
-}
-
-/// Ctrl+Shift+F as in DBeaver. On macOS the editor binds Cmd+Shift+F to
-/// Replace, so Format takes Cmd+Option+L, DataGrip's Reformat Code.
-fn format_query_chord() -> KeyChord {
-    #[cfg(target_os = "macos")]
-    {
-        KeyChord::new(
-            "l",
-            Modifiers {
-                platform: true,
-                alt: true,
-                ..Modifiers::none()
-            },
-        )
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        KeyChord::new("f", Modifiers::ctrl_shift())
-    }
 }
 
 fn event_streams_picker_layer() -> KeymapLayer {
@@ -747,6 +742,10 @@ fn results_layer() -> KeymapLayer {
     layer.bind(
         KeyChord::new("s", Modifiers::shift()),
         Command::FindSimilarRows,
+    );
+    layer.bind(
+        KeyChord::new("0", Modifiers::ctrl_shift()),
+        Command::ResultsSetDefault,
     );
 
     // Copy selected cell(s) to clipboard — Cmd+C on macOS, Ctrl+C elsewhere.
@@ -1610,6 +1609,14 @@ fn data_table_layer() -> KeymapLayer {
         KeyChord::new("n", Modifiers::ctrl()),
         Command::ResultsSetNull,
     );
+    // The literal / expression editor toggle. Ctrl+E and Ctrl+Shift+E belong
+    // to the input component and the export menu, so it takes Ctrl+Shift+I.
+    // It also works inside the cell input, to flip an open editor.
+    layer.bind_with_predicate(
+        KeyChord::new("i", Modifiers::ctrl_shift()),
+        Command::ResultsToggleExpression,
+        "DataTable",
+    );
 
     // Undo / redo: the standard primary chords plus the vim-style `u` and
     // `ctrl-r`, kept literal as familiar editor aliases.
@@ -2313,8 +2320,9 @@ fn settings_layer() -> KeymapLayer {
     let section = "Settings && focus == section && !Input";
     let list_section = "Settings && focus == section && section != keybindings && !Input";
     let keybindings = "Settings && focus == section && section == keybindings && !Input";
-    // R and Shift+R reset key bindings, and on Appearance the syntax color of
-    // the row under the cursor and every syntax color of the variant shown.
+    // R and Shift+R reset key bindings, and on Appearance the accent color
+    // or the syntax color of the row under the cursor and every syntax color
+    // of the variant shown.
     let reset = "Settings && focus == section && (section == keybindings || section == appearance) && !Input";
 
     layer.bind_with_predicate(
@@ -2352,6 +2360,7 @@ fn settings_layer() -> KeymapLayer {
         Command::ResetAllBindings,
         reset,
     );
+
     layer.bind_with_predicate(
         KeyChord::new("p", Modifiers::none()),
         Command::EditBindingContext,

@@ -1,4 +1,5 @@
 use crate::ConnectionHook;
+use crate::config::accent_color::AccentColor;
 use crate::driver::form::FormValues;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -421,10 +422,6 @@ pub struct GeneralSettings {
     #[serde(default, skip_serializing_if = "SyntaxColorOverrides::is_empty")]
     pub syntax_colors: SyntaxColorOverrides,
 
-    /// Accent colors the user picked in place of the palette's, per palette
-    /// variant. A variant without one uses the palette's accent.
-    #[serde(default, skip_serializing_if = "AccentColorOverrides::is_empty")]
-    pub accent_colors: AccentColorOverrides,
     /// A blank line ends a SQL statement in the editor, as `;` does, so a
     /// statement left without its `;` above the cursor does not run into the
     /// one below. Off by default.
@@ -438,6 +435,16 @@ pub struct GeneralSettings {
     pub grid_fk_labels: bool,
 
     // -- Appearance --
+    /// The accent the user picked for the Dark palette. `None` keeps the
+    /// palette's own accent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accent_dark: Option<AccentColor>,
+
+    /// The accent the user picked for the Light palette. `None` keeps the
+    /// palette's own accent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accent_light: Option<AccentColor>,
+
     /// When scrollbars are shown in every window. While scrolling by default.
     #[serde(default)]
     pub scrollbar_visibility: ScrollbarVisibility,
@@ -608,6 +615,8 @@ impl Default for GeneralSettings {
             blank_line_delimits_statements: false,
             vim_leader: default_vim_leader(),
             grid_fk_labels: false,
+            accent_dark: None,
+            accent_light: None,
             scrollbar_visibility: ScrollbarVisibility::WhileScrolling,
             ui_font_family: None,
             ui_font_size: Self::DEFAULT_UI_FONT_SIZE,
@@ -616,7 +625,6 @@ impl Default for GeneralSettings {
             grid_font_family: None,
             grid_font_size: Self::DEFAULT_GRID_FONT_SIZE,
             syntax_colors: SyntaxColorOverrides::default(),
-            accent_colors: AccentColorOverrides::default(),
         }
     }
 }
@@ -689,37 +697,6 @@ impl SyntaxColorOverrides {
     }
 }
 
-/// Accent colors that replace the palette's, per palette variant, as
-/// `#RRGGBB` text.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AccentColorOverrides {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dark: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub light: Option<String>,
-}
-
-impl AccentColorOverrides {
-    pub fn is_empty(&self) -> bool {
-        self.dark.is_none() && self.light.is_none()
-    }
-
-    /// The accent of `variant`; `System` has none of its own.
-    pub fn for_variant(&self, variant: ThemeSetting) -> Option<&str> {
-        match variant {
-            ThemeSetting::Light => self.light.as_deref(),
-            ThemeSetting::Dark | ThemeSetting::System => self.dark.as_deref(),
-        }
-    }
-
-    pub fn for_variant_mut(&mut self, variant: ThemeSetting) -> &mut Option<String> {
-        match variant {
-            ThemeSetting::Light => &mut self.light,
-            ThemeSetting::Dark | ThemeSetting::System => &mut self.dark,
-        }
-    }
-}
-
 /// Parses `#RRGGBB` (the `#` is optional) into its 24-bit value.
 pub fn parse_hex_color(text: &str) -> Option<u32> {
     let digits = text.trim().strip_prefix('#').unwrap_or(text.trim());
@@ -751,6 +728,24 @@ mod font_settings_tests {
             super::ScrollbarVisibility::WhileScrolling
         );
         assert_eq!(legacy, settings);
+    }
+
+    #[test]
+    fn accent_overrides_default_to_the_palette_and_round_trip() {
+        let settings = GeneralSettings::default();
+        assert_eq!((settings.accent_dark, settings.accent_light), (None, None));
+
+        let custom = GeneralSettings {
+            accent_dark: Some(super::AccentColor::from_rgb(0x2F7D6D)),
+            ..GeneralSettings::default()
+        };
+        let json = serde_json::to_string(&custom).expect("serializes");
+        assert!(json.contains("\"accent_dark\":\"#2F7D6D\""), "{json}");
+        assert!(!json.contains("accent_light"), "{json}");
+        assert_eq!(
+            serde_json::from_str::<GeneralSettings>(&json).expect("round trips"),
+            custom
+        );
     }
 
     #[test]

@@ -66,14 +66,18 @@ fn general_theme(
     window: &mut VisualTestContext,
 ) -> ThemeSetting {
     window.update(|_, cx| match &settings.read(cx).active_section_entity {
-        ActiveSettingsSection::General(section) => section.read(cx).gen_settings.theme,
+        ActiveSettingsSection::General(section) | ActiveSettingsSection::Appearance(section) => {
+            section.read(cx).gen_settings.theme
+        }
         _ => unreachable!("the general section is open"),
     })
 }
 
 fn general_cursor(settings: &Entity<SettingsCoordinator>, window: &mut VisualTestContext) -> usize {
     window.update(|_, cx| match &settings.read(cx).active_section_entity {
-        ActiveSettingsSection::General(section) => section.read(cx).gen_form_cursor,
+        ActiveSettingsSection::General(section) | ActiveSettingsSection::Appearance(section) => {
+            section.read(cx).gen_form_cursor
+        }
         _ => unreachable!("the general section is open"),
     })
 }
@@ -96,10 +100,10 @@ fn ctrl_h_and_ctrl_l_move_between_navigation_and_section(cx: &mut TestAppContext
     );
 }
 
-/// The theme row of Appearance is a segmented field: Left and Right pick the
-/// choice next to the current one and stop at either end.
+/// The theme row is a segmented field: Left and Right pick the choice next
+/// to the current one and stop at either end.
 #[gpui::test]
-fn arrows_move_the_choice_of_a_segmented_general_row(cx: &mut TestAppContext) {
+fn arrows_move_the_choice_of_a_segmented_appearance_row(cx: &mut TestAppContext) {
     let (settings, window) = open_settings(cx, SettingsSectionId::Appearance);
     focus_content(&settings, window);
     assert_eq!(
@@ -110,8 +114,8 @@ fn arrows_move_the_choice_of_a_segmented_general_row(cx: &mut TestAppContext) {
 
     window.update(|_, cx| {
         let section = match &settings.read(cx).active_section_entity {
-            ActiveSettingsSection::General(section) => section.clone(),
-            _ => unreachable!("the general section is open"),
+            ActiveSettingsSection::Appearance(section) => section.clone(),
+            _ => unreachable!("the appearance section is open"),
         };
         section.update(cx, |section, _| {
             section.gen_settings.theme = ThemeSetting::Dark
@@ -723,6 +727,7 @@ fn every_settings_section_is_covered(cx: &mut TestAppContext) {
 
     let sections = [
         SettingsSectionId::General,
+        SettingsSectionId::Appearance,
         SettingsSectionId::Audit,
         SettingsSectionId::Keybindings,
         SettingsSectionId::Updates,
@@ -755,4 +760,110 @@ fn every_settings_section_is_covered(cx: &mut TestAppContext) {
             "{section:?}: {checked:?}"
         );
     }
+}
+
+/// The shared confirmation a section opens adds its buttons and the dialog
+/// close button to the settings window, and each answers a key.
+#[gpui::test]
+fn the_settings_confirmation_controls_are_covered(cx: &mut TestAppContext) {
+    use crate::keyboard_coverage::{SETTINGS, SETTINGS_CONFIRM};
+    use dbflux_components::modals::{ConfirmRequest, ModalVariant};
+    use dbflux_ui_base::keyboard_coverage::{Coverage, FrameCapture, MODAL_CHROME};
+
+    let (settings, window) = open_settings(cx, SettingsSectionId::General);
+    let capture = FrameCapture::observe(window);
+    window.update(|_, cx| {
+        settings.update(cx, |settings, cx| {
+            settings.section_confirm.update(cx, |confirm, cx| {
+                confirm.open(
+                    ConfirmRequest {
+                        title: "Discard changes".to_string(),
+                        body: "Discard the unsaved changes?".to_string(),
+                        variant: ModalVariant::Default,
+                        confirm_label: "Discard".to_string(),
+                    },
+                    cx,
+                )
+            })
+        })
+    });
+    window.update(|window, _| window.refresh());
+    window.run_until_parked();
+
+    let covered = Coverage::new(SETTINGS)
+        .with_surface(SETTINGS_CONFIRM)
+        .with_surface(MODAL_CHROME)
+        .assert_covered(&capture.frame(window));
+    assert!(
+        covered.iter().any(|id| id == "confirm-confirm"),
+        "{covered:?}"
+    );
+}
+
+/// `R` on an accent field of the Appearance page puts the palette accent
+/// back, through the keymap's own binding.
+#[gpui::test]
+fn r_resets_the_focused_accent_field(cx: &mut TestAppContext) {
+    let (settings, window) = open_settings(cx, SettingsSectionId::Appearance);
+    focus_content(&settings, window);
+
+    let section = window.update(|_, cx| match &settings.read(cx).active_section_entity {
+        ActiveSettingsSection::Appearance(section) => section.clone(),
+        _ => unreachable!("the appearance section is open"),
+    });
+    window.update(|window, cx| {
+        section.update(cx, |section, cx| {
+            section
+                .input_accent_dark
+                .update(cx, |input, cx| input.set_value("#2F7D6D", window, cx));
+        })
+    });
+
+    window.simulate_keystrokes("j");
+    assert_eq!(
+        general_cursor(&settings, window),
+        1,
+        "the cursor is on the dark accent"
+    );
+
+    window.simulate_keystrokes("r");
+
+    let text = window.update(|_, cx| {
+        section
+            .read(cx)
+            .input_accent_dark
+            .read(cx)
+            .value()
+            .to_string()
+    });
+    assert_eq!(text, "#7AA2F7", "R resets the focused field");
+}
+
+/// The enabled Reset buttons of a custom accent are covered.
+#[gpui::test]
+fn the_accent_reset_buttons_are_covered(cx: &mut TestAppContext) {
+    use crate::keyboard_coverage::SETTINGS;
+    use dbflux_ui_base::keyboard_coverage::{Coverage, FrameCapture};
+
+    let (settings, window) = open_settings(cx, SettingsSectionId::Appearance);
+    let capture = FrameCapture::observe(window);
+    let section = window.update(|_, cx| match &settings.read(cx).active_section_entity {
+        ActiveSettingsSection::Appearance(section) => section.clone(),
+        _ => unreachable!("the appearance section is open"),
+    });
+    window.update(|window, cx| {
+        section.update(cx, |section, cx| {
+            section
+                .input_accent_dark
+                .update(cx, |input, cx| input.set_value("#2F7D6D", window, cx));
+        })
+    });
+    window.update(|window, _| window.refresh());
+    window.run_until_parked();
+
+    let checked = Coverage::new(SETTINGS).assert_covered(&capture.frame(window));
+    assert!(
+        checked.iter().any(|id| id == "accent-reset-dark"),
+        "{checked:?}"
+    );
 }

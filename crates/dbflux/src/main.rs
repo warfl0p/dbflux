@@ -511,7 +511,6 @@ fn run_gui() {
         let font_settings =
             dbflux_ui_base::app_state_entity::resolve_font_settings(&general_settings, cx);
         dbflux_ui::theme::set_syntax_overrides(general_settings.syntax_colors.clone(), cx);
-        dbflux_ui::theme::set_accent_overrides(general_settings.accent_colors.clone(), cx);
         dbflux_ui::theme::init_with_settings(theme_setting, style_setting, font_settings, cx);
 
         let channel = dbflux_core::ReleaseChannel::current();
@@ -612,6 +611,8 @@ fn run_gui() {
                 workspace.clone(),
                 window.window_handle(),
                 auth_token,
+                #[cfg(feature = "telemetry")]
+                app_state.downgrade(),
                 cx,
             );
             info!("IPC server started");

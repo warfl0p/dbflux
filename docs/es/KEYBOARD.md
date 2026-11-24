@@ -142,8 +142,8 @@ del panel** desde el texto del editor, en cualquier modo de Vim y sin Vim.
 controles de conexión, así que su barra de contexto solo contiene un botón
 **Acciones**, que `Ctrl+k` enfoca y que se pulsa con `Enter`, `m` o un clic. El
 menú lista Ejecutar (Cancelar mientras corre una query), Ejecutar en
-una pestaña nueva, Guardar, Formatear, Historial de consultas, Explicar y
-Gráfico, cada una con su atajo cuando lo tiene. Muévete con `j` / `k` y elige con
+una pestaña nueva, Guardar, Formatear, Ir al error de la consulta (habilitado
+mientras hay un error marcado), Historial de consultas, Explicar y Gráfico, cada una con su atajo cuando lo tiene. Muévete con `j` / `k` y elige con
 `Enter`, como en cualquier [menú contextual](#menú-contextual); `Escape` lo
 cierra. Mientras la consulta tiene resultados, el menú sigue con la cabecera de
 resultados: Actualizar y el intervalo de actualización automática, Pestaña de
@@ -667,6 +667,8 @@ foco y no se está editando ninguna celda.
 | `d d` / `Delete` | Borrar la fila |
 | `a a` / `Shift+a Shift+a` | Agregar / duplicar una fila |
 | `Ctrl+n` | Poner la celda en NULL |
+| `Ctrl+Shift+0` | Poner la celda en el valor por defecto de la columna (prepara la expresión por defecto) |
+| `Ctrl+Shift+I` | Alternar el editor en línea entre literal y expresión SQL, o abrirlo como expresión |
 | `u` / `Ctrl+z` / `Cmd+z` | Deshacer |
 | `Ctrl+r` / `Ctrl+Shift+z` / `Cmd+Shift+z` | Rehacer |
 | `e` | Expandir o contraer una columna anidada (grillas de documentos) |
@@ -881,6 +883,8 @@ En el paso de configuración, un cursor recorre las opciones que no toman foco p
 | `l` / `h` (o `Right` / `Left`) | En el delimitador o la codificación: elegir el siguiente / anterior y leer el archivo de nuevo |
 | `Enter` | En el delimitador o la codificación: elegir el siguiente. En la Hoja, un modo de mapeo, columna de destino o columna de origen: abrir su desplegable, que entonces usa `j` / `k` y `Enter` como en [Desplegables](#desplegables) |
 | `Escape` | En el campo de la tabla de destino o del texto NULL: salir del campo y devolver al diálogo las teclas anteriores. En un desplegable abierto: cerrar solo el desplegable y devolver las teclas al diálogo. En cualquier otro sitio: cerrar el asistente |
+
+En el paso de configuración de un script SQL, el cursor visita **Ante un error** y **Ejecutar en una sola transacción**: `l` / `h` y `Enter` en **Ante un error** eligen la otra opción, y `Enter` en la casilla de la transacción la alterna (se omite mientras "Continuar tras los errores" o una conexión sin transacciones la desactivan).
 
 Mientras un campo de texto o un desplegable abierto tiene el foco, estas teclas (incluido `Enter`) actúan sobre ese campo, no sobre el cursor. Aparecen en el contexto Import Wizard de Settings > Keybindings.
 

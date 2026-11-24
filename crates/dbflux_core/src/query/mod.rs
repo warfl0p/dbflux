@@ -11,6 +11,7 @@ pub(crate) mod safety;
 pub(crate) mod script_operation;
 pub(crate) mod semantic;
 pub(crate) mod sql_context;
+pub(crate) mod sql_format;
 pub(crate) mod table_browser;
 pub(crate) mod time_macros;
 pub(crate) mod transfer;
@@ -43,8 +44,8 @@ pub use language_service::{
     DiagnosticSeverity, EditorDiagnostic, LanguageService, SchemaColumns, SqlLanguageService,
     TextPosition, TextPositionRange, TextRange, ValidationResult, aggregate_writes_output,
     classify_query_for_language, classify_query_for_language_with_service,
-    classify_visual_mutation, detect_dangerous_query, detect_dangerous_sql, format_sql,
-    sql_statement_keywords, strip_leading_comments,
+    classify_visual_mutation, detect_dangerous_query, detect_dangerous_sql, sql_statement_keywords,
+    strip_leading_comments,
 };
 pub use name_suggestion::{MAX_NAME_SUGGESTIONS, MAX_SUGGESTED_NAME_LENGTH, suggest_names};
 pub use relaxed_json::{normalize_relaxed_json, parse_relaxed_json};
@@ -66,6 +67,7 @@ pub use sql_context::{
     DerivedRelation, ScopeRelation, SqlClause, SqlCompletionContext, SqlContextEngine,
     SqlCursorAnalysis, StatementScope,
 };
+pub use sql_format::{SqlFormatDialect, format_sql, format_sql_text};
 pub use table_browser::{
     CollectionBrowseRequest, CollectionCountEstimate, CollectionCountRequest, CollectionRef,
     ColumnRef, DescribeRequest, ExplainRequest, OrderByColumn, Pagination, SortDirection,

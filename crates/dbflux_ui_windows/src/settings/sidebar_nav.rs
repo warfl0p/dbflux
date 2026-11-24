@@ -217,6 +217,10 @@ mod tests {
             Some(SettingsSectionId::General)
         );
         assert_eq!(
+            SettingsCoordinator::section_for_tree_id("appearance"),
+            Some(SettingsSectionId::Appearance)
+        );
+        assert_eq!(
             SettingsCoordinator::section_for_tree_id("audit"),
             Some(SettingsSectionId::Audit)
         );
@@ -309,6 +313,26 @@ mod tests {
     }
 
     #[test]
+    fn appearance_is_listed_right_after_general() {
+        let tree = SettingsCoordinator::build_sidebar_tree("");
+        let ids: Vec<&str> = tree.rows().iter().map(|row| row.id.as_ref()).collect();
+        let general = ids.iter().position(|id| *id == "general").expect("general");
+
+        assert_eq!(ids[general + 1], "appearance");
+    }
+
+    #[test]
+    fn searching_for_appearance_finds_the_page() {
+        let tree = SettingsCoordinator::build_sidebar_tree("appearance");
+
+        assert!(
+            tree.rows()
+                .iter()
+                .any(|row| row.id.as_ref() == "appearance")
+        );
+    }
+
+    #[test]
     fn search_is_case_insensitive_and_empty_query_keeps_everything() {
         let everything = SettingsCoordinator::build_sidebar_tree("");
         let upper = SettingsCoordinator::build_sidebar_tree("PROX");
@@ -338,6 +362,7 @@ mod tests {
     const NAV_CATALOG_KEYS: &[&str] = &[
         "settings.nav.general_group",
         "settings.nav.general",
+        "settings.nav.appearance",
         "settings.nav.keybindings",
         "settings.nav.updates",
         "settings.nav.audit",

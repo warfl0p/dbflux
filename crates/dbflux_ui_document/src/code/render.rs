@@ -19,29 +19,13 @@ use dbflux_ui_base::toast::{Toast, copy_action, now_hms};
 use gpui::KeyContext;
 use gpui_component::scroll::ScrollableElement;
 
-/// The Format button's label, which says why it is disabled.
-fn format_label(can_format: bool) -> SharedString {
+/// The Format button's label: what it does, or why it is disabled.
+fn format_label(can_format: bool) -> String {
     if can_format {
-        dbflux_i18n::t!("document.code.toolbar.format").into()
+        dbflux_i18n::t!("document.code.toolbar.format")
     } else {
-        dbflux_i18n::t!("document.code.toolbar.formatter_unavailable").into()
+        dbflux_i18n::t!("document.code.toolbar.formatter_unavailable")
     }
-}
-
-/// The editor's share of a two-panel split, from the measured panel sizes.
-pub(super) fn editor_share(sizes: &[Pixels]) -> Option<f32> {
-    let [editor, results] = sizes else {
-        return None;
-    };
-    let total = editor.as_f32() + results.as_f32();
-    (total > 0.0).then(|| editor.as_f32() / total)
-}
-
-/// Initial panel sizes for a split whose editor takes `editor_share`. The
-/// group scales them to its container, so only their ratio matters.
-fn split_sizes(editor_share: f32) -> (Pixels, Pixels) {
-    let total = 1000.0;
-    (px(total * editor_share), px(total * (1.0 - editor_share)))
 }
 
 impl CodeDocument {
@@ -109,7 +93,7 @@ impl CodeDocument {
             .icon(AppIcon::Save),
         );
 
-        let can_format = self.formatter(cx).is_some();
+        let can_format = self.can_format(cx);
         actions.push(
             PaneAction::command(
                 "format",
@@ -119,6 +103,17 @@ impl CodeDocument {
             )
             .icon(AppIcon::Zap)
             .enabled(can_format),
+        );
+
+        actions.push(
+            PaneAction::command(
+                "go-to-query-error",
+                dbflux_i18n::t!("document.code.toolbar.go_to_query_error"),
+                Command::GoToQueryError,
+                context,
+            )
+            .icon(AppIcon::CircleAlert)
+            .enabled(self.has_query_error()),
         );
 
         actions.push(
@@ -324,9 +319,8 @@ impl CodeDocument {
         let is_executing = self.state == DocumentState::Executing;
         let is_db_language = self.supports_connection_context();
         let history_open = self.history.history_panel.read(cx).is_visible();
+        let can_format = self.can_format(cx);
 
-        let run_enabled = true;
-        let can_format = self.formatter(cx).is_some();
         let (run_icon, run_label) = if is_executing {
             (AppIcon::X, dbflux_i18n::t!("document.code.toolbar.cancel"))
         } else {
@@ -364,7 +358,6 @@ impl CodeDocument {
                     } else {
                         ButtonVariant::Ghost
                     })
-                    .disabled(!run_enabled)
                     .on_click(cx.listener(move |this, _, window, cx| {
                         if this.state == DocumentState::Executing {
                             this.cancel_query(cx);
@@ -863,29 +856,6 @@ impl CodeDocument {
             )
     }
 
-    /// Saves the editor's share of the split once the user finishes dragging
-    /// its divider, so the next split for `position` opens the same way.
-    fn save_split_on_resize(
-        &self,
-        position: ResultsPosition,
-        cx: &mut Context<Self>,
-    ) -> impl Fn(&Entity<ResizableState>, &mut Window, &mut App) + 'static {
-        let document = cx.entity().downgrade();
-        move |state, _window, cx| {
-            let Some(share) = editor_share(state.read(cx).sizes()) else {
-                return;
-            };
-            if let Err(error) = document.update(cx, |document, cx| {
-                let app_state = document.app_state.clone();
-                document
-                    .editor_shares
-                    .set(position, share, app_state.read(cx));
-            }) {
-                log::warn!("Could not record the results split: {error}");
-            }
-        }
-    }
-
     fn render_collapsed_results_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
         let tab_count = self.result_tabs.result_tabs.len();
@@ -1075,7 +1045,9 @@ impl CodeDocument {
         let entity_confirm = cx.entity().clone();
 
         let pending = self.pending.dangerous_query.as_ref();
-        let suppress = pending.is_some_and(|pending| pending.suppress);
+        let suppressible = pending
+            .is_some_and(|pending| pending.kind != dbflux_core::DangerousQueryKind::AdminScript);
+        let suppress = suppressible && pending.is_some_and(|pending| pending.suppress);
         let query = pending.map(|pending| pending.query.clone());
 
         let (title, message) = pending
@@ -1100,22 +1072,24 @@ impl CodeDocument {
             .when_some(query, |body, query| {
                 body.child(modal_code(query.trim().to_string(), cx))
             })
-            .child(
-                Checkbox::new("dangerous-dont-ask-again")
-                    .checked(suppress)
-                    .label(dbflux_i18n::t!(
-                        "document.code.dangerous_query.dont_ask_again"
-                    ))
-                    .on_click(move |checked: &bool, _, cx| {
-                        let checked = *checked;
-                        entity_toggle.update(cx, |doc, cx| {
-                            if let Some(pending) = doc.pending.dangerous_query.as_mut() {
-                                pending.suppress = checked;
-                                cx.notify();
-                            }
-                        });
-                    }),
-            );
+            .when(suppressible, |body| {
+                body.child(
+                    Checkbox::new("dangerous-dont-ask-again")
+                        .checked(suppress)
+                        .label(dbflux_i18n::t!(
+                            "document.code.dangerous_query.dont_ask_again"
+                        ))
+                        .on_click(move |checked: &bool, _, cx| {
+                            let checked = *checked;
+                            entity_toggle.update(cx, |doc, cx| {
+                                if let Some(pending) = doc.pending.dangerous_query.as_mut() {
+                                    pending.suppress = checked;
+                                    cx.notify();
+                                }
+                            });
+                        }),
+                )
+            });
 
         let cancel_btn = Button::new(
             "dangerous-cancel-btn",
@@ -1180,6 +1154,8 @@ impl Render for CodeDocument {
         self.sync_statement_gutter_style(cx);
 
         self.process_pending_result(window, cx);
+
+        self.process_pending_go_to_query_error(window, cx);
 
         self.process_pending_set_query(window, cx);
 
@@ -1255,7 +1231,7 @@ impl Render for CodeDocument {
         if std::mem::take(&mut self.pending.chart_reexecute)
             && !self.result_tabs.result_tabs.is_empty()
         {
-            self.run_query(window, cx);
+            self.run_query_with_origin(ExecutionOrigin::Automatic, window, cx);
         }
 
         if let Some(error) = self.pending.error.take() {
@@ -1303,6 +1279,7 @@ impl Render for CodeDocument {
         let bg = cx.theme().background;
         let has_collapsed_results =
             self.layout == SqlQueryLayout::EditorOnly && !self.result_tabs.result_tabs.is_empty();
+        let results_split = super::results_split::current(&self.app_state, cx);
 
         div()
             .id(ElementId::Name(format!("sql-doc-{}", self.id.0).into()))
@@ -1325,12 +1302,12 @@ impl Render for CodeDocument {
                             if self.results_position == ResultsPosition::Right =>
                         {
                             let (editor_size, results_size) =
-                                split_sizes(self.editor_shares.get(ResultsPosition::Right));
+                                results_split.panel_weights(ResultsPosition::Right);
                             h_resizable(SharedString::from(format!(
                                 "sql-split-right-{}",
                                 self.id.0
                             )))
-                            .on_resize(self.save_split_on_resize(ResultsPosition::Right, cx))
+                            .on_resize(self.remember_split_on_resize(ResultsPosition::Right))
                             .child(
                                 resizable_panel()
                                     .size(editor_size)
@@ -1348,9 +1325,9 @@ impl Render for CodeDocument {
 
                         SqlQueryLayout::Split => {
                             let (editor_size, results_size) =
-                                split_sizes(self.editor_shares.get(ResultsPosition::Bottom));
+                                results_split.panel_weights(ResultsPosition::Bottom);
                             v_resizable(SharedString::from(format!("sql-split-{}", self.id.0)))
-                                .on_resize(self.save_split_on_resize(ResultsPosition::Bottom, cx))
+                                .on_resize(self.remember_split_on_resize(ResultsPosition::Bottom))
                                 .child(
                                     resizable_panel()
                                         .size(editor_size)

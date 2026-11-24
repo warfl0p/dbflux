@@ -207,11 +207,11 @@ fn test_editor_toggle_comment_binding() {
 }
 
 #[test]
-fn test_editor_format_query_binding() {
+fn format_query_is_bound_in_the_editor_without_taking_replace() {
     let keymap = default_keymap();
 
     #[cfg(target_os = "macos")]
-    let chord = KeyChord::new(
+    let format_chord = KeyChord::new(
         "l",
         Modifiers {
             platform: true,
@@ -220,11 +220,29 @@ fn test_editor_format_query_binding() {
         },
     );
     #[cfg(not(target_os = "macos"))]
-    let chord = KeyChord::new("f", Modifiers::ctrl_shift());
+    let format_chord = KeyChord::new("f", Modifiers::ctrl_shift());
 
     assert_eq!(
-        keymap.resolve(ContextId::Editor, &chord),
+        keymap.resolve(ContextId::Editor, &format_chord),
         Some(Command::FormatQuery)
+    );
+    // Outside the editor the chord keeps whatever it had: Format is an
+    // editor command.
+    assert_ne!(
+        keymap.resolve(ContextId::Sidebar, &format_chord),
+        Some(Command::FormatQuery)
+    );
+    // Cmd+Shift+F stays the editor's Replace on macOS.
+    assert_eq!(
+        keymap.resolve(
+            ContextId::Editor,
+            &KeyChord::new("f", Modifiers::primary_shift())
+        ),
+        if cfg!(target_os = "macos") {
+            None
+        } else {
+            Some(Command::FormatQuery)
+        }
     );
 }
 
@@ -851,7 +869,7 @@ fn roots_reported_for(context: ContextId) -> Vec<KeyContext> {
         return vec![root_key_context(WORKSPACE_KEY_CONTEXT, context, &[])];
     }
 
-    ["proxies", "keybindings"]
+    ["proxies", "keybindings", "appearance"]
         .into_iter()
         .map(|section| {
             root_key_context(
@@ -903,6 +921,34 @@ fn every_root_default_resolves_to_the_same_command_natively() {
                     .collect::<Vec<_>>()
             );
         }
+    }
+}
+
+/// `R` is the reset key of the Settings window: it reaches the key bindings
+/// editor and the Appearance page, and no other section.
+#[test]
+fn r_resets_only_in_the_keybindings_and_appearance_sections() {
+    let keymap = native_keymap();
+    let typed = gpui_keystrokes(&KeySequence::from(KeyChord::new("r", Modifiers::none())));
+
+    for (section, resets) in [
+        ("keybindings", true),
+        ("appearance", true),
+        ("proxies", false),
+        ("general", false),
+    ] {
+        let root = root_key_context(
+            WORKSPACE_KEY_CONTEXT,
+            ContextId::Settings,
+            &[
+                ("section".into(), section.into()),
+                ("focus".into(), "section".into()),
+            ],
+        );
+        let runs_reset = top_action(&keymap, &typed, std::slice::from_ref(&root))
+            .is_some_and(|action| runs_command(action.as_ref(), Command::ResetBinding));
+
+        assert_eq!(runs_reset, resets, "section {section}");
     }
 }
 
@@ -3154,4 +3200,19 @@ fn test_results_b_rolls_the_secret_back() {
         keymap.resolve(ContextId::Results, &KeyChord::new("b", Modifiers::none())),
         Some(Command::RollBackVersion)
     );
+}
+
+/// The literal / expression toggle must reach the grid while the cell input
+/// has focus, where the other grid chords are held back by `!Input`.
+#[test]
+fn the_expression_toggle_stays_active_inside_the_cell_input() {
+    let keymap = default_keymap();
+    let keys = KeySequence::from(KeyChord::new("i", Modifiers::ctrl_shift()));
+    let layer = keymap.layer(ContextId::DataTable).expect("grid layer");
+
+    assert_eq!(
+        layer.get_sequence(&keys),
+        Some(Command::ResultsToggleExpression)
+    );
+    assert_eq!(layer.predicate_for(&keys), "DataTable");
 }

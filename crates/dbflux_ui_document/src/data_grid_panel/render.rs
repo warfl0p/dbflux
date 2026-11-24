@@ -340,6 +340,12 @@ impl Render for DataGridPanel {
             .when(self.pending_delete_confirm.is_some(), |d| {
                 d.child(self.render_delete_confirm_modal(&st.theme, cx))
             })
+            .when(self.pending_expression_confirm.is_some(), |d| {
+                d.child(self.render_expression_confirm_modal(cx))
+            })
+            .when(self.edit_guard.modal.read(cx).is_visible(), |d| {
+                d.child(self.edit_guard.modal.clone())
+            })
             .when(self.document_view.cell_editor.read(cx).is_visible(), |d| {
                 d.child(self.document_view.cell_editor.clone())
             })
@@ -407,12 +413,19 @@ impl DataGridPanel {
         }
 
         if std::mem::take(&mut self.pending.refresh) {
+            #[cfg(feature = "telemetry")]
+            let usage = self.take_queued_builder_usage(cx);
             if std::mem::take(&mut self.pending.refresh_keeps_edits) {
                 self.refresh_keeping_edits(window, cx);
             } else if !self.rerun_nearest_neighbors(cx) {
                 // An auto-refresh tick over similar rows reads them again;
                 // every other source reads its page.
-                self.refresh(window, cx);
+                self.refresh_with_origin(
+                    window,
+                    cx,
+                    #[cfg(feature = "telemetry")]
+                    usage,
+                );
             }
         }
 

@@ -2,6 +2,7 @@ use super::data_grid_panel::{DataGridEvent, DataGridPanel};
 use super::handle::DocumentEvent;
 use super::task_runner::DocumentTaskRunner;
 use super::types::{DocumentId, DocumentState};
+use crate::completion_support::{apply_completion_menu_width, follow_ui_font_size};
 use crate::history_panel::{
     HistoryPanel, HistoryPanelCallbacks, HistoryPanelClosed, HistoryQuerySelected,
 };
@@ -69,9 +70,12 @@ mod execution_session;
 mod file_ops;
 mod file_persistence;
 mod focus;
+mod format;
 mod live_output;
 pub(crate) mod pane;
+mod query_error;
 mod render;
+mod results_split;
 pub(crate) mod schema_highlight;
 mod statements;
 mod vim;
@@ -82,7 +86,9 @@ pub(crate) use execution_session::ExecutionSessionBinding;
 use live_output::LiveOutputState;
 pub(crate) use vim::VimMode;
 
-pub(crate) use execution::evaluate_dangerous_with_effective_settings;
+pub(crate) use execution::{
+    confirmed_ceiling_for_dangerous, evaluate_dangerous_with_effective_settings,
+};
 
 /// A single result tab within the CodeDocument.
 ///
@@ -188,83 +194,6 @@ impl ResultsPosition {
             .set(RESULTS_POSITION_KEY, self.storage_value())
         {
             log::error!("Could not save the results position: {error}");
-        }
-    }
-}
-
-/// UI state keys holding the editor's share of the split for each results
-/// position, which every query tab opens with.
-const BOTTOM_SPLIT_KEY: &str = "query_results_split_bottom";
-const RIGHT_SPLIT_KEY: &str = "query_results_split_right";
-
-/// The editor's share of the split before the user drags the divider.
-const DEFAULT_EDITOR_SHARE: f32 = 0.5;
-
-/// The editor's share of the split, kept per results position because a
-/// comfortable split below the editor is rarely the same one beside it.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct EditorShares {
-    bottom: f32,
-    right: f32,
-}
-
-impl EditorShares {
-    fn load(app_state: &AppStateEntity) -> Self {
-        let load = |key: &str| match app_state.storage_runtime().ui_state().get(key) {
-            Ok(Some(value)) => value
-                .parse::<f32>()
-                .ok()
-                .filter(|share| Self::is_usable(*share))
-                .unwrap_or(DEFAULT_EDITOR_SHARE),
-            Ok(None) => DEFAULT_EDITOR_SHARE,
-            Err(error) => {
-                log::warn!("Could not read the saved results split: {error}");
-                DEFAULT_EDITOR_SHARE
-            }
-        };
-
-        Self {
-            bottom: load(BOTTOM_SPLIT_KEY),
-            right: load(RIGHT_SPLIT_KEY),
-        }
-    }
-
-    /// A share that leaves one side under a fifteenth of the other is not
-    /// restored, as in DBeaver, so a near-collapsed divider does not stick.
-    fn is_usable(share: f32) -> bool {
-        share.is_finite() && (1.0 / 16.0..=15.0 / 16.0).contains(&share)
-    }
-
-    pub(crate) fn get(self, position: ResultsPosition) -> f32 {
-        match position {
-            ResultsPosition::Bottom => self.bottom,
-            ResultsPosition::Right => self.right,
-        }
-    }
-
-    /// Records a share the user dragged to, and saves it for later tabs.
-    fn set(&mut self, position: ResultsPosition, share: f32, app_state: &AppStateEntity) {
-        if !Self::is_usable(share) || share == self.get(position) {
-            return;
-        }
-
-        let key = match position {
-            ResultsPosition::Bottom => {
-                self.bottom = share;
-                BOTTOM_SPLIT_KEY
-            }
-            ResultsPosition::Right => {
-                self.right = share;
-                RIGHT_SPLIT_KEY
-            }
-        };
-
-        if let Err(error) = app_state
-            .storage_runtime()
-            .ui_state()
-            .set(key, &share.to_string())
-        {
-            log::error!("Could not save the results split: {error}");
         }
     }
 }
@@ -489,10 +418,9 @@ pub(super) struct EditorState {
     pub(super) is_dirty: bool,
     /// Buffer length at the previous `Change` event, to detect deletions.
     pub(super) last_change_length: usize,
-    /// Set while `toggle_comment` or `format_query` rewrites the buffer, so
-    /// the Change handler skips the completion-menu plumbing meant for a
-    /// user's deletion.
-    pub(super) rewriting_buffer: bool,
+    /// Set while a command (comment toggle, Format) rewrites the buffer, so the Change handler
+    /// skips the completion-menu plumbing meant for a user's deletion.
+    pub(super) programmatic_edit: bool,
     /// Shared with the completion provider, which bumps it on every query.
     /// A deletion that did NOT bump it was ignored by the menu plumbing
     /// (cursor deleted back past the menu's trigger start) and would leave a
@@ -522,6 +450,9 @@ pub(super) struct EditorState {
     pub(super) gutter_style: Option<gpui_base::input::GutterStatementStyle>,
     /// Whether the installed gutter carries statements (false while hidden).
     pub(super) gutter_shown: bool,
+    /// The token the server named in the last failed run, shown as an error
+    /// diagnostic until the next edit or run.
+    pub(super) query_error: Option<query_error::QueryErrorMarker>,
 }
 
 /// Auto-save-to-disk machinery and saved-label UI feedback.
@@ -573,8 +504,7 @@ pub(super) struct LoadAllRows {
     pub(super) origin: ResultOrigin,
 }
 
-/// The connection, database, execution context and language a query result
-/// came from.
+/// The connection, database and execution context a query result came from.
 #[derive(Clone)]
 pub(super) struct ResultOrigin {
     connection_id: Uuid,
@@ -613,6 +543,9 @@ pub(super) struct PendingActions {
     run_after_connect: Option<PendingConnectRun>,
     routine_definition: Option<String>,
     error: Option<String>,
+    /// The error toast's "Go to error" was clicked; the next render moves
+    /// the cursor, because a toast callback has no window.
+    go_to_query_error: bool,
 }
 
 #[derive(Clone)]
@@ -663,7 +596,6 @@ pub struct CodeDocument {
     // Layout/focus
     layout: SqlQueryLayout,
     results_position: ResultsPosition,
-    editor_shares: EditorShares,
     focus_handle: FocusHandle,
     focus_mode: SqlQueryFocus,
     /// Keyboard focus for the multi-statement script confirmation.
@@ -693,6 +625,8 @@ pub struct CodeDocument {
 
     /// Deferred action slots drained at the top of each render cycle.
     pending: PendingActions,
+    #[cfg(all(test, feature = "telemetry"))]
+    script_executor: Option<Arc<dyn dbflux_core::HookExecutor>>,
 
     /// Set when a save was started by the interrupted-close flow, so a write
     /// that lands also asks the workspace to close the tab.
@@ -703,10 +637,21 @@ pub struct CodeDocument {
 }
 
 struct PendingQueryResult {
+    #[cfg(feature = "telemetry")]
+    usage_ticket: Option<dbflux_core::observability::usage::UsageTicket>,
+    #[cfg(feature = "telemetry")]
+    usage_success: bool,
+    #[cfg(feature = "telemetry")]
+    usage_cancel: dbflux_core::CancelToken,
+    #[cfg(feature = "telemetry")]
+    usage_session_generation: Option<u64>,
     task_id: dbflux_core::TaskId,
     exec_id: Uuid,
     query: String,
     result: Result<QueryResult, DbError>,
+    /// Where `query` starts in the buffer when it is exactly the buffer text
+    /// it came from, so a failure position can be marked on it.
+    sent_buffer_start: Option<usize>,
     /// Whether this execution is a script (vs a database query).
     /// Determines the audit event category and whether connection context is required.
     is_script: bool,
@@ -724,8 +669,17 @@ pub(super) struct ActiveQueryTask {
     uses_isolated_session: bool,
 }
 
+// Delayed confirmations must preserve the original trigger, not turn an
+// automatic execution into a user execution merely because it was approved.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ExecutionOrigin {
+    User,
+    Automatic,
+}
+
 /// Pending dangerous query confirmation.
 struct PendingDangerousQuery {
+    origin: ExecutionOrigin,
     query: String,
     kind: DangerousQueryKind,
     in_new_tab: bool,
@@ -739,6 +693,7 @@ struct PendingDangerousQuery {
 /// one statement, and the driver advertises `MULTI_STATEMENT`, or when the
 /// statement under the cursor only opens or ends a transaction.
 struct PendingScriptConfirm {
+    origin: ExecutionOrigin,
     query: String,
     in_new_tab: bool,
     statement_count: usize,
@@ -761,6 +716,7 @@ struct CursorStatement {
 /// asked the workspace to connect it and runs once the connection is up.
 struct PendingConnectRun {
     profile_id: Uuid,
+    origin: ExecutionOrigin,
     in_new_tab: bool,
     /// The connect was seen in flight, so its end without a connection means
     /// it failed and the run is dropped.
@@ -768,6 +724,12 @@ struct PendingConnectRun {
     /// The connection is up; the next render runs the query.
     ready: bool,
 }
+/// The consent ticket a run carries to completion. Without the `telemetry`
+/// feature nothing is ever captured, so the type carries no data.
+#[cfg(feature = "telemetry")]
+type UsageTicket = dbflux_core::observability::usage::UsageTicket;
+#[cfg(not(feature = "telemetry"))]
+type UsageTicket = std::convert::Infallible;
 
 /// Record of a query execution.
 #[derive(Clone)]
@@ -875,10 +837,12 @@ impl CodeDocument {
                 .line_number(true)
                 .soft_wrap(false)
                 .placeholder(placeholder);
-            state.lsp_mut().completion_menu.max_width =
-                crate::completion_support::completion_menu_max_width(cx);
+            // The menu sizes itself to its longest item; allow database identifiers
+            // more room than the component's 320 px default, while keeping a cap.
+            apply_completion_menu_width(&mut state, cx);
             state
         });
+        let completion_menu_width_sub = follow_ui_font_size(&input_state, cx);
 
         let completion_query_generation = Rc::new(std::cell::Cell::new(0u64));
         let catalog_names = schema_highlight::SharedCatalogNames::default();
@@ -896,6 +860,7 @@ impl CodeDocument {
             |this, input, event: &InputEvent, _window, cx| match event {
                 InputEvent::Change => {
                     this.finish_replace_once(_window, cx);
+                    this.clear_query_error(cx);
                     this.refresh_statements(cx);
                     let current_length = input.read(cx).text().len();
                     let previous_length =
@@ -903,7 +868,7 @@ impl CodeDocument {
                     // Consumed here, not cleared by the toggle itself: GPUI
                     // delivers `emit` after the outermost update finishes, so a
                     // toggle's Change arrives long after it returned.
-                    let toggled = std::mem::take(&mut this.editor.rewriting_buffer);
+                    let toggled = std::mem::take(&mut this.editor.programmatic_edit);
 
                     let generation = this.editor.completion_query_generation.get();
                     let provider_queried = generation != this.editor.last_completion_generation;
@@ -1210,7 +1175,6 @@ impl CodeDocument {
 
         let vim = dbflux_components::vim::VimBinding::new(input_state.clone(), window, cx);
         let results_position = ResultsPosition::load(app_state.read(cx));
-        let editor_shares = EditorShares::load(app_state.read(cx));
 
         let mut document = Self {
             id: doc_id,
@@ -1223,7 +1187,7 @@ impl CodeDocument {
             app_state,
             editor: EditorState {
                 input_state,
-                _input_subscriptions: vec![input_change_sub],
+                _input_subscriptions: vec![input_change_sub, completion_menu_width_sub],
                 original_content: String::new(),
                 saved_query_id: None,
                 current_editor_mode: editor_profile.editor_mode.clone(),
@@ -1234,7 +1198,7 @@ impl CodeDocument {
                 path: None,
                 is_dirty: false,
                 last_change_length: 0,
-                rewriting_buffer: false,
+                programmatic_edit: false,
                 completion_query_generation,
                 catalog_names,
                 last_completion_generation: 0,
@@ -1244,6 +1208,7 @@ impl CodeDocument {
                 statement_ranges: None,
                 gutter_style: None,
                 gutter_shown: false,
+                query_error: None,
             },
             source: SourceContext {
                 exec_ctx,
@@ -1291,7 +1256,6 @@ impl CodeDocument {
             },
             layout: SqlQueryLayout::EditorOnly,
             results_position,
-            editor_shares,
             focus_handle: cx.focus_handle(),
             focus_mode: SqlQueryFocus::Editor,
             script_confirm_focus: ModalFocus::new(cx),
@@ -1318,6 +1282,8 @@ impl CodeDocument {
                 shutdown_flush_written: None,
             },
             pending: PendingActions::default(),
+            #[cfg(all(test, feature = "telemetry"))]
+            script_executor: None,
             close_after_save: false,
             vim,
         };
@@ -2061,6 +2027,7 @@ impl CodeDocument {
             }
             Command::ToggleComment => self.toggle_comment(window, cx),
             Command::FormatQuery => self.format_query(window, cx),
+            Command::GoToQueryError => self.go_to_query_error(window, cx),
             Command::Cancel | Command::CancelQuery if self.runner.is_primary_active() => {
                 self.cancel_query(cx);
                 true

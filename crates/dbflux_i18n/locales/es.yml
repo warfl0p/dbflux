@@ -172,6 +172,9 @@ components:
     compact: Compactar
     cancel: Cancelar
     save: Guardar
+  json_report_preview:
+    copy_raw: Copiar original
+    close: Cerrar
   value_source:
     literal: Literal
     env: Variable de entorno
@@ -1257,13 +1260,6 @@ document:
         connection_not_found: Conexión no encontrada o inactiva
         catalog_unsupported: La conexión no admite el catálogo de métricas
   code:
-    completion_kind:
-      table: "tabla"
-      view: "vista"
-      schema: "esquema"
-      column: "columna"
-      alias: "alias"
-      keyword: "palabra clave"
     gutter:
       run_statement: Ejecutar esta sentencia
     history:
@@ -1282,12 +1278,12 @@ document:
       refresh: Actualizar
       cancel: Cancelar
       run: Ejecutar
-      last_run: "última ejecución %{seconds} s"
       read_only: Solo lectura
       saved: Guardado
       save: Guardar
-      formatter_unavailable: Formateador no disponible
       format: Formatear
+      formatter_unavailable: Formateador no disponible
+      go_to_query_error: Ir al error de la consulta
       query_history: Historial de consultas
       explain_query: Explicar consulta
       open_in_chart: Abrir la consulta actual en un documento de gráfico
@@ -1302,6 +1298,16 @@ document:
       show_results: "Mostrar resultados"
       results_right: "Mostrar los resultados a la derecha"
       results_bottom: "Mostrar los resultados debajo"
+    completion_kind:
+      table: "tabla"
+      view: "vista"
+      schema: "esquema"
+      column: "columna"
+      alias: "alias"
+      keyword: "palabra clave"
+      cte: "cte"
+    layout:
+      split_save_failed: "No se pudo guardar la división entre el editor y los resultados: %{error}"
     vim:
       normal: "NORMAL"
       insert: "INSERTAR"
@@ -1368,6 +1374,9 @@ document:
         script:
           title: Script peligroso
           body: Este script contiene sentencias potencialmente destructivas
+        admin_script:
+          title: Script de administración
+          body: Este script contiene comandos de administración y requiere confirmación de administrador
         mongo_delete_many:
           title: deleteMany con filtro vacío
           body: deleteMany con filtro vacío eliminará todos los documentos
@@ -1440,6 +1449,7 @@ document:
       task:
         run_script: "Ejecutar script %{name}"
       copy_error: Copiar error
+      go_to_error: Ir al error
       result_tab_title: "Resultado %{index}"
       count_rows_failed: No se pudieron contar las filas de la consulta
       next_rows_failed: "No se pudieron cargar más filas de la consulta"
@@ -1626,6 +1636,13 @@ document:
         edit_in_modal: Editar en modal…
         set_default: Establecer valor predeterminado
         set_null: Establecer NULL
+        set_value: "Establecer valor"
+        set_expression: "Establecer como expresión…"
+        set_value_column_default: "Valor por defecto de la columna"
+        set_value_type_values: "Valores del tipo · %{type}"
+        set_value_expression: "Expresión…"
+        set_value_null: "NULL"
+        set_value_no_default: "%{column} no tiene valor por defecto. Agregá uno en el diseño de la tabla o elegí un valor del tipo."
         add_row: Agregar fila
         inspect_row: Inspeccionar fila
         find_similar_rows: Buscar filas similares
@@ -1647,6 +1664,10 @@ document:
           many: "%{count} filas se eliminarán de forma permanente. Esta acción no se puede deshacer."
         cancel: Cancelar
         delete: Eliminar
+      expression_confirm:
+        list: "Expresiones escritas como SQL:"
+        cancel: "Cancelar"
+        confirm: "Guardar con expresiones"
       filter:
         title: Filtro
         cell_value: Valor de celda
@@ -1732,6 +1753,8 @@ document:
           insert_failed: "Error al insertar el documento: %{error}"
           update_failed: "Error al actualizar el documento: %{error}"
     grid:
+      expression:
+        placeholder: Expresión SQL
       edit_bar:
         clean: Sin cambios pendientes
         dirty:
@@ -1836,6 +1859,7 @@ document:
         invalid_json_filter: Filtro JSON no válido
         chart_save_failed: 'No se pudo guardar el gráfico "%{name}": %{error}'
         pk_details_fetch_failed: "Error al obtener los detalles de la tabla para la PK: %{error}"
+        edit_guard_check_failed: "No se pudo comprobar la clave primaria de la tabla, así que no se envió nada: %{error}"
         query_failed: "Consulta fallida: %{error}"
         chart_save_no_profile_binding: "No se puede guardar el gráfico: la consulta no tiene un perfil vinculado"
       placeholder:
@@ -1914,7 +1938,6 @@ document:
         insert_document: Insertar documento
         insert_row: Insertar fila
         delete_document: Eliminar documento
-        delete_row: Eliminar fila
         visual_mutation_chunked: "Mutación visual (por segmentos)"
         visual_mutation_direct: "Mutación visual (directa)"
         visual_mutation_single_transaction: "Mutación visual (transacción única)"
@@ -1923,6 +1946,7 @@ document:
         update_document_failed: "No se pudo actualizar el documento: %{error}"
         save_row_unsupported_pk: "No se puede guardar la fila: la clave primaria usa un tipo de valor no admitido"
         save_row_identity_failed: "No se puede guardar la fila: no se pudo construir la identidad de la fila a partir de las columnas de clave primaria"
+        staged_row_left_grid: "Una fila con cambios pendientes ya no está en la grilla, así que el lote se detuvo ahí."
         save_row_unsupported_values: "No se puede guardar la fila: los valores no admitidos son de solo lectura"
         save_failed: "Error al guardar: %{error}"
         save_document_unsupported_id: "No se puede guardar el documento: tiene un valor de _id no admitido"
@@ -2511,12 +2535,15 @@ document:
       truncate_unavailable: "Esta conexión no puede truncar tablas, así que Truncate no aparece. Elige Recreate para reemplazar la tabla."
     pick_file:
       description: "O importa un único archivo en una tabla: CSV, JSON, JSON Lines, XML o una hoja de cálculo."
+      description_sql: "O importa un único archivo en una tabla: CSV, JSON, JSON Lines, XML o una hoja de cálculo. Un archivo .sql se ejecuta como script en una conexión SQL."
       choose_file: "Elegir archivo…"
       reading_file: "Leyendo archivo…"
       dialog_title: "Elegir archivo para importar"
       filter_label: "CSV, JSON, JSON Lines, XML y hojas de cálculo"
+      filter_label_sql: "CSV, JSON, JSON Lines, XML, hojas de cálculo y SQL"
       error:
         unsupported: "Solo se pueden importar archivos .csv, .json, .jsonl, .xml, .xlsx, .xlsm, .xls y .ods."
+        unsupported_sql: "Solo se pueden importar archivos .csv, .json, .jsonl, .xml, .xlsx, .xlsm, .xls, .ods y .sql."
         invalid_file: "No se puede leer el archivo: %{error}"
         unsupported_next: "Elige un archivo con una de esas extensiones."
         lookup_failed: "No se pudo consultar la tabla de destino: %{error}"
@@ -2560,6 +2587,170 @@ document:
         next_single: "Expórtala como CSV desde la aplicación de hojas de cálculo (Guardar como → CSV) e importa el CSV."
       list_and: "%{head} y %{last}"
       list_more: "%{list} y %{count} más"
+    script:
+      title: "Ejecutar script SQL"
+      task: "Ejecutar script SQL"
+      thousands_separator: "."
+      classification:
+        metadata: "Metadatos"
+        read: "Lectura"
+        write: "Escritura"
+        destructive: "Destructiva"
+        admin: "Administración"
+        admin_safe: "Administración (segura)"
+        admin_destructive: "Administración (destructiva)"
+      error:
+        unreadable: "No se puede leer el archivo: %{path}: %{message}"
+        unreadable_next: "Comprueba que puedes leer el archivo o elige otro."
+        not_utf8: "No se puede leer el script: no es UTF-8 válido (byte no válido en la posición %{position}). Los scripts SQL se leen como UTF-8 y no tienen opción de codificación."
+        not_utf8_next: "Guarda el archivo como UTF-8 en tu editor y vuelve a elegirlo."
+        too_large: "Este script pesa %{size}, por encima del límite de %{limit} para ejecutar un script aquí."
+        too_large_next: "Ejecútalo con el cliente de línea de comandos de la propia base de datos. Dividirlo en archivos más pequeños también funciona, pero cada archivo se ejecuta por separado: un archivo posterior que falle no puede deshacer uno anterior."
+        empty: "El script no tiene sentencias: el archivo está vacío o solo contiene comentarios."
+        empty_next: "Elige un archivo que tenga al menos una sentencia."
+        not_sql: "No se puede ejecutar un script SQL en esta conexión: usa el lenguaje de consulta %{language}, no SQL."
+        not_sql_next: "Conéctate a una conexión SQL y abre la importación allí, o elige un archivo CSV, JSON o JSON Lines para importar datos en esta conexión."
+        other_next: "Revisa el script y las opciones y vuelve a intentarlo."
+        interrupt_failed: "No se pudo detener la sentencia en curso: %{error}. Terminará antes de que la ejecución se detenga."
+        session_open_failed: "No se pudo abrir una sesión aparte para el script, así que no se ejecutó nada: %{error}"
+        session_cleanup_failed: "La sesión aparte del script no se pudo liberar limpiamente: %{error}"
+        conditional_transaction: "Este script tiene un comentario condicional por versión (línea %{line}) que controla transacciones, y que se ejecute o no depende del servidor."
+        conditional_transaction_next: "Ejecuta el script con el cliente de línea de comandos de la propia base de datos."
+        session_commit: "Este script %{change} en la línea %{line} (%{statement}), lo que dejaría esta conexión en modo de confirmación manual tras la ejecución."
+        session_commit_next: "Quita esa sentencia, o ejecuta el script con el cliente de línea de comandos de la propia base de datos."
+        session_change_autocommit: "desactiva autocommit"
+        session_change_implicit: "activa las transacciones implícitas"
+        client_directive: "Este script usa el comando de cliente %{directive} (línea %{line}), que solo entiende un cliente de línea de comandos de base de datos."
+        client_directive_next: "Ejecuta el script con el cliente de línea de comandos de la propia base de datos, o quita las líneas %{directive} y termina cada sentencia con un punto y coma."
+        split_routine: "Este script tiene un cuerpo de rutina que empieza en la línea %{line} y cuyas sentencias terminan con \";\", así que no se puede dividir en sentencias aquí."
+        split_routine_next: "Ejecuta el script con el cliente de línea de comandos de la propia base de datos."
+        copy_stdin: "Este script tiene un bloque de datos COPY … FROM stdin (línea %{line}), que solo el cliente de línea de comandos psql puede cargar."
+        copy_stdin_next: "Ejecútalo con psql en su lugar."
+        psql_meta: "Este script usa el comando de psql %{command} (línea %{line}), que solo entiende el cliente de línea de comandos psql."
+        psql_meta_next: "Ejecuta el script con psql en su lugar: quitarlo ejecutaría las sentencias restantes en esta conexión, que puede no ser la base de datos que selecciona."
+        self_managed: "Este script gestiona sus propias transacciones (%{keyword} en la línea %{line}), así que no se puede ejecutar en una sola transacción."
+        self_managed_next: "Desactiva “Ejecutar en una sola transacción”; entonces las propias sentencias del script deciden qué se guarda."
+        read_only:
+          one: "Esta conexión es de solo lectura y %{count} sentencia del script cambia datos, estructura o permisos."
+          many: "Esta conexión es de solo lectura y %{count} sentencias del script cambian datos, estructura o permisos."
+        read_only_next: "Abre una conexión de lectura y escritura para ejecutarlo. Un script que solo lee puede ejecutarse aquí."
+      configure:
+        file: "Archivo: %{file} (script SQL)"
+        script_label: "Script"
+        script_summary:
+          one: "%{count} sentencia, %{size}"
+          many: "%{count} sentencias, %{size}"
+        preview_label: "Vista previa"
+        preview_more:
+          one: "y %{count} sentencia más"
+          many: "y %{count} sentencias más"
+        preview_hint: "La etiqueta es la clasificación que usa el editor. DELETE y UPDATE sin WHERE están marcados."
+        preview_sequence_hint: "Las sentencias que cambian una secuencia (setval, nextval, ALTER SEQUENCE) cuentan como Escritura, así que una conexión de solo lectura las rechaza."
+        no_where: "Sin WHERE"
+        on_error_label: "Ante un error"
+        on_error_stop: "Detener en el primer error"
+        on_error_continue: "Continuar tras los errores"
+        on_error_stop_hint: "La ejecución se detiene en la primera sentencia que falla. Las sentencias siguientes no se ejecutan."
+        on_error_continue_hint: "Se ejecutan todas las sentencias. Las que fallan se listan al final y las demás se conservan."
+        transaction_label: "Transacción"
+        transaction_checkbox: "Ejecutar en una sola transacción"
+        transaction_hint: "Si una sentencia falla, los cambios hechos en la transacción se deshacen. No se guarda nada hasta que la última sentencia tenga éxito. Los cambios de secuencias (setval, nextval) no se deshacen con un rollback."
+        transaction_unchecked_hint: "Cada sentencia se ejecuta por separado y se guarda al ejecutarse, así que un fallo conserva las sentencias que ya se ejecutaron."
+        transaction_off_continue: "Desactivada porque una sentencia fallida aborta la transacción en esta conexión, así que la ejecución no podría continuar después. Elige “Detener en el primer error” para ejecutar en una sola transacción."
+        transaction_unavailable: "Una sola transacción no está disponible: esta conexión no admite transacciones. Cada sentencia se ejecuta por separado y se guarda al ejecutarse, así que un fallo conserva las sentencias que ya se ejecutaron."
+        transaction_self_managed_commit: "Desactivada porque este script gestiona sus propias transacciones (%{keyword} en la línea %{line}). Se ejecuta tal cual: cada %{keyword} del script guarda los cambios anteriores."
+        transaction_self_managed: "Desactivada porque este script gestiona sus propias transacciones (%{keyword} en la línea %{line}). Se ejecuta tal cual: sus propias sentencias de transacción deciden qué se guarda."
+        ddl_commits: "CREATE, ALTER y DROP se guardan al ejecutarse en esta conexión y además guardan todas las sentencias anteriores. Un rollback solo deshace los cambios hechos después de la última de esas sentencias."
+      footer:
+        read_only: "Continuar está desactivado: la conexión es de solo lectura."
+        running_transaction: "Cancelar ejecución se detiene tras la sentencia en curso. Los cambios transaccionales se deshacen; los cambios de secuencias (setval, nextval) no."
+        running_kept: "Cancelar ejecución se detiene tras la sentencia en curso. Las sentencias ya ejecutadas se conservan."
+        cancelling_transaction: "Esperando a que se detenga la sentencia en curso. Después se deshace la transacción."
+        cancelling_kept: "Esperando a que se detenga la sentencia en curso. Las sentencias ya ejecutadas se conservan."
+      confirm:
+        destructive_lead:
+          one: "Este script tiene %{count} sentencia destructiva de %{total}:"
+          many: "Este script tiene %{count} sentencias destructivas de %{total}:"
+        plain_lead:
+          one: "Este script tiene %{count} sentencia, ninguna destructiva. Se ejecutará en esta conexión:"
+          many: "Este script tiene %{count} sentencias, ninguna destructiva. Se ejecutará en esta conexión:"
+        warning: "Las sentencias destructivas no se pueden deshacer cuando el script termina. Confirma para continuar."
+        danger_line: "%{count} × %{message}"
+        first_label: "Primeras %{shown} de %{total}"
+        first_line: "#%{index} %{snippet}"
+        how_transaction: "Se ejecuta en una sola transacción y se detiene en el primer error."
+        how_each_stop: "Cada sentencia se guarda al ejecutarse y la ejecución se detiene en el primer error."
+        how_each_continue: "Cada sentencia se guarda al ejecutarse y la ejecución continúa tras los errores."
+        how_self_stop: "Se ejecuta tal cual: las propias sentencias de transacción del script deciden qué se guarda, y la ejecución se detiene en el primer error."
+        how_self_continue: "Se ejecuta tal cual: las propias sentencias de transacción del script deciden qué se guarda, y la ejecución continúa tras los errores."
+        run: "Ejecutar script"
+        proceed: "Sí, ejecutar script"
+      running:
+        title: "Ejecutando la sentencia %{index} de %{total}"
+        current: "Sentencia actual"
+        starting: "Iniciando…"
+        transaction_line: "Una sola transacción: no se guarda nada hasta que la última sentencia tenga éxito."
+        no_transaction_line: "Sin transacción: cada sentencia se guarda al ejecutarse."
+        cancel: "Cancelar ejecución"
+        cancelling: "Cancelando…"
+      toast:
+        completed: "Script completado"
+      done:
+        finished:
+          one: "Script terminado: se ejecutó %{count} sentencia en %{elapsed}"
+          many: "Script terminado: se ejecutaron %{count} sentencias en %{elapsed}"
+        committed: "Confirmado: los cambios están guardados."
+        saved_as_run: "Cada sentencia se guardó al ejecutarse."
+        with_errors: "Script terminado con errores: se ejecutaron %{ran} de %{total} sentencias y %{failed} fallaron"
+        with_errors_next: "Las sentencias ejecutadas se conservaron; las %{failed} que fallaron se omitieron. Revisa las sentencias fallidas y las posteriores que dependan de ellas, concilia la ejecución parcial y conserva o restaura los ajustes de sesión que necesita el script (por ejemplo SET search_path o SET NAMES) antes de volver a ejecutar las sentencias corregidas: una sentencia posterior puede haberse ejecutado sobre datos que una fallida debía haber cambiado."
+        failure_label: "#%{index} · línea %{line}"
+        cancelled: "Script cancelado tras %{ran} de %{total} sentencias"
+        rolled_back_cancelled: "Deshecho: se revirtieron los cambios transaccionales, así que no se guardó nada. Los cambios de secuencias (setval, nextval) no se deshacen con un rollback."
+        cancelled_rolled_back_next: "Elige el archivo y ejecútalo de nuevo cuando quieras."
+        nothing_ran: "No se ejecutó ninguna sentencia, así que nada cambió."
+        cancelled_kept:
+          one: "Se ejecutó %{count} sentencia y se conservó: se guardó al ejecutarse."
+          many: "Se ejecutaron %{count} sentencias y se conservaron: cada una se guardó al ejecutarse."
+        cancelled_kept_next: "Bórralas del archivo antes de ejecutarlo de nuevo, o se ejecutarán dos veces. Conserva o restaura los ajustes de sesión que necesita el script (por ejemplo SET search_path o SET NAMES) para el resto."
+        stopped: "Script detenido en la sentencia %{index} de %{total}"
+        failed_statement: "Sentencia fallida · línea %{line}"
+        database_error: "Error de base de datos: %{error}"
+        rolled_back_before:
+          one: "Deshecho: se revirtieron los cambios transaccionales de la %{count} sentencia anterior. Los cambios de secuencias (setval, nextval) no se deshacen con un rollback."
+          many: "Deshecho: se revirtieron los cambios transaccionales de las %{count} sentencias anteriores. Los cambios de secuencias (setval, nextval) no se deshacen con un rollback."
+        rolled_back_first: "Deshecho: no se guardó nada. Los cambios de secuencias (setval, nextval) no se deshacen con un rollback."
+        rolled_back_nothing_saved: "Deshecho: no se guardó nada."
+        stopped_rolled_back_next: "Corrige esa sentencia en el archivo, elige el archivo y ejecútalo de nuevo."
+        kept_before:
+          one: "La %{count} sentencia anterior se ejecutó y se conservó."
+          many: "Las %{count} sentencias anteriores se ejecutaron y se conservaron."
+        nothing_before_it: "Ninguna sentencia se ejecutó antes."
+        not_run_range: "Las sentencias %{from} a %{total} no se ejecutaron."
+        not_run_single: "La sentencia %{index} no se ejecutó."
+        stopped_kept_next: "Corrige la sentencia %{index} y concilia los cambios que ya hicieron las primeras %{before} sentencias. Antes de ejecutar el resto, conserva o restaura los ajustes de sesión que necesita el script (por ejemplo SET search_path o SET NAMES) y ejecuta solo las sentencias restantes, o se ejecutarán dos veces."
+        use_transaction_next: "Activa “Ejecutar en una sola transacción” la próxima vez para evitar una ejecución parcial."
+        fix_first_next: "Corrige la sentencia %{index} y ejecuta el script de nuevo."
+        commit_failed: "Script detenido: no se pudo confirmar la transacción"
+        commit_failed_next: "Comprueba la conexión, elige el archivo y ejecútalo de nuevo."
+        unresolved: "El script terminó sin un resultado claro"
+        unresolved_message: "No se pudo terminar la transacción: %{error}"
+        unresolved_next: "Comprueba el estado de la base de datos antes de ejecutar nada más: la transacción puede seguir abierta o parte del script puede estar guardada. Cierra la conexión para terminar una transacción abierta."
+        ddl_not_undone: "CREATE, ALTER y DROP se guardan al ejecutarse en esta conexión, así que un rollback no los deshizo."
+        not_run: "El script no se ejecutó"
+        not_run_next: "No se ejecutó nada. Corrige la causa indicada y ejecuta el script de nuevo."
+        partially_kept: "Guardado en parte: todo hasta la sentencia %{index} (línea %{line}) se guardó, porque se confirma por sí sola en esta conexión, y las sentencias posteriores también pueden haberse guardado."
+        partially_kept_no_line: "Guardado en parte: todo hasta la sentencia %{index} se guardó, porque se confirma por sí sola en esta conexión, y las sentencias posteriores también pueden haberse guardado."
+        partially_kept_next: "Comprueba la base de datos y concilia lo que se guardó antes de volver a ejecutar el script, o las sentencias guardadas se ejecutarán dos veces."
+        script_rolled_back: "Las sentencias que el script ejecutó fuera de sus propias transacciones se guardaron al ejecutarse. La transacción abierta del script se deshizo, así que lo que había cambiado en ella no se guardó. Los cambios de secuencias (setval, nextval) no se deshacen con un rollback."
+        stopped_own_transaction_next: "Corrige la sentencia %{index}, comprueba en la base de datos cuáles de las anteriores se guardaron y concilia los cambios. Conserva o restaura los ajustes de sesión que necesita el script (por ejemplo SET search_path o SET NAMES) y ejecuta solo lo que falta, o las sentencias guardadas se ejecutarán dos veces."
+        cancelled_own_transaction_next: "Comprueba en la base de datos cuáles sentencias se guardaron y concilia los cambios antes de volver a ejecutar el script, o las sentencias guardadas se ejecutarán dos veces."
+        possibly_open_rolled_back: "El script usó SAVEPOINT fuera de una transacción, así que DBFlux emitió un ROLLBACK por si había quedado una abierta. Los cambios que la base de datos ya había confirmado se mantienen."
+        ended_without_commit: "El script terminó sin COMMIT, así que su transacción abierta se deshizo."
+        ended_without_commit_next: "Añade un COMMIT al final del script para guardar sus cambios."
+        ended_without_commit_next_or: "Añade un COMMIT al final del script para guardar sus cambios, o activa “Ejecutar en una sola transacción”."
+        left_open: "El script terminó con una transacción abierta"
+        left_open_message: "No se pudo deshacer la transacción del script: %{error}"
+        left_open_next: "Puede que siga abierta una transacción en esta conexión. Desconéctate y vuelve a conectar para terminarla, y comprueba el estado de la base de datos antes de ejecutar nada más."
     mapping_mode:
       create: Crear
       existing: "Existente (solo insertar)"
@@ -4188,6 +4379,9 @@ modals:
     compact: Compactar
     cancel: Cancelar
     confirm: Importar
+  confirm:
+    cancel: Cancelar
+    confirm: Confirmar
   mutation_confirm:
     title: Confirmar mutación
     sample_unavailable: Vista previa de muestra no disponible
@@ -4206,8 +4400,6 @@ modals:
     cancel: Cancelar
     confirm: Renombrar
   schema_drift:
-    lead: "%{table} difiere del esquema en caché."
-    title: El esquema cambió desde que se abrió esta pestaña
     column_header: Columna
     local_header: En caché
     remote_header: Ahora
@@ -4226,10 +4418,13 @@ modals:
       primary_key: (clave primaria)
       foreign_keys: (claves foráneas)
       nullable: admite NULL
-    continue_stale: Continuar con el esquema desactualizado
     cancel: Cancelar
-    refreshing: Actualizando…
-    refresh: Actualizar y volver a ejecutar
+    edit:
+      title: "La tabla cambió desde que se cargó"
+      pk_lead: "La clave primaria de %{table} ya no es la que usa esta grilla para guardar, así que no se envió nada."
+      gone_lead: "%{table} ya no existe, así que no se envió nada."
+      discard_note: "Recargar la tabla descarta tus cambios pendientes, porque sus identidades de fila se tomaron con la clave anterior. Cancelar los deja pendientes y sin guardar."
+      reload: "Recargar tabla"
   tunnel_auth:
     hide_passphrase: "Ocultar frase de contraseña"
     show_passphrase: "Mostrar frase de contraseña"
@@ -4319,6 +4514,8 @@ palette:
       name: Alternar comentario
     format_query:
       name: Formatear consulta
+    go_to_query_error:
+      name: Ir al error de la consulta
     open_history:
       name: Abrir historial de consultas
     cancel_query:
@@ -4457,6 +4654,7 @@ settings:
   discard:
     title: Descartar cambios sin guardar
     body: "Tienes cambios sin guardar. ¿Descartarlos y cambiar a %{section}?"
+    confirm: Descartar
   editor_panel:
     title:
       edit: "Editar %{noun}"
@@ -4502,7 +4700,14 @@ settings:
       title: General
       subtitle: "Editor, inicio, actualización y la red de seguridad para sentencias peligrosas."
     appearance:
-      group: Apariencia
+      subtitle: "Tema, color de acento, densidad, idioma, fuentes y barras de desplazamiento."
+      accent:
+        label: "Color de acento"
+        dark: "Oscuro"
+        light: "Claro"
+        reset: "Restablecer"
+        error: "Usa un color como #RRGGBB."
+        help: "Botones primarios, casillas marcadas, la barra de progreso, el cursor de texto, la selección, el anillo de foco y las filas seleccionadas. Los colores de sintaxis mantienen los suyos."
     startup:
       group: "Inicio y sesión"
     refresh:
@@ -4786,6 +4991,7 @@ settings:
       open_folder: "Abrir carpeta…"
       toggle_comment: Alternar comentario
       format_query: Formatear consulta
+      go_to_query_error: Ir al error de la consulta
       export_results: Exportar resultados
       clear_filter: Limpiar filtro
       next_result_tab: Siguiente pestaña de resultados
@@ -4809,6 +5015,8 @@ settings:
       toggle_row_inspector: Alternar inspector de fila
       find_similar_rows: Buscar filas similares
       results_set_null: Establecer celda en NULL
+      results_set_default: "Poner la celda en el valor por defecto de la columna"
+      results_toggle_expression: "Alternar editor literal / expresión"
       open_context_menu: Abrir menú contextual
       open_pane_actions: Abrir acciones del panel
       menu_up: "Menú: arriba"
@@ -5539,9 +5747,9 @@ settings:
     search_placeholder: "Buscar en ajustes"
     general_group: General
     general: General
-    appearance: "Apariencia"
+    appearance: Apariencia
     keybindings: Atajos de teclado
-    updates: Actualizaciones
+    updates: Actualizaciones y privacidad
     audit: Auditoría
     about: Acerca de
     network: Red
@@ -6019,8 +6227,8 @@ workspace:
   default_object_type: Objeto
 updates:
   settings:
-    title: Actualizaciones
-    subtitle: Búsqueda de nuevas versiones y el registro de cambios tras actualizar.
+    title: Actualizaciones y privacidad
+    subtitle: Comprobación de nuevas versiones, el registro de cambios tras las actualizaciones y estadísticas de uso.
     group: Actualizaciones
     new_versions: Nuevas versiones
     check_on_startup: Buscar una nueva versión en GitHub al iniciar
@@ -6041,6 +6249,41 @@ updates:
     save: Guardar
     saved: Configuración de actualizaciones guardada.
     save_error: "No se pudo guardar la configuración de actualizaciones: %{error}"
+    usage_heading: Estadísticas de uso
+    usage_level: Nivel
+    level_off: "Apagado"
+    level_minimal: "Mínimo"
+    level_basic: "Básico"
+    level_hint: "Apagado no envía nada. Mínimo envía un aviso por compilación y un evento de actividad semanal. Básico, el valor predeterminado, reemplaza ese evento por un informe semanal de uso."
+    what_is_sent: Qué se envía
+    collected_build: "Compilación: versión, canal, sistema operativo, arquitectura"
+    collected_language: "Idioma del sistema y país, semanal"
+    collected_counts: "Recuentos de funciones (consultas, paneles, scripts, …)"
+    collected_header: Recopilado
+    collected_minimal: Mínimo
+    collected_basic: Básico
+    collected_yes: "✓"
+    collected_no: "—"
+    counts_not_instrumented: "Recuentos acotados de operaciones compatibles exitosas. Sin actualizaciones, fallos ni cancelaciones; cobertura MCP limitada. Ver Política de privacidad."
+    install_id: Id de instalación
+    install_id_hint: "Aleatorio y estable hasta que lo reinicies, seudónimo más que anónimo. No está ligado a ti ni a esta máquina. Reiniciarlo cancela los envíos pendientes y conserva las compilaciones confirmadas."
+    reset_install_id: Reiniciar id
+    reset_install_id_title: "¿Reiniciar el id de instalación?"
+    reset_install_id_body: "Un nuevo id aleatorio reemplaza al actual. Los envíos pendientes se cancelan y las compilaciones confirmadas siguen confirmadas."
+    reports: Informes
+    no_report_sent_yet: Todavía no se envió ningún informe
+    checking_last_report: Buscando el último informe…
+    delivery_unavailable: "El envío no está disponible: no hay un destino configurado."
+    report_load_failed: No se pudo cargar el último informe.
+    last_sent: "Último envío %{when} · %{level} · %{size}"
+    level_off_display: apagado
+    level_minimal_display: mínimo
+    level_basic_display: básico
+    view_report: Ver el último informe
+    open_in_audit: Abrir en auditoría
+    reports_audit_note: "Cada informe queda registrado en Auditoría: cuándo se envió, el nivel y el contenido completo."
+    telemetry_save_failed: No se pudo guardar la configuración de telemetría.
+    telemetry_reset_failed: No se pudo reiniciar el id de instalación.
   ago:
     just_now: ahora mismo
     minutes: "hace %{count} min"
@@ -6078,13 +6321,23 @@ updates:
   welcome:
     title: Te damos la bienvenida a DBFlux
     tagline: Un cliente pensado para el teclado para SQL, documentos, clave-valor, series temporales y almacenamiento de objetos.
+    telemetry_save_failed: No se pudo guardar la confirmación del aviso de telemetría.
+    telemetry_heading: Estadísticas de uso
+    telemetry_helper: "Ayuda al desarrollo. Básico es el nivel por defecto."
+    telemetry_off: "Apagado"
+    telemetry_off_description: "No se envía nada."
+    telemetry_minimal: "Mínimo"
+    telemetry_minimal_description: "Aviso por build y semanal: versión, SO, arq., ID aleatorio."
+    telemetry_basic: "Básico"
+    telemetry_basic_description: "Mínimo más informe semanal: idioma, país y conteos de uso."
+    telemetry_privacy: "ID seudónimo aleatorio. Nunca consultas, resultados, credenciales, rutas ni metadatos de conexión. Informes completos en Audit local. No se envía nada hasta que eliges Empezar."
     whats_new: Novedades
     updates: Actualizaciones
     notify: Avisarme cuando salga una nueva versión
     notify_hint: Al iniciar, DBFlux le pregunta a GitHub por la última versión. No se envía nada sobre ti.
     show_whats_new: Mostrar las novedades después de cada actualización
     show_whats_new_hint: Abre este registro de cambios una vez, la primera vez que inicia una versión nueva.
-    change_later: Puedes cambiar esto después en Configuración › Actualizaciones
+    change_later: "Puede cambiarse después en Ajustes › Actualizaciones y privacidad"
     get_started: Empezar
     full_changelog: Registro de cambios completo
 notifications:

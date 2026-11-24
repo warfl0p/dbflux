@@ -665,7 +665,7 @@ impl ValueTypeColors {
 pub struct SyntaxColors {
     pub keyword: Hsla,
     pub string: Hsla,
-    /// Number literals.
+    /// Numbers.
     pub number: Hsla,
     pub comment: Hsla,
     /// Types and built-in identifiers.
@@ -769,14 +769,16 @@ impl SyntaxColors {
         colors.with_keyword(Self::keyword_for_current(cx))
     }
 
-    /// The accent role a keyword takes: the accent tint on dark, the accent on light.
+    /// The keyword role of the installed brand for the active palette. It is
+    /// the brand's own keyword color, not its accent, so a user accent never
+    /// recolors the editor.
     pub fn keyword_for_current(cx: &gpui::App) -> Hsla {
         let brand = crate::brand::brand(cx);
 
         match crate::palette::resolved_mode(cx) {
-            crate::palette::PaletteMode::Light => brand.accent,
+            crate::palette::PaletteMode::Light => brand.keyword_light,
             crate::palette::PaletteMode::Dark | crate::palette::PaletteMode::System => {
-                brand.accent_tint
+                brand.keyword_dark
             }
         }
     }
@@ -812,6 +814,12 @@ impl SyntaxColors {
     /// Schema-tree column icon.
     pub fn column(&self) -> Hsla {
         self.operator
+    }
+
+    /// A NULL value in the data grid and the row inspector. NULL is a
+    /// keyword, so it takes the keyword role, as in the SQL editor.
+    pub fn null_value(&self) -> Hsla {
+        self.keyword
     }
 
     /// Schema-tree custom type icon.
@@ -1020,6 +1028,15 @@ impl MenuMetrics {
     /// Trailing check mark of a checked row, sized like the submenu chevron.
     /// (13 px)
     pub const CHECK_ICON: Rems = ui(13.0);
+
+    /// Default width of a submenu flyout. (240 px)
+    pub const SUBMENU_WIDTH: Pixels = px(240.0);
+    /// How far a flyout overlaps its parent panel, so the two frames meet
+    /// instead of leaving a seam. (8 px)
+    pub const SUBMENU_OVERLAP: Pixels = px(8.0);
+    /// Gap kept between a flyout and the window edge it may flip against.
+    /// (6 px)
+    pub const FLYOUT_MARGIN: Pixels = px(6.0);
 }
 
 /// Geometry of the resize gutter between two panes (`composites::Splitter`),
@@ -2598,9 +2615,17 @@ impl Widths {
 mod tests {
     use super::{
         BASE_REM, Borders, ChartGeometry, ChromeColorSlot, ChromeEdgeRole, ChromeSurfaceRole,
-        DocumentTreeMetrics, FontSizes, Radii, Shadows, Spacing, ValueTypeColors, ui,
+        DocumentTreeMetrics, FontSizes, Radii, Shadows, Spacing, SyntaxColors, ValueTypeColors, ui,
     };
     use gpui::{hsla, px, rems};
+
+    #[test]
+    fn a_null_value_takes_the_keyword_role_in_both_palettes() {
+        for colors in [SyntaxColors::dark(), SyntaxColors::light()] {
+            assert_eq!(colors.null_value(), colors.keyword);
+            assert_ne!(colors.null_value(), colors.number);
+        }
+    }
 
     #[test]
     fn ui_expresses_design_pixels_in_rems_of_the_base_size() {

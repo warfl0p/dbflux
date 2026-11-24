@@ -12,6 +12,10 @@ fn init(cx: &mut TestAppContext) -> Entity<AppStateEntity> {
     cx.update(gpui_component::init);
     cx.update(dbflux_components::theme::init);
     cx.update(dbflux_ui_base::keymap::init_keymap);
+    // A command that asks for a file or folder must never open the OS picker.
+    cx.update(|cx| {
+        dbflux_ui_base::file_dialog::install_open_target_override(cx, std::sync::Arc::new(|| None))
+    });
 
     cx.update(|cx| {
         cx.new(|_| {
@@ -75,6 +79,8 @@ fn every_command_is_routed_by_a_dispatch_domain(cx: &mut TestAppContext) {
     );
 }
 
+/// The dispatch above walks this command too; it must ask the injected picker
+/// instead of the native dialog, and a dismissed picker changes nothing.
 fn route_create_folder_on_sidebar_tab(
     workspace: &Entity<Workspace>,
     tab: dbflux_ui_sidebar::SidebarTab,

@@ -43,11 +43,11 @@ impl GeneralSettingsRepository {
                        key_value_size_limit_mib, vim_mode, editor_row_limit, vim_leader,
                        ui_font_family, ui_font_size, editor_font_family, editor_font_size,
                        grid_font_family, grid_font_size, toast_auto_dismiss_secs,
-                       syntax_colors_json, accent_color_dark, accent_color_light,
+                       syntax_colors_json,
                        table_alias_completion, table_alias_use_as,
                        blank_line_delimits_statements, show_error_toasts,
                        grid_fk_labels, scrollbar_visibility, workspace_inspector_width_px,
-                       updated_at
+                       accent_dark, accent_light, updated_at
                 FROM cfg_general_settings WHERE id = 1
                 "#,
             )
@@ -89,15 +89,15 @@ impl GeneralSettingsRepository {
                 grid_font_size: row.get(28)?,
                 toast_auto_dismiss_secs: row.get(29)?,
                 syntax_colors_json: row.get(30)?,
-                accent_color_dark: row.get(31)?,
-                accent_color_light: row.get(32)?,
-                table_alias_completion: row.get(33)?,
-                table_alias_use_as: row.get(34)?,
-                blank_line_delimits_statements: row.get(35)?,
-                show_error_toasts: row.get(36)?,
-                grid_fk_labels: row.get(37)?,
-                scrollbar_visibility: row.get(38)?,
-                workspace_inspector_width_px: read_inspector_width(row, 39)?,
+                table_alias_completion: row.get(31)?,
+                table_alias_use_as: row.get(32)?,
+                blank_line_delimits_statements: row.get(33)?,
+                show_error_toasts: row.get(34)?,
+                grid_fk_labels: row.get(35)?,
+                scrollbar_visibility: row.get(36)?,
+                workspace_inspector_width_px: read_inspector_width(row, 37)?,
+                accent_dark: row.get(38)?,
+                accent_light: row.get(39)?,
                 updated_at: row.get(40)?,
             })
         });
@@ -129,11 +129,11 @@ impl GeneralSettingsRepository {
                     key_value_size_limit_mib, vim_mode, editor_row_limit, vim_leader,
                     ui_font_family, ui_font_size, editor_font_family, editor_font_size,
                     grid_font_family, grid_font_size, toast_auto_dismiss_secs,
-                    syntax_colors_json, accent_color_dark, accent_color_light,
+                    syntax_colors_json,
                     table_alias_completion, table_alias_use_as,
                     blank_line_delimits_statements, show_error_toasts,
                     grid_fk_labels, scrollbar_visibility, workspace_inspector_width_px,
-                    updated_at
+                    accent_dark, accent_light, updated_at
                 ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, datetime('now'))
                 ON CONFLICT(id) DO UPDATE SET
                     theme = excluded.theme,
@@ -166,8 +166,6 @@ impl GeneralSettingsRepository {
                     grid_font_size = excluded.grid_font_size,
                     toast_auto_dismiss_secs = excluded.toast_auto_dismiss_secs,
                     syntax_colors_json = excluded.syntax_colors_json,
-                    accent_color_dark = excluded.accent_color_dark,
-                    accent_color_light = excluded.accent_color_light,
                     table_alias_completion = excluded.table_alias_completion,
                     table_alias_use_as = excluded.table_alias_use_as,
                     blank_line_delimits_statements = excluded.blank_line_delimits_statements,
@@ -175,6 +173,8 @@ impl GeneralSettingsRepository {
                     grid_fk_labels = excluded.grid_fk_labels,
                     scrollbar_visibility = excluded.scrollbar_visibility,
                     workspace_inspector_width_px = excluded.workspace_inspector_width_px,
+                    accent_dark = excluded.accent_dark,
+                    accent_light = excluded.accent_light,
                     updated_at = datetime('now')
                 "#,
                 params![
@@ -208,8 +208,6 @@ impl GeneralSettingsRepository {
                     settings.grid_font_size,
                     settings.toast_auto_dismiss_secs,
                     settings.syntax_colors_json,
-                    settings.accent_color_dark,
-                    settings.accent_color_light,
                     settings.table_alias_completion,
                     settings.table_alias_use_as,
                     settings.blank_line_delimits_statements,
@@ -217,6 +215,8 @@ impl GeneralSettingsRepository {
                     settings.grid_fk_labels,
                     settings.scrollbar_visibility,
                     settings.workspace_inspector_width_px,
+                    settings.accent_dark,
+                    settings.accent_light,
                 ],
             )
             .map_err(|source| StorageError::Sqlite {
@@ -304,12 +304,6 @@ pub struct GeneralSettingsDto {
     /// Syntax colors that replace the palette's, as the JSON form of
     /// `dbflux_core::SyntaxColorOverrides`; empty keeps every palette color.
     pub syntax_colors_json: String,
-    /// Accent color of the dark palette as `#RRGGBB`; `None` keeps the
-    /// palette's accent.
-    pub accent_color_dark: Option<String>,
-    /// Accent color of the light palette as `#RRGGBB`; `None` keeps the
-    /// palette's accent.
-    pub accent_color_light: Option<String>,
     /// Whether accepting a table completion after `FROM` / `JOIN` appends a
     /// generated alias: 1 on, 0 off.
     pub table_alias_completion: i32,
@@ -330,6 +324,11 @@ pub struct GeneralSettingsDto {
     /// Width in pixels the row inspector was last resized to, or `None` to
     /// open it at its default width.
     pub workspace_inspector_width_px: Option<f64>,
+    /// The `#RRGGBB` accent picked for the Dark palette; `None` keeps the
+    /// palette's own accent.
+    pub accent_dark: Option<String>,
+    /// The `#RRGGBB` accent picked for the Light palette.
+    pub accent_light: Option<String>,
     pub updated_at: String,
 }
 
@@ -421,8 +420,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -430,6 +427,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -490,8 +489,6 @@ mod tests {
                 grid_font_size: 12.5,
                 toast_auto_dismiss_secs: 8,
                 syntax_colors_json: String::new(),
-                accent_color_dark: None,
-                accent_color_light: None,
                 table_alias_completion: 1,
                 table_alias_use_as: 0,
                 blank_line_delimits_statements: 0,
@@ -499,6 +496,8 @@ mod tests {
                 grid_fk_labels: 0,
                 scrollbar_visibility: "while_scrolling".to_string(),
                 workspace_inspector_width_px: None,
+                accent_dark: None,
+                accent_light: None,
                 updated_at: String::new(),
             };
 
@@ -579,8 +578,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -588,6 +585,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -686,8 +685,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -695,6 +692,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -749,8 +748,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -758,6 +755,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -844,8 +843,6 @@ mod tests {
             grid_font_size: 14.0,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -853,6 +850,8 @@ mod tests {
             grid_fk_labels: 0,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -929,8 +928,6 @@ mod tests {
             grid_font_size: 12.5,
             toast_auto_dismiss_secs: 8,
             syntax_colors_json: String::new(),
-            accent_color_dark: None,
-            accent_color_light: None,
             table_alias_completion: 1,
             table_alias_use_as: 0,
             blank_line_delimits_statements: 0,
@@ -938,6 +935,8 @@ mod tests {
             grid_fk_labels: 1,
             scrollbar_visibility: "while_scrolling".to_string(),
             workspace_inspector_width_px: None,
+            accent_dark: None,
+            accent_light: None,
             updated_at: String::new(),
         };
 
@@ -955,6 +954,42 @@ mod tests {
         let fetched = repo.get().expect("should get").expect("should exist");
         assert_eq!(fetched.scrollbar_visibility, "always");
         assert_eq!(fetched.grid_fk_labels, 1);
+
+        drop(repo);
+        std::fs::remove_file(&path).expect("remove the test database");
+    }
+
+    #[test]
+    fn accent_colors_default_to_null_and_round_trip_per_theme() {
+        let path = temp_db("accent_colors");
+        let conn = open_database(&path).expect("should open");
+        MigrationRegistry::new()
+            .run_all(&conn)
+            .expect("migration should run");
+
+        #[allow(clippy::arc_with_non_send_sync)]
+        let repo = GeneralSettingsRepository::new(Arc::new(conn));
+
+        let seeded = repo.get().expect("should get").expect("the row is seeded");
+        assert_eq!(seeded.accent_dark, None);
+        assert_eq!(seeded.accent_light, None);
+
+        repo.upsert(&GeneralSettingsDto {
+            accent_dark: Some("#2F7D6D".to_string()),
+            ..seeded.clone()
+        })
+        .expect("should upsert the dark accent");
+        let fetched = repo.get().expect("should get").expect("should exist");
+        assert_eq!(fetched.accent_dark.as_deref(), Some("#2F7D6D"));
+        assert_eq!(fetched.accent_light, None, "Light keeps the palette accent");
+
+        repo.upsert(&GeneralSettingsDto {
+            accent_dark: None,
+            ..fetched
+        })
+        .expect("should clear the dark accent");
+        let cleared = repo.get().expect("should get").expect("should exist");
+        assert_eq!(cleared.accent_dark, None, "Reset stores NULL");
 
         drop(repo);
         std::fs::remove_file(&path).expect("remove the test database");
