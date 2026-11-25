@@ -129,6 +129,12 @@ pub(crate) enum ResultsPosition {
 /// tabs open with.
 const RESULTS_POSITION_KEY: &str = "query_results_position";
 
+/// The results position every query editor shows. One setting for all
+/// editors: moving the results in one moves them in every open editor.
+pub(crate) struct SharedResultsPosition(pub ResultsPosition);
+
+impl gpui::Global for SharedResultsPosition {}
+
 impl ResultsPosition {
     fn toggled(self) -> Self {
         match self {

@@ -60,7 +60,11 @@ pub(crate) const CODE_EDITOR_CHROME: SurfaceRegistry = SurfaceRegistry {
             KeyboardPath::Command(Command::ToggleEditor),
         ),
         (
-            "toggle-results-position",
+            "results-position-bottom",
+            KeyboardPath::Menu("results-position"),
+        ),
+        (
+            "results-position-right",
             KeyboardPath::Menu("results-position"),
         ),
         // The mode bar of the results (Data, JSON, Chart): Shift+T shows the

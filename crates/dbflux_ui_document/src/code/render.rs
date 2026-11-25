@@ -791,7 +791,31 @@ impl CodeDocument {
     fn render_results_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
         let is_maximized = self.results_maximized;
-        let (_, position_icon) = self.results_position.toggle_label_and_icon();
+
+        let position_button = |id: &'static str, position: ResultsPosition, icon: AppIcon| {
+            let selected = self.results_position == position;
+
+            div()
+                .id(id)
+                .flex()
+                .items_center()
+                .justify_center()
+                .size_5()
+                .rounded(Radii::SM)
+                .cursor_pointer()
+                .when(selected, |button| button.bg(theme.secondary))
+                .when(!selected, |button| button.hover(|d| d.bg(theme.muted)))
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    if this.results_position != position {
+                        this.toggle_results_position(cx);
+                    }
+                }))
+                .child(
+                    Icon::new(icon)
+                        .size(ui(13.0))
+                        .when(!selected, |icon| icon.muted()),
+                )
+        };
 
         div()
             .flex()
@@ -799,18 +823,21 @@ impl CodeDocument {
             .gap_1()
             .child(
                 div()
-                    .id("toggle-results-position")
                     .flex()
                     .items_center()
-                    .justify_center()
-                    .size_6()
-                    .rounded(Radii::SM)
-                    .cursor_pointer()
-                    .hover(|d| d.bg(theme.secondary))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.toggle_results_position(cx);
-                    }))
-                    .child(Icon::new(position_icon).size(ui(14.0)).muted()),
+                    .p(px(2.0))
+                    .rounded(Radii::MD)
+                    .bg(theme.list_hover)
+                    .child(position_button(
+                        "results-position-bottom",
+                        ResultsPosition::Bottom,
+                        AppIcon::PanelBottom,
+                    ))
+                    .child(position_button(
+                        "results-position-right",
+                        ResultsPosition::Right,
+                        AppIcon::PanelRight,
+                    )),
             )
             .child(
                 div()
@@ -1152,6 +1179,10 @@ impl CodeDocument {
 impl Render for CodeDocument {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_statement_gutter_style(cx);
+
+        if let Some(shared) = cx.try_global::<SharedResultsPosition>() {
+            self.results_position = shared.0;
+        }
 
         self.process_pending_result(window, cx);
 

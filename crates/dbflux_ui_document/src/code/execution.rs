@@ -2501,12 +2501,13 @@ impl CodeDocument {
         cx.notify();
     }
 
-    /// Moves the results between below and beside the editor, and keeps the
-    /// choice for the query tabs opened after it.
+    /// Moves the results between below and beside the editor in every open
+    /// query editor, and keeps the choice for the ones opened after it.
     pub fn toggle_results_position(&mut self, cx: &mut Context<Self>) {
         self.results_position = self.results_position.toggled();
         self.results_position.save(self.app_state.read(cx));
-        cx.notify();
+        cx.set_global(SharedResultsPosition(self.results_position));
+        cx.refresh_windows();
     }
 
     /// Restores the split when maximized results hide the editor, so moving
