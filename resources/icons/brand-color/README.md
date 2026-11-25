@@ -9,5 +9,7 @@ The MySQL dolphin is filled and stroked (3 units of 128) in MySQL's brand
 blue `#4479A1` instead of devicon's `#00618A`: the thin dark outline was
 barely visible on a dark sidebar.
 
-MariaDB and InfluxDB keep their tinted glyphs: devicon's dark navy and teal
-originals almost vanish on a dark sidebar.
+MariaDB and InfluxDB are recolored for the same reason: devicon's dark navy
+originals almost vanish on a dark sidebar, so the MariaDB seal is drawn in
+`#C49A6C` and the InfluxDB cube in `#9394FF`. SQL Server is devicon's
+`microsoftsqlserver-original` unchanged.

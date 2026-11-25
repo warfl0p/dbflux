@@ -157,7 +157,7 @@ app_icons! {
     ChartNetwork => "icons/ui/chart-network.svg",
     BrandPostgres => "icons/brand-color/postgresql.png",
     BrandMysql => "icons/brand-color/mysql.png",
-    BrandMariadb => "icons/brand/mariadb.svg",
+    BrandMariadb => "icons/brand-color/mariadb.png",
     BrandSqlite => "icons/brand-color/sqlite.png",
     BrandMongodb => "icons/brand-color/mongodb.png",
     BrandRedis => "icons/brand-color/redis.png",
@@ -169,7 +169,8 @@ app_icons! {
     BrandPython => "icons/brand/python.svg",
     BrandBash => "icons/brand/gnubash.svg",
     BrandJavaScript => "icons/brand/javascript.svg",
-    BrandInfluxDb => "icons/brand/influxdb.svg",
+    BrandInfluxDb => "icons/brand-color/influxdb.png",
+    BrandMssql => "icons/brand-color/mssql.png",
     DbFlux => "icons/dbflux.svg" from "branding/glyph.svg",
     BrainCircuit => "icons/ui/brain-circuit.svg",
     Bot => "icons/ui/bot.svg",
@@ -234,6 +235,7 @@ impl AppIcon {
             Icon::Clickhouse => Self::BrandClickhouse,
             Icon::Turso => Self::BrandTurso,
             Icon::Duckdb => Self::BrandDuckdb,
+            Icon::Mssql => Self::BrandMssql,
             Icon::Influxdb => Self::BrandInfluxDb,
             Icon::Logs => Self::Logs,
             Icon::Database => crate::category::category_presentation(category).fallback_icon,
@@ -265,7 +267,8 @@ impl DriverIconTone {
             | Icon::Redshift
             | Icon::Clickhouse
             | Icon::Turso
-            | Icon::Duckdb => Self::Info,
+            | Icon::Duckdb
+            | Icon::Mssql => Self::Info,
             Icon::Mongodb | Icon::Dynamodb => Self::Success,
             Icon::Redis => Self::Danger,
             Icon::Influxdb => Self::Violet,
@@ -350,7 +353,7 @@ mod tests {
     fn explicit_driver_icons_preserve_brands_and_semantic_fallbacks() {
         assert_eq!(
             AppIcon::for_driver(Icon::Influxdb, DatabaseCategory::TimeSeries).path(),
-            "icons/brand/influxdb.svg"
+            "icons/brand-color/influxdb.png"
         );
         assert_eq!(
             AppIcon::for_driver(Icon::Redshift, DatabaseCategory::Relational),

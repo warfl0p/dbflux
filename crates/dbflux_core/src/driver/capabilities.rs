@@ -140,6 +140,7 @@ pub enum Icon {
     Clickhouse,
     Turso,
     Duckdb,
+    Mssql,
 
     // Time-series brands
     Influxdb,

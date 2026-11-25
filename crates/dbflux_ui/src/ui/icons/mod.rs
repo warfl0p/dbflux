@@ -9,7 +9,6 @@ mod tests {
         for icon in [
             AppIcon::ChartNoAxesColumn,
             AppIcon::Boxes,
-            AppIcon::BrandMariadb,
             AppIcon::BrandTurso,
         ] {
             assert!(AppIcon::ALL.contains(&icon));

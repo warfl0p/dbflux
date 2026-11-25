@@ -144,7 +144,7 @@ pub static METADATA: LazyLock<DriverMetadata> = LazyLock::new(|| DriverMetadata 
     ),
     default_port: Some(1433),
     uri_scheme: "sqlserver".into(),
-    icon: Icon::Database,
+    icon: Icon::Mssql,
     syntax: Some(SyntaxInfo {
         // T-SQL identifiers are bracketed (`[name]`), but `SyntaxInfo`
         // models the quote as a single `char`. The dialect's
