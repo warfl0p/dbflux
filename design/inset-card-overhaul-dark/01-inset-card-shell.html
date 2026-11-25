@@ -1,0 +1,292 @@
+<title>DBFlux Inset Card</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: sidebar and status bar sit on the window ground; the document is one rounded card inset by 6px. */
+:root{
+  --ground:#191A1B; --card:#121314; --raised:#232425; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.11);
+  --strong:#E4E4E6; --fg:#CCCCCF; --muted:#8E8F94; --faint:#6A6B70;
+  --hover:rgba(255,255,255,.04); --selected:rgba(255,255,255,.07);
+  --accent:#7AA2F7; --accent-wash:rgba(122,162,247,.14);
+  --ok:#7BE0A0; --warn:#FFC23D; --danger:#FF6B5E; --danger-wash:rgba(255,107,94,.10);
+  --kw:#C792EA; --str:#C3E88D; --num:#F78C6C;
+  --pop:#1E1F20; --shadow:0 12px 32px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);
+  --page:#0E0F10; --page-fg:#CCCCCF;
+  --ui:"Inter","Ubuntu","Noto Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --ground:#F3F3F4; --card:#FFFFFF; --raised:#E9E9EB; --line:rgba(0,0,0,.08); --line-2:rgba(0,0,0,.12);
+  --strong:#18181B; --fg:#3A3A3F; --muted:#6E6E76; --faint:#9A9AA2;
+  --hover:rgba(0,0,0,.04); --selected:rgba(0,0,0,.065);
+  --accent:#3E6FD8; --accent-wash:rgba(62,111,216,.12);
+  --ok:#1F9D55; --warn:#B7791F; --danger:#D64235; --danger-wash:rgba(214,66,53,.08);
+  --kw:#8E44AD; --str:#3F7F2A; --num:#B5531F;
+  --pop:#FFFFFF; --shadow:0 12px 32px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.08);
+  --page:#E4E4E7; --page-fg:#3A3A3F; color-scheme:light}}
+:root[data-theme="light"]{
+  --ground:#F3F3F4; --card:#FFFFFF; --raised:#E9E9EB; --line:rgba(0,0,0,.08); --line-2:rgba(0,0,0,.12);
+  --strong:#18181B; --fg:#3A3A3F; --muted:#6E6E76; --faint:#9A9AA2;
+  --hover:rgba(0,0,0,.04); --selected:rgba(0,0,0,.065);
+  --accent:#3E6FD8; --accent-wash:rgba(62,111,216,.12);
+  --ok:#1F9D55; --warn:#B7791F; --danger:#D64235; --danger-wash:rgba(214,66,53,.08);
+  --kw:#8E44AD; --str:#3F7F2A; --num:#B5531F;
+  --pop:#FFFFFF; --shadow:0 12px 32px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.08);
+  --page:#E4E4E7; --page-fg:#3A3A3F; color-scheme:light}
+body{background:var(--page);color:var(--page-fg);font:13px/1.45 var(--ui);
+  padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:20px;font-weight:600;margin:0 0 4px;color:var(--strong)}
+h2{font-size:15px;font-weight:600;margin:48px 0 4px;color:var(--strong)}
+.lede{color:var(--muted);max-width:70ch;margin:0 0 20px}
+.wrap{max-width:1280px;margin:0 auto}
+.scroll{overflow-x:auto}
+ul.notes{color:var(--muted);max-width:80ch;padding-left:18px;margin:12px 0 0}
+ul.notes li{margin:4px 0}
+ul.notes b{color:var(--fg);font-weight:600}
+
+/* window */
+.win{width:1240px;height:760px;background:var(--ground);border-radius:10px;display:grid;
+  grid-template-columns:272px 1fr;grid-template-rows:1fr 26px;overflow:hidden;color:var(--fg);
+  box-shadow:0 0 0 1px var(--line-2)}
+.side{grid-row:1;display:flex;flex-direction:column;min-width:0;padding:8px 6px 0 8px}
+.card{grid-row:1;margin:6px 6px 0 0;background:var(--card);border-radius:8px;border:1px solid var(--line);
+  display:flex;flex-direction:column;min-width:0;overflow:hidden;position:relative}
+.status{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:0 12px;font-size:12px;color:var(--muted)}
+.status .sp{flex:1}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.dot.ok{background:var(--ok)} .dot.bad{background:var(--danger)} .dot.idle{background:transparent;box-shadow:inset 0 0 0 1.5px var(--faint)}
+.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* sidebar */
+.rail{display:flex;gap:2px;padding:0 0 6px}
+.rail b{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--muted)}
+.rail b.on{background:var(--selected);color:var(--strong)}
+.rail .sp{flex:1}
+.head{display:flex;align-items:center;height:30px;padding:0 6px;font-weight:600;color:var(--strong);font-size:13px}
+.head .sp{flex:1}
+.ghost{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--muted)}
+.ghost:hover{background:var(--hover)}
+.search{margin:2px 0 8px;height:28px;border-radius:6px;background:var(--hover);display:flex;align-items:center;gap:8px;padding:0 8px;color:var(--faint)}
+.search kbd{margin-left:auto;font:11px var(--ui);color:var(--faint)}
+.tree{display:flex;flex-direction:column;gap:1px}
+.row{height:26px;display:flex;align-items:center;gap:7px;padding:0 6px;border-radius:6px;color:var(--fg);white-space:nowrap;position:relative}
+.row:hover{background:var(--hover)}
+.row.sel{background:var(--selected);color:var(--strong)}
+.row .tw{width:12px;color:var(--faint);font-size:10px;text-align:center}
+.row .meta{margin-left:auto;font-size:12px;color:var(--faint)}
+.row .meta.bad{color:var(--danger)}
+.row .acts{margin-left:auto;display:flex;gap:2px}
+.row .acts span{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;color:var(--muted)}
+.row .acts span:hover{background:var(--hover);color:var(--strong)}
+.logo{width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font:700 9px var(--ui);color:#fff;flex:none}
+.pg{background:#336791}.my{background:#00758F}.sq{background:#0F80CC}.mg{background:#13AA52}
+.grp{font-size:12px;color:var(--faint);padding:10px 6px 4px}
+.ind{padding-left:24px}.ind2{padding-left:42px}
+
+/* hover card */
+.hc{position:absolute;z-index:5;width:340px;background:var(--pop);border-radius:8px;box-shadow:var(--shadow);padding:12px;color:var(--fg)}
+.hc .t{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--strong)}
+.hc .t .sp{flex:1}
+.hc .t small{font-weight:400;color:var(--faint);font-size:12px}
+.hc pre{margin:8px 0 10px;font:12px/1.5 var(--mono);color:var(--muted);white-space:pre-wrap;background:var(--hover);border-radius:6px;padding:8px}
+.hc .b{display:flex;gap:6px}
+.btn{height:26px;padding:0 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--fg);background:var(--raised)}
+.btn.pri{background:var(--accent);color:#0B0C0D}
+.btn.gh{background:transparent;color:var(--muted)}
+
+/* document card */
+.top{height:38px;display:flex;align-items:center;gap:6px;padding:0 8px 0 14px;border-bottom:1px solid var(--line);flex:none}
+.crumb{display:flex;align-items:center;gap:6px;color:var(--muted);white-space:nowrap}
+.crumb b{font-weight:500;color:var(--strong)}
+.crumb i{font-style:normal;color:var(--faint)}
+.top .sp{flex:1}
+.chip{height:24px;padding:0 8px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.chip:hover{background:var(--hover)}
+.run{height:26px;padding:0 10px 0 8px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;color:var(--strong);background:var(--raised);font-size:12.5px;font-weight:500}
+.run kbd{font:11px var(--ui);color:var(--faint)}
+.ed{flex:1 1 52%;font:13px/21px var(--mono);padding:12px 0;display:grid;grid-template-columns:48px 1fr;overflow:hidden}
+.ln{color:var(--faint);text-align:right;padding-right:16px;opacity:.7}
+.code{color:var(--fg);white-space:pre}
+.k{color:var(--kw)}.s{color:var(--str)}.n{color:var(--num)}.c{color:var(--faint)}
+.res{flex:1 1 48%;border-top:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.rbar{height:34px;display:flex;align-items:center;gap:10px;padding:0 10px 0 14px;color:var(--muted);font-size:12px;flex:none}
+.rbar .ok{color:var(--ok)}
+.rbar .sp{flex:1}
+.seg{display:inline-flex;background:var(--hover);border-radius:6px;padding:2px}
+.seg span{padding:2px 8px;border-radius:4px;font-size:12px}
+.seg span.on{background:var(--raised);color:var(--strong)}
+table{border-collapse:collapse;width:100%;font:12.5px var(--mono);color:var(--fg)}
+th{font:500 12px var(--ui);color:var(--muted);text-align:left;height:28px;padding:0 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{height:26px;padding:0 12px;white-space:nowrap;border-bottom:1px solid var(--line)}
+tr:nth-child(even) td{background:var(--hover)}
+td.num{text-align:right;color:var(--num)} td.nul{color:var(--faint);font-style:italic}
+tr.act td{background:var(--accent-wash)}
+
+/* welcome */
+.wel{flex:1;display:grid;place-items:center}
+.wbox{width:560px}
+.wbox h3{font-size:22px;font-weight:600;color:var(--strong);margin:14px 0 4px;letter-spacing:-.01em}
+.wbox p{color:var(--muted);margin:0 0 22px}
+.mark{width:36px;height:36px;border-radius:9px;background:var(--raised);display:grid;place-items:center;color:var(--strong)}
+.wl{display:flex;flex-direction:column;gap:1px;margin-bottom:22px}
+.wl .row{height:32px}
+.wl kbd{margin-left:auto;font:12px var(--ui);color:var(--faint)}
+.wsec{font-size:12px;color:var(--faint);margin:0 0 6px 6px}
+.ver{display:flex;gap:14px;font-size:12px;color:var(--faint);margin-left:6px}
+.ver a{color:var(--accent);text-decoration:none}
+
+/* states strip */
+.states{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:16px}
+.pane{background:var(--ground);border-radius:10px;padding:10px 8px;box-shadow:0 0 0 1px var(--line-2);color:var(--fg)}
+.pane .cap{font-size:12px;color:var(--faint);margin:0 6px 6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.tokens{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;max-width:960px}
+.tok{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--page-fg)}
+.tok span{width:34px;height:34px;border-radius:8px;box-shadow:0 0 0 1px var(--line-2);flex:none}
+.tok code{font:11.5px var(--mono);color:var(--muted);display:block}
+</style>
+
+<div class="wrap">
+<h1>DBFlux inset card overhaul</h1>
+<p class="lede">Proposal for review before any code changes. The sidebar and status bar sit on the window ground (#191A1B). The open document is one rounded card (#121314) inset by 6 px. Labels use sentence case. Upstream's chamfered mark, the desk gaps and the in-tree failure block are gone.</p>
+
+<h2>Main window: editor, results and a failed connection</h2>
+<p class="lede">The failed connection gets a red dot and a short "Failed" label on its own row. Hovering the row, or pressing → on it, opens the card with the error and its actions. No rows are added to the tree.</p>
+<div class="scroll"><div class="win">
+  <aside class="side">
+    <div class="rail">
+      <b class="on" title="Connections"><svg class="i" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></b>
+      <b title="Explorer"><svg class="i" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></b>
+      <b title="Dashboards"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></b>
+      <b title="Audit"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></b>
+      <span class="sp"></span>
+      <b title="Settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></b>
+    </div>
+    <div class="head">Connections<span class="sp"></span><span class="ghost">+</span></div>
+    <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Filter connections and schema<kbd>/</kbd></div>
+    <div class="tree">
+      <div class="row"><span class="tw">▾</span><span class="logo pg">Pg</span>billing-prod<span class="dot ok" style="margin-left:auto"></span></div>
+      <div class="row ind"><span class="tw">▾</span>public</div>
+      <div class="row ind2 sel"><span class="tw"></span>invoices<span class="meta">12.4k</span></div>
+      <div class="row ind2"><span class="tw"></span>customers<span class="meta">3.1k</span></div>
+      <div class="row ind2"><span class="tw"></span>payments<span class="meta">48k</span></div>
+      <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo my">My</span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo sq">Sq</span>scratch.db<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="grp">Staging</div>
+      <div class="row"><span class="tw">▸</span><span class="logo pg">Pg</span>billing-staging<span class="dot idle" style="margin-left:auto"></span></div>
+    </div>
+  </aside>
+
+  <main class="card">
+    <div class="top">
+      <div class="crumb"><span class="logo pg">Pg</span>billing-prod <i>›</i> billing <i>›</i> public <i>›</i> <b>overdue_invoices.sql</b></div>
+      <span class="sp"></span>
+      <span class="chip">Saved</span>
+      <span class="run"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M7 4l12 8-12 8z" fill="currentColor" stroke="none"/></svg>Run <kbd>Ctrl ⏎</kbd></span>
+      <span class="ghost">⋯</span>
+    </div>
+    <div class="ed">
+      <div class="ln">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div>
+      <div class="code"><span class="c">-- Invoices more than 30 days past due</span>
+<span class="k">select</span> i.id, c.name, i.amount_cents, i.due_on
+<span class="k">from</span> invoices i
+<span class="k">join</span> customers c <span class="k">on</span> c.id = i.customer_id
+<span class="k">where</span> i.status = <span class="s">'open'</span>
+  <span class="k">and</span> i.due_on &lt; now() - <span class="k">interval</span> <span class="s">'30 days'</span>
+<span class="k">order by</span> i.due_on
+<span class="k">limit</span> <span class="n">200</span>;</div>
+    </div>
+    <div class="res">
+      <div class="rbar"><span class="ok">●</span> 37 rows · 18 ms<span class="sp"></span><span class="seg"><span class="on">Grid</span><span>JSON</span><span>Chart</span></span><span class="ghost">⤓</span></div>
+      <div style="overflow:hidden;flex:1">
+      <table>
+        <tr><th>id</th><th>name</th><th style="text-align:right">amount_cents</th><th>due_on</th></tr>
+        <tr><td>inv_8841</td><td>Northwind Traders</td><td class="num">129900</td><td>2026-09-02</td></tr>
+        <tr class="act"><td>inv_8857</td><td>Contoso Ltd</td><td class="num">48000</td><td>2026-09-11</td></tr>
+        <tr><td>inv_8862</td><td>Fabrikam</td><td class="num">7250</td><td>2026-09-14</td></tr>
+        <tr><td>inv_8890</td><td>Tailspin Toys</td><td class="num">310000</td><td>2026-09-30</td></tr>
+        <tr><td>inv_8902</td><td>Adventure Works</td><td class="num">15500</td><td class="nul">null</td></tr>
+        <tr><td>inv_8915</td><td>Wide World Importers</td><td class="num">92040</td><td>2026-10-08</td></tr>
+      </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="status"><span class="dot ok"></span>billing-prod<span>PostgreSQL 16.4</span><span>Ln 6, Col 41</span><span class="sp"></span><span>No background tasks</span><span>🔔︎</span></div>
+
+  <div class="hc" style="left:262px;top:178px">
+    <div class="t"><span class="dot bad"></span>Can't connect to events-cluster<span class="sp"></span><small>2 min ago</small></div>
+    <pre>connection refused
+10.0.4.12:27017 · 3 tries</pre>
+    <div class="b"><span class="btn pri">Retry</span><span class="btn">Edit connection</span><span class="btn gh">View in audit</span></div>
+  </div>
+</div></div>
+<ul class="notes">
+  <li><b>Ground and card.</b> Sidebar, rail and status bar share #191A1B. The document card is #121314 with an 8 px radius and a faint 1 px edge. This replaces the 1 px #2A2B2C desk gaps.</li>
+  <li><b>Sentence case.</b> "Connections", "Staging", column headers and every section label lose the uppercase and the tracking.</li>
+  <li><b>Rows.</b> 26 px tree rows with a 6 px radius. Hover and selection are neutral washes inset from the sidebar edge, as in Linear.</li>
+  <li><b>Connection state.</b> A dot at the row's right end: green when connected, a hollow ring when idle, red when failed, with a spinner while connecting. Only a failed row adds a word.</li>
+  <li><b>Results.</b> The result bar shows the outcome as plain text, with a segmented Grid / JSON / Chart switch and ghost actions.</li>
+</ul>
+
+<h2>Connection row states</h2>
+<div class="states">
+  <div class="pane"><div class="cap">Idle, connecting, connected</div>
+    <div class="row"><span class="tw">▸</span><span class="logo my">My</span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
+    <div class="row"><span class="tw">▸</span><span class="logo my">My</span>legacy-shop<span class="meta">Connecting…</span><svg class="i spin" viewBox="0 0 24 24" style="width:13px;height:13px;margin-left:6px"><path d="M21 12a9 9 0 1 1-9-9"/></svg></div>
+    <div class="row"><span class="tw">▾</span><span class="logo my">My</span>legacy-shop<span class="dot ok" style="margin-left:auto"></span></div>
+  </div>
+  <div class="pane"><div class="cap">Failed: at rest, hovered, selected</div>
+    <div class="row"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+    <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="acts"><span title="Retry">↻</span><span title="Edit">✎</span></span><span class="dot bad" style="margin-left:6px"></span></div>
+    <div class="row sel"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+  </div>
+</div>
+<ul class="notes">
+  <li><b>Hovered</b> replaces the label with ghost Retry and Edit buttons, the way Linear shows row actions. The full error stays in the hover card.</li>
+  <li><b>Keyboard.</b> Enter retries, → or Space opens the hover card, and the card's buttons are reachable with Tab.</li>
+</ul>
+
+<h2>Welcome screen</h2>
+<div class="scroll"><div class="win" style="height:560px">
+  <aside class="side">
+    <div class="rail"><b class="on"><svg class="i" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg></b></div>
+    <div class="head">Connections<span class="sp"></span><span class="ghost">+</span></div>
+    <div style="flex:1;display:grid;place-items:center;text-align:center;color:var(--faint);font-size:12.5px">No connections yet<br><span class="btn" style="margin-top:10px">Add connection</span></div>
+  </aside>
+  <main class="card"><div class="wel"><div class="wbox">
+    <div class="mark"><svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+    <h3>Welcome to DBFlux</h3>
+    <p>A keyboard-first client for SQL, documents, key-value, time series and object storage.</p>
+    <div class="wsec">Start</div>
+    <div class="wl">
+      <div class="row">New connection<kbd>Ctrl N</kbd></div>
+      <div class="row">Open folder…<kbd>Ctrl O</kbd></div>
+      <div class="row">Command palette<kbd>Ctrl Shift P</kbd></div>
+    </div>
+    <div class="ver">Version 0.12.0 · <a href="#">What's new</a> · <a href="#">Update settings</a></div>
+  </div></div></main>
+  <div class="status"><span class="dot idle"></span>No connection<span class="sp"></span><span>Ready</span></div>
+</div></div>
+<ul class="notes">
+  <li><b>Branding.</b> The purple chamfered tile, the uppercase display title and the boxed version chip are replaced by a plain mark on a raised tile and a sentence-case title.</li>
+  <li><b>What's new</b> moves out of the welcome screen into its own document opened from the link, so the first screen is a list of actions.</li>
+</ul>
+
+<h2>Tokens that change</h2>
+<div class="tokens">
+  <div class="tok"><span style="background:var(--ground)"></span><div>Ground<code>#191A1B</code></div></div>
+  <div class="tok"><span style="background:var(--card)"></span><div>Card and editor<code>#121314</code></div></div>
+  <div class="tok"><span style="background:var(--raised)"></span><div>Raised<code>#232425</code></div></div>
+  <div class="tok"><span style="background:var(--pop)"></span><div>Popover<code>#1E1F20</code></div></div>
+  <div class="tok"><span style="background:var(--accent)"></span><div>Accent, unchanged<code>#7AA2F7</code></div></div>
+</div>
+<ul class="notes">
+  <li><b>Radii</b> 4 / 6 / 8 px (controls, rows and menus, card and popovers), up from 3 / 4 / 6.</li>
+  <li><b>Type.</b> Interface 13 px at weight 400, headings 600. Labels become 12 px sentence case in the faint color, with no tracking.</li>
+  <li><b>Separators</b> are translucent white (7 % and 11 %) instead of fixed grays, so they read the same on the ground and on the card.</li>
+  <li><b>Unchanged:</b> syntax colors, the accent and the semantic colors. The code colors in these mockups are only illustrative.</li>
+</ul>
+</div>
