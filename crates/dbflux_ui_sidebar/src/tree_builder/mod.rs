@@ -712,36 +712,12 @@ impl Sidebar {
                             secret_path_cache,
                         );
                         items.push(profile_item);
-                        items.extend(Self::build_connect_failure_rows(profile_id, state));
                     }
                 }
             }
         }
 
         items
-    }
-
-    /// The entries that carry the failed-connection block under a profile:
-    /// present while the last connect attempt failed and no new attempt is
-    /// running. Disabled, so the tree neither selects nor expands them.
-    fn build_connect_failure_rows(profile_id: Uuid, state: &AppStateEntity) -> Vec<TreeItem> {
-        let failed = state.connect_failure(profile_id).is_some()
-            && !state.connections().contains_key(&profile_id)
-            && !state.is_operation_pending(profile_id, None);
-
-        if !failed {
-            return Vec::new();
-        }
-
-        (0..crate::connection_failure::FAILURE_ROW_SLICES)
-            .map(|slice| {
-                TreeItem::new(
-                    crate::connection_failure::failure_row_id(profile_id, slice),
-                    "",
-                )
-                .disabled(true)
-            })
-            .collect()
     }
 
     fn build_profile_item_with_errors(

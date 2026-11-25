@@ -1,5 +1,5 @@
 use super::*;
-use crate::connection_failure::{ConnectionFailure, parse_failure_row_id};
+use crate::connection_failure::ConnectionFailure;
 use dbflux_components::controls::Button;
 use dbflux_components::icons::AppIcon;
 use dbflux_components::primitives::{Icon, Status, StatusIndicator, Text};
@@ -103,6 +103,7 @@ pub(super) struct TreeRenderParams {
     pub sidebar_entity: Entity<Sidebar>,
     pub multi_selection: HashSet<String>,
     pub pending_delete: Option<String>,
+    pub hovered_failed_profile: Option<Uuid>,
     pub drop_target: Option<DropTarget>,
     pub scripts_drop_target: Option<DropTarget>,
     pub editing_id: Option<Uuid>,
@@ -169,10 +170,6 @@ pub(super) fn render_tree_item(
                         .color(theme.muted_foreground),
                 ),
         );
-    }
-
-    if let Some((profile_id, slice)) = parse_failure_row_id(&item_id) {
-        return render_failure_slice(params, ix, profile_id, slice, entry.depth(), cx);
     }
 
     let node_kind = parse_node_kind(&item_id);
@@ -279,22 +276,18 @@ pub(super) fn render_tree_item(
     };
 
     // Icons read muted and the driver logo keeps its tone, selected or not.
-    let icon_color = if connect_failure.is_some() {
-        theme.danger
-    } else if let Some(color) = profile_id.and_then(|id| params.profile_icon_colors.get(&id)) {
-        *color
-    } else {
-        theme.muted_foreground
-    };
+    let icon_color =
+        if let Some(color) = profile_id.and_then(|id| params.profile_icon_colors.get(&id)) {
+            *color
+        } else {
+            theme.muted_foreground
+        };
 
-    let label_color = if connect_failure.is_some() {
-        theme.danger
-    } else if selected
+    let label_color = if selected
         || matches!(
             node_kind,
             SchemaNodeKind::Profile | SchemaNodeKind::ConnectionFolder
-        )
-    {
+        ) {
         ChromeColors::strong(theme)
     } else {
         theme.foreground
@@ -398,6 +391,8 @@ pub(super) fn render_tree_item(
     // list selection.
     let mut list_item = ListItem::new(ix)
         .h(TreeMetrics::ROW_HEIGHT)
+        .mx(TreeMetrics::ROW_INSET)
+        .rounded(Radii::MD)
         .when(selected && !is_pending_delete, |el| {
             el.bg(theme.list_active)
         })
@@ -634,38 +629,14 @@ pub(super) fn render_tree_item(
                 .when_some(connect_failure, |el, (profile_id, tooltip)| {
                     let sidebar = params.sidebar_entity.clone();
 
-                    el.child(
-                        div()
-                            .id(SharedString::from(format!("connect-error-{profile_id}")))
-                            .debug_selector(move || format!("connect-error-{profile_id}"))
-                            .flex()
-                            .flex_shrink_0()
-                            .items_center()
-                            .gap(ShellMetrics::ROW_STATUS_GAP)
-                            .ml(TreeMetrics::GAP)
-                            .text_size(ShellMetrics::ROW_STATUS_FONT)
-                            .text_color(theme.danger)
-                            .cursor_pointer()
-                            .child(
-                                Icon::new(AppIcon::TriangleAlert)
-                                    .size(TreeMetrics::CHEVRON)
-                                    .color(theme.danger),
-                            )
-                            .child(dbflux_i18n::t!("sidebar.tree.status.retry_inline"))
-                            .tooltip(move |window, cx| {
-                                gpui_component::tooltip::Tooltip::new(tooltip.clone())
-                                    .build(window, cx)
-                            })
-                            .on_mouse_down(MouseButton::Left, |_, _, cx| {
-                                cx.stop_propagation();
-                            })
-                            .on_click(move |_, _, cx| {
-                                cx.stop_propagation();
-                                sidebar.update(cx, |sidebar, cx| {
-                                    sidebar.connect_to_profile(profile_id, cx);
-                                });
-                            }),
-                    )
+                    el.on_hover(move |hovered, _, cx| {
+                        sidebar.update(cx, |sidebar, cx| {
+                            sidebar.set_hovered_failed_profile(profile_id, *hovered, cx);
+                        });
+                    })
+                    .child(render_connect_failure_status(
+                        params, profile_id, tooltip, cx,
+                    ))
                 })
                 .when(
                     matches!(
@@ -1197,139 +1168,120 @@ pub(super) fn render_tree_item(
     list_item
 }
 
-/// One row-tall slice of the failed-connection block under `profile_id`.
-///
-/// Every slice lays out the whole block and shows the band of it that
-/// falls on its row, so the rows read as one block.
-fn render_failure_slice(
+/// The status at the right end of a failed profile row: "Failed" and a red
+/// dot at rest, Retry and Edit buttons while the row is hovered. The dot's
+/// tooltip shows the error; the context menu also offers the audit log.
+fn render_connect_failure_status(
     params: &TreeRenderParams,
-    ix: usize,
     profile_id: Uuid,
-    slice: usize,
-    depth: usize,
+    tooltip: SharedString,
     cx: &App,
-) -> ListItem {
+) -> impl IntoElement {
     let theme = cx.theme();
     let danger = theme.danger;
-    let muted = theme.muted_foreground;
-    let row_height = dbflux_components::fonts::ui_px(cx, TreeMetrics::ROW_HEIGHT);
-    let block_left = TreeMetrics::PADDING_X
-        + dbflux_components::fonts::ui_px(cx, TreeMetrics::INDENT) * depth as f32
-        + Spacing::SM;
+    let hovered = params.hovered_failed_profile == Some(profile_id);
+    let tooltip = match params.failure_details.get(&profile_id) {
+        Some(ConnectionFailure { summary, detail }) => {
+            let summary = crate::labels::connect_failed_tooltip_label(summary);
+            match detail {
+                Some(detail) => SharedString::from(format!("{summary}\n{detail}")),
+                None => SharedString::from(summary),
+            }
+        }
+        None => tooltip,
+    };
 
-    let failure = params
-        .failure_details
-        .get(&profile_id)
-        .cloned()
-        .unwrap_or_else(|| ConnectionFailure::from_error(""));
+    let retry_sidebar = params.sidebar_entity.clone();
+    let label_sidebar = params.sidebar_entity.clone();
+    let edit_sidebar = params.sidebar_entity.clone();
 
     let action = |name: &'static str, icon: AppIcon, label: String| {
         Button::new(
-            SharedString::from(format!("connect-failure-{name}-{profile_id}-{slice}")),
+            SharedString::from(format!("connect-failure-{name}-{profile_id}")),
             label,
         )
+        .ghost()
         .icon(icon)
         .icon_size(ShellMetrics::FAILURE_ACTION_ICON)
         .icon_only()
         .tab_stop(false)
     };
 
-    let retry_sidebar = params.sidebar_entity.clone();
-    let edit_sidebar = params.sidebar_entity.clone();
-    let audit_sidebar = params.sidebar_entity.clone();
-
-    let block = div()
-        .absolute()
-        .top(ShellMetrics::FAILURE_MARGIN_TOP - row_height * slice as f32)
-        .left(block_left)
-        .right(ShellMetrics::FAILURE_MARGIN_RIGHT)
+    div()
         .flex()
-        .flex_col()
-        .py(ShellMetrics::FAILURE_PADDING_Y)
-        .px(ShellMetrics::FAILURE_PADDING_X)
-        .bg(danger.opacity(ShellMetrics::FAILURE_ALPHA))
-        .border_l(ShellMetrics::FAILURE_EDGE)
-        .border_color(danger)
-        .child(
-            div()
-                .font_family(dbflux_components::fonts::editor_family(cx))
-                .text_size(ShellMetrics::FAILURE_FONT)
-                .line_height(ShellMetrics::FAILURE_LINE_HEIGHT)
-                .text_color(muted)
-                .map(|text| match failure.detail {
-                    Some(detail) => text
-                        .child(div().truncate().child(failure.summary))
-                        .child(div().truncate().child(detail)),
-                    // A one-line error gets both lines of the block.
-                    None => text.child(
-                        div()
-                            .overflow_hidden()
-                            .text_ellipsis()
-                            .line_clamp(2)
-                            .child(failure.summary),
-                    ),
-                }),
-        )
-        .child(
-            div()
-                .flex()
-                .gap(ShellMetrics::FAILURE_ACTION_GAP)
-                .pt(ShellMetrics::FAILURE_ACTIONS_GAP_TOP)
-                .child(
-                    action(
-                        "retry",
-                        AppIcon::RefreshCcw,
-                        dbflux_i18n::t!("sidebar.failure.retry"),
-                    )
+        .flex_shrink_0()
+        .items_center()
+        .gap(ShellMetrics::ROW_STATUS_GAP)
+        .ml(TreeMetrics::GAP)
+        .when(!hovered, |status| {
+            status.child(
+                div()
+                    .id(SharedString::from(format!("connect-error-{profile_id}")))
+                    .debug_selector(move || format!("connect-error-{profile_id}"))
+                    .text_size(ShellMetrics::ROW_STATUS_FONT)
+                    .text_color(danger)
+                    .cursor_pointer()
+                    .child(dbflux_i18n::t!("sidebar.tree.status.failed_inline"))
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
                     .on_click(move |_, _, cx| {
-                        retry_sidebar.update(cx, |sidebar, cx| {
+                        cx.stop_propagation();
+                        label_sidebar.update(cx, |sidebar, cx| {
                             sidebar.connect_to_profile(profile_id, cx);
                         });
                     }),
-                )
-                .child(
-                    action(
-                        "edit",
-                        AppIcon::Pencil,
-                        dbflux_i18n::t!("sidebar.failure.edit"),
-                    )
-                    .on_click(move |_, _, cx| {
-                        edit_sidebar.update(cx, |_, cx| {
-                            cx.emit(SidebarEvent::RequestEditConnection { profile_id });
-                        });
-                    }),
-                )
-                .child(
-                    action(
-                        "audit",
-                        AppIcon::FingerprintPattern,
-                        dbflux_i18n::t!("sidebar.failure.audit"),
-                    )
-                    .on_click(move |_, _, cx| {
-                        audit_sidebar.update(cx, |sidebar, cx| {
-                            sidebar.app_state.update(cx, |state, cx| {
-                                state.request_open_audit(None, cx);
+            )
+        })
+        .when(hovered, |status| {
+            status.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .child(
+                        action(
+                            "retry",
+                            AppIcon::RefreshCcw,
+                            dbflux_i18n::t!("sidebar.failure.retry"),
+                        )
+                        .on_click(move |_, _, cx| {
+                            cx.stop_propagation();
+                            retry_sidebar.update(cx, |sidebar, cx| {
+                                sidebar.connect_to_profile(profile_id, cx);
                             });
-                        });
-                    }),
-                ),
-        );
-
-    ListItem::new(ix).h(row_height).p_0().child(
-        div()
-            .id(SharedString::from(failure_slice_element_id(
-                profile_id, slice,
-            )))
-            .relative()
-            .w_full()
-            .h(row_height)
-            .overflow_hidden()
-            .child(block),
-    )
-}
-
-fn failure_slice_element_id(profile_id: Uuid, slice: usize) -> String {
-    format!("connect-failure-{profile_id}-{slice}")
+                        }),
+                    )
+                    .child(
+                        action(
+                            "edit",
+                            AppIcon::Pencil,
+                            dbflux_i18n::t!("sidebar.failure.edit"),
+                        )
+                        .on_click(move |_, _, cx| {
+                            cx.stop_propagation();
+                            edit_sidebar.update(cx, |_, cx| {
+                                cx.emit(SidebarEvent::RequestEditConnection { profile_id });
+                            });
+                        }),
+                    ),
+            )
+        })
+        .child(
+            div()
+                .id(SharedString::from(format!(
+                    "connect-error-dot-{profile_id}"
+                )))
+                .p(ShellMetrics::ROW_STATUS_GAP)
+                .child(
+                    div()
+                        .size(ShellMetrics::FAILURE_DOT)
+                        .rounded_full()
+                        .bg(danger),
+                )
+                .tooltip(move |window, cx| {
+                    gpui_component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
+                }),
+        )
 }
 
 /// Returns the icon variant for a node kind without any color or theme context.

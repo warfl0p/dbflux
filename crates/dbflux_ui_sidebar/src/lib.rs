@@ -1145,6 +1145,8 @@ pub struct Sidebar {
     dashboards_selection_anchor: Option<String>,
     /// Item ID pending delete confirmation (for keyboard x shortcut)
     pending_delete_item: Option<String>,
+    /// The failed profile row under the pointer, which shows Retry and Edit.
+    hovered_failed_profile: Option<Uuid>,
     /// Delete confirmation modal state (for context menu delete)
     delete_confirm_modal: Option<DeleteConfirmState>,
     /// Keyboard focus for the inline delete confirmation.
@@ -1515,6 +1517,7 @@ impl Sidebar {
             dashboards_multi_selection: HashSet::new(),
             dashboards_selection_anchor: None,
             pending_delete_item: None,
+            hovered_failed_profile: None,
             delete_confirm_modal: None,
             delete_modal_focus: ModalFocus::new(cx),
             add_menu_open: false,
