@@ -44,7 +44,7 @@ ul.notes li{margin:4px 0}
 ul.notes b{color:var(--fg);font-weight:600}
 
 /* window */
-.win{width:1240px;height:760px;background:var(--ground);border-radius:10px;display:grid;
+.win{position:relative;width:1240px;height:760px;background:var(--ground);border-radius:10px;display:grid;
   grid-template-columns:272px 1fr;grid-template-rows:1fr 26px;overflow:hidden;color:var(--fg);
   box-shadow:0 0 0 1px var(--line-2)}
 .side{grid-row:1;display:flex;flex-direction:column;min-width:0;padding:8px 6px 0 8px}
@@ -77,8 +77,8 @@ ul.notes b{color:var(--fg);font-weight:600}
 .row .acts{margin-left:auto;display:flex;gap:2px}
 .row .acts span{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;color:var(--muted)}
 .row .acts span:hover{background:var(--hover);color:var(--strong)}
-.logo{width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font:700 9px var(--ui);color:#fff;flex:none}
-.pg{background:#336791}.my{background:#00758F}.sq{background:#0F80CC}.mg{background:#13AA52}
+.logo{width:16px;height:16px;flex:none}
+.logo.pg{background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAG+0lEQVRYhbWWe1TT5xnHPwFyDyFcEhJA8MLFSxWrTtDatZvaWees6+ZmdaNnMrW7dM457dHe1h7b1TO3tqud8+gUj7a2tj1SLUIBlcvwUinECogg8RLCJVwkJARISLI/hCzID/WP+j0n5+T3XL7P9/097/s+PxHfPsYAMUAEYAcagZuAVyhYJGBLADLlcvnj8fHx8UBQR0dHc3t7exVgBPIGi6xLSUmZqVarY1wuV6/JZGqJioqKSEtL08fExhGtj8Fht3HN1EBxcXGz2Ww+AuwYFDSqgHXz5s3756uvvyHR6g00tdnw4SMiVEGoQkp1VRV5OceI1hv4xbOrMVu76O51oZSJidVqmDZxAtWmJg4UGHH2u5BLxBg0ctKT9Tht7Wxc//ueqqqqjcBuIQHPrs5csz/zdxtEf88u50brreGvSgQTx+h47/mlHMw7z+HiGlwDnmExunAVyx+bRup4A9sOneSmtcvvS4yNZOOyWbz/j+0cyNq/GfgbQPCgPzQpKenE9nd2KjbsOUlnt1OoXWQu/g755fUcLrqEx+sb4e/pc3Gh1kzNDStvZC6i+norHYNcnfZeCozX2bR2FZ2tTQuvXKn9L3AtaDD3qfV/+nPkgZM1uNyeEcQAY/XhJOjC+azkkqA/EA1NHWzc9QWvZiwgKkzpt7vcHl4/XMbmrS8BrAAYEvDonLnzKK+zjEr6xKxkPiu9d/EhtHTa2fFJCVtXfX+YvcvRS2hoGEB0oID4ELFkRE8DMXdKAmdrbt63AICKOgv97gGmJ8YMs3t9PgBxoADZyI7+H+KQYHyAs8+FNkzJpHgdMknIXYvrNCoWzkzCbO1icdpEv10iDmbA1Q9gARhicQYJ3QiDiA5XoVZIyXrhZ3Q5+mi39TBtgoEte3JpaOoYET93SgLPLZ3DxYYmbtl7MUSG+n3JcVoufvMNQF3gG7jS47Ajl4oFBUjFITj73WzZk8um3Tk4+118dMpIxhMzBOOfmT+dHUeKCVPKKL5owubo8/umjdNxpuQ0wLlAAbW1tZcZGx0uSOge8HCztYvmTjvuAQ87j54hu6yasfoIwXifF643d/LK/nw0Kjntth6/Lz1Zz4mcL7rvFFB+pqSI1PHRgoQer4/ggB65Bjx4vT5EIuG+Vd9oZUZyHABy6e23BxChVoC7l5aWlhzAFSjAWFRUZHt4XKQgoUouwdHrEliq8NY9VXHVv/G6nf2EKWUALJmdTNbe3QAHh2KHBHjr6+uLDOEqggR2o0oupdvZP8IuFAtQb2lHJZcQr9Pg6HWhkEkIDgpifmo8hz/8oBHIv1MAwOnKykpS4rQjCwnU0WlU3HL0CgoA2JvzFc8tTafP5UYmCeEHs5LIOZ6Nw+H4K+C/cAIF5Gd/+jGPTo4dQVbX2E7qBMMw25I5kygorx9VQEW9BblUzJOzU2jr6mH5vGR2vPVmI/CfYYsL+H85N/dE9SOT40aQ2Xr6uGK2snL+dOD2ZJw/I5EvL9SNKgBg1+dnWbskDY1SwpEPD9LW1rYNGNbL4MAHt9utTp8zZ4FbGkZzh30YWeXVZravXcT0sZEkjdGjkEo4ZWzAfZfru6PbSaRawYxxUaxY/rTP4/H4FArFBrlcvqm/v78PqLizu9qpU6ea3937gXTTvtN+o0gEL638LiXHP6Lwy1z+8tprTHo4HVFQMH/ceYy2gHMeiLkPJfDrxbNpbGolQafG0eNEJpeTGB9DmDq0wePxJAbfkeO0Wq26Hy1ZnOaVqjG32QBYt3gmbXVfc/TTIyz78dPMeuRx/vCvPMQhwRgi1Vy+aRUUsPyxVE6cr+VA4UXKaptwuGBibDgvv7gVY2XFu0Cx0DkK1el0lwqKShMOldSTZNAQ6mpDIZehiDSQX3mDsppGHhqn583VC9iX9zUfFwmP6bcyFyL19KBUKmlttVJWcpqsfXt7LBbLK8DbgG+0EZSu1WpzX9j6sqah4Sr/fv+9xp8/sypu85YXEUtkiEQ+aqqqMJafQz5uJtnljYIke9f/kNmpk2643e5CoAMoBwoA/7faXWYgOuAng4lHgWXAL4Ekbn9un8nIyFifmL6Izy+2CRLsW/8kqZOTs4BfjVbkbkPdCuwKeP5k8OeHSCR63jvgDkIASpkE261OCFitEAST7xdut7tXHHLnPr6NmEg1JlMDQMsDE2C3222aUJWgT6+RY6qvA7j8wARYLJbaWG2YoG9KjIoLF74aAEofmACj0Zg3Pk7nH7dD0GmUzEqOobS09BhwSzj7NoQbeJ/w+XzXGs3m327buEbsHBARp1WzaJqejO9N4jdr13SYTKafco9NeLdjeL94KjU19dCKlatUXo+H8+fOugoLC487nc5NwLV7JX8bAgDCgdmAE6gAhIeDAP4HGSGks5Neqg8AAAAASUVORK5CYII=) center/contain no-repeat}.logo.mg{background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAH7UExURQAAAGaZZl+zT0ujOWGzTWCyT0miOjOZM2KxU0mjOkWgNwD/AFmxQ1iwSUqiPEagN4CAgFevR1+xTkujPEegOE+rQVatR1ywTEukO0agN0ObN0CfQE+qQVOsRFqvSEujPEagOEmoPk+qQE+qQleuR2CxTkykPEagN0mgOkqmPE2pQFWuRk2kPUahN0ejM0qnPEqoPVKtRVivSE2kPUahN0agNkCAQESmOEimOUqnPE6pQVCrQUyjPUScNUOcNUOZNUSZM0WlOEelOE2pP1WtRkmgOkSZNESlN0mnPEugOkOaNEWlOUimOk6pQE+qQleuRkqfO0OZNEWlOEamOUqhO0OZNEWkOEqmPEmgO0OZNEalOEmnPEqnPE+rQUigOkOZNESmOEalOU2pQEigOUKZNEanOUyoPkeeOkOXNEGWNECUM0CUM0CTMj+TM0WlOEmnO0+pQESaOECUM0CPMESlN0alOUyqPkSaN0GUNEWlOEqnPEunPUOXNUCUMz6TM0SlN0WlOEinO0qnPEKWNkCVM0akOEemOk2nPlSYQkCUM0CVK1WqVUWlOFqoSWmdU0CUMz6TNkm2SUWmOG+oWo2odECUM0GWNJisfby8omqfYLezl8XEqMbGqs3NtcrKudzcyObm2WCyT0agN1euR0+qQUOZNEqnPEWlOECUMxR6MmUAAAChdFJOUwAFXjoy7roFNOWeARfH4oMCvNveVl7Kv9vsFwjgxN7ZnFvy8ffY1/sjvsTJ1ooZ5MrE4tTuwQRWv/nx8rXC0Os8jdXDyM6Ar+LNq8vA7vP2zMrS18vOyODKz6W/+u/JtHvXw8uOOsrCycDE1vNV3r/uzfgQdNjC1p7i3c3d/C1P/r/955eS2ffj1wwDqsrQ5CEHsbi13yeNsxhRli2KHYoUApXm0AAAAAFiS0dEAIgFHUgAAAAHdElNRQfqCw4REypLtJVlAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI2LTExLTE0VDE3OjE5OjQyKzAwOjAwUU0MXwAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNi0xMS0xNFQxNzoxOTo0MiswMDowMCAQtOMAAAAodEVYdGRhdGU6dGltZXN0YW1wADIwMjYtMTEtMTRUMTc6MTk6NDIrMDA6MDB3BZU8AAABVUlEQVQ4y4XR1W7DQBBG4S2klDIzMzMzM3NTZmZmZmaud51MHrOO71qNnf9udT5pJJuQvzMgemZoJN+NFSamct1MwZlbKKW7pRXHWVMbyW5rx+w5B0odpYCTM3PhXCl1c8e7h6cX8+Z8KKW+OPDzDwhkQcECCAlFQVg4H8FcIgVAo7AeHRPLx7H4BKEnJiUjICU1LT0jkGVmZeeo1bkIyMvXFPCFrEitWzECSqA0lvdiZSIoR0AFVKZVVdfUiqAOAfXQoLvRKIImBDQDtAg3WkXQhoB2gA5VZ0aXCLoR0APQq+nj+0UwgIBBEG4M8cMjo2PjE5MIUE4BTKtmZrXC5uaxb70AsKhZWtaBFfRneawCrK1vCH1zCwVkewd29/YFcEAkdghHxyda7emZFDi/gMsr7fUNkdzt3f3D4xOR2fnzyyuR3du7fCcfn3rA17ceQH7+vX8BslSC23LUhfEAAAAASUVORK5CYII=) center/contain no-repeat}.logo.my{background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAEwUlEQVRYhcXWbWiVZRzH8e//unfO2VmaTbepFFZURCYimIVoOT3HJ0SUwi1r7iFDC0KLmduZEcdItyk4Q7AmqTvHdLZVvomm7sEZma/MCkx7UkxfOPOpOfd0zn39eyEDEW1nm9rv3cV1/398rosb7lsCxZHdwBRjRK3qGaOU1Zfl7eEeRYKhyFWgVUAUMoCrICfjrpnXvC7n7F0HBEKRbhHZ6rNOSbfEwqpkKWa4oC0YYqheE+SguvJRw7rc43caYEDPo5rdrnZUfWn+cjXecQY9LBBHSULIUFgqRpuDocje2aFt6XcSINOKIrPF8LmBCzGfHd0cLujs2ZwbrkzpiHnHqjWFokxGyABaFEKNpXmROwEwTeV5dSLUKjyY1O1s6NkIhiLbOruSN1z+u/tIY2neAuO4z6rSDJoisDFYEtm6YEGNM2AAwLUO/1so57C8lBmuGQSgSLuFxUNTfUsA9q957UxjWV5AVUqAbqwsvPRY57cT36nxDxhwuCKrQ4zUqmiqE2/PBvC2XSk0aKsjeuzGgcayvM02bmaLcEVEJ6Qkt+/LDB9IGhAAQNT91ECbxOVNgLpNy7raXfeRvWUFzTcPNa1f9EPc2unABVHzjKf7dE1/AXLjYnooclwhPR63Y5rXF5zrbTi4KjpZrH6liBdjVzasyd/SV4C5caHCemCQJ8lsSmS4YU3ud4iWi6jgsjpYFB01IEDq7/6IwmmrzJxRtP3lRArq1+ZtUOUkIiNEtHpAgNraLNdakyWGLhV5L7EKUddqDmiLCk9ML9k+rt8AAAcdjGoKIr8mWnKgPP8YyAkgHcz7AwIgdpYgSYhu7kuRVflAhEtWmThjRTSj3wAxkglca+tI+b4vgKay3CbgvIEM67Wr+w2wygjgn8MVWR0AwaLoqMzCXWmJlFlLWKENZF6wqHJIvwAioCIKkBneniyGg0me+CeJlD2ffKpW4BJW03D87/YPoMRQkgGSOp1CVTtSsZPmFO9M7a0sHA5bi1YoEsdqwaSVWwf3GaAqx0AHTS2qehrhRUS8YmRol8RXJnIib1trpRFaENL9judQsKRqTp8AxupuFJ9j5A3QNOCKqnSAFARCkWG9Aeo2LesSRxarclHQJ1GqAyXRE9NWRecmBBhyyr8HOAe8KuAHuhzDx6g+YJSNvQEA9n+Y2+Qm26dcV5Yj8qeg6cZqdbC46ouez31P5FYF00uqAqpSDdwP8nND6aLngqHofoFpoC/Ul+YfSgTSk0Dos9EGt0bhceCso2bWvrJFf9zyBgDq1+Y3WpM0AUt23Jc8DURNTOYr+qMitTeforc0lub8EvONGmegAnSka+zRqcU7x9/2Bm6X8UsqPanDfDVghl2+2BE4smVprLeZGSui96lHAuAuVGSMwHBVBqloq9vtHdMnwPWoBEPRtar4G8vy3v6vJ8PhsDnU9ehZhftB/cBFIAamE+Fo3Ou+3g9A3xIsrjqgIlNEtVXFyXd9D33dHJ4a79m/5TtwJ2PiJluQUyIyWNRWOl1/rb7xb/qu3wBAZuGuNMcT+xLDWBSfCD95vM7MunBO6z0B9GRGaMd8F1suqg8j5jdP25UJ9xRwPSqB4sgrIrIF1aP/A+B6ZpbsGOmq+82/igMASRys5dMAAAAASUVORK5CYII=) center/contain no-repeat}.logo.sq{background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAADhElEQVRYhbWWT0xcVRTGf+e9YYahSA3EYuKkYvwTUzY2aWP8E7ts4tJUNzZ10cQYu+jKJl20mapxYVywqYkm9V9tiU7U1mI0RmmjQSiKiCg2xSKpCIRSQBymM2/evcdFp/BmgKHMm57kZuad+b73fe+cO+9c4daH8MjT+0BeBJqBdrxrB+g7kwGILMKSZ2vrbcNe62iro+pWQ9nms/nMuTfvQ83OQHofsfjtwO7r7gBQaXql/+xT2+/csbkxjoqGV1f09SOHhtIzV1oD2QwQBVwi2sz3qSsRgNuSvfc/1NK0Y8td9eGFC/HOsQ9GSsSnEOZQHgDAOI8CpyMAvqlpikYcsnlbFfGe3oH04PnvWgKpa8BXKHuWUhqBwB4wVslVwYDn5ek4eWweCJazDdhfjNTZIgO+VXJ+eAMdn3eMmXw2EUh9hnIPQl1QnWj+5yIDxoSvwHx6QX/r+jr45JMo7yKcLoH2c+7UXJGBalTg2y87/lbVzYsJlUOIPQwiRUDh5I2vJXvAVCzuG5/Rge7aJXEGEHsVZFsJ1COvJ5YZ8EO2YLC/76oaf9NiwpEDKK8uR8pxfvx4cpkBE7IFF3o6Z4CmwmUnah2Q7SUwH/w3gomqVMDL5cjOTQV6TxsiB1eAvkX3JxdWNhDiPTA6fHEeaChc/ok4Y2CfKIHN4rnJUm5VWjB5aXB6yYAcBX1hOUpepq99elUDFbfAKoHRlSGS/wg/MhxAjAPv4208uhK9qAWVzIJ/p/7JpidGBDAI3+DXPA66AbgE8imiY5ia9+h7O1/WgLGWnL/+90DO86zJ/tcCZLByBtFdwALQAPoSymHOn5hfjR+6BdN/dI1JTSyu+VyCiN+JcduADdeX/kCC18rxQ0/D3PTlWrV+DGEY624tiAPMYdhNKlW2rKFnQXTTvX5ufOgOlC+AnYUz1hToc/Sm/lqLXzwNzepHMS35vBFO8xaP8SHB0R5U9gOnQPfSnZq5mQdwyv2ogAVMYNmSJY2JuwGLlQmQX0jorpsVX9HASoLljqjiRuOIexmXNAvR59fq+aoGLOAHBNdzLnbrG0eY0y5+Pb6wHvEiA6EivnGW31NeJVQHQF2ZCGUgWpeplOoAZJNbR0E/rPgmjltxJRf/hgtHtu2pS/7ULtZpBV3XDU1mJlapgerEY888WSm1OpvQ4PHwsw1rA2+VgUysG8d7sBLq/wddsVTDOG+ZAAAAAElFTkSuQmCC) center/contain no-repeat}
 .grp{font-size:12px;color:var(--faint);padding:10px 6px 4px}
 .ind{padding-left:24px}.ind2{padding-left:42px}
 
@@ -113,7 +113,7 @@ ul.notes b{color:var(--fg);font-weight:600}
 .rbar .sp{flex:1}
 .seg{display:inline-flex;background:var(--hover);border-radius:6px;padding:2px}
 .seg span{padding:2px 8px;border-radius:4px;font-size:12px}
-.seg span.on{background:var(--raised);color:var(--strong)}
+.seg.lay span{display:grid;place-items:center;padding:2px 5px}.seg span.on{background:var(--raised);color:var(--strong)}
 table{border-collapse:collapse;width:100%;font:12.5px var(--mono);color:var(--fg)}
 th{font:500 12px var(--ui);color:var(--muted);text-align:left;height:28px;padding:0 12px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{height:26px;padding:0 12px;white-space:nowrap;border-bottom:1px solid var(--line)}
@@ -121,6 +121,7 @@ tr:nth-child(even) td{background:var(--hover)}
 td.num{text-align:right;color:var(--num)} td.nul{color:var(--faint);font-style:italic}
 tr.act td{background:var(--accent-wash)}
 
+.split{flex:1;display:flex;min-height:0}.res.rgt{border-top:0;border-left:1px solid var(--line);flex:1 1 50%;min-width:0}
 /* welcome */
 .wel{flex:1;display:grid;place-items:center}
 .wbox{width:560px}
@@ -166,26 +167,26 @@ tr.act td{background:var(--accent-wash)}
     <div class="head">Connections<span class="sp"></span><span class="ghost">+</span></div>
     <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Filter connections and schema<kbd>/</kbd></div>
     <div class="tree">
-      <div class="row"><span class="tw">▾</span><span class="logo pg">Pg</span>billing-prod<span class="dot ok" style="margin-left:auto"></span></div>
+      <div class="row"><span class="tw">▾</span><span class="logo pg"></span>billing-prod<span class="dot ok" style="margin-left:auto"></span></div>
       <div class="row ind"><span class="tw">▾</span>public</div>
       <div class="row ind2 sel"><span class="tw"></span>invoices<span class="meta">12.4k</span></div>
       <div class="row ind2"><span class="tw"></span>customers<span class="meta">3.1k</span></div>
       <div class="row ind2"><span class="tw"></span>payments<span class="meta">48k</span></div>
-      <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
-      <div class="row"><span class="tw">▸</span><span class="logo my">My</span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
-      <div class="row"><span class="tw">▸</span><span class="logo sq">Sq</span>scratch.db<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg"></span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo my"></span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo sq"></span>scratch.db<span class="dot idle" style="margin-left:auto"></span></div>
       <div class="grp">Staging</div>
-      <div class="row"><span class="tw">▸</span><span class="logo pg">Pg</span>billing-staging<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo pg"></span>billing-staging<span class="dot idle" style="margin-left:auto"></span></div>
     </div>
   </aside>
 
   <main class="card">
     <div class="top">
-      <div class="crumb"><span class="logo pg">Pg</span>billing-prod <i>›</i> billing <i>›</i> public <i>›</i> <b>overdue_invoices.sql</b></div>
+      <div class="crumb"><span class="logo pg"></span>billing-prod <i>›</i> billing <i>›</i> public <i>›</i> <b>overdue_invoices.sql</b></div>
       <span class="sp"></span>
       <span class="chip">Saved</span>
-      <span class="run"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M7 4l12 8-12 8z" fill="currentColor" stroke="none"/></svg>Run <kbd>Ctrl ⏎</kbd></span>
-      <span class="ghost">⋯</span>
+      <span class="run"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M7 4l12 8-12 8z" fill="currentColor" stroke="none"/></svg>Run <kbd>Ctrl Enter</kbd></span>
+      <span class="ghost"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span>
     </div>
     <div class="ed">
       <div class="ln">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div>
@@ -199,7 +200,7 @@ tr.act td{background:var(--accent-wash)}
 <span class="k">limit</span> <span class="n">200</span>;</div>
     </div>
     <div class="res">
-      <div class="rbar"><span class="ok">●</span> 37 rows · 18 ms<span class="sp"></span><span class="seg"><span class="on">Grid</span><span>JSON</span><span>Chart</span></span><span class="ghost">⤓</span></div>
+      <div class="rbar"><span class="dot ok"></span> 37 rows · 18 ms<span class="sp"></span><span class="seg"><span class="on">Grid</span><span>JSON</span><span>Chart</span></span><span class="ghost" title="Export"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></span><span class="seg lay" title="Results below or beside the editor"><span class="on"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 13h18"/></svg></span><span><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M13 4v16"/></svg></span></span></div>
       <div style="overflow:hidden;flex:1">
       <table>
         <tr><th>id</th><th>name</th><th style="text-align:right">amount_cents</th><th>due_on</th></tr>
@@ -214,7 +215,7 @@ tr.act td{background:var(--accent-wash)}
     </div>
   </main>
 
-  <div class="status"><span class="dot ok"></span>billing-prod<span>PostgreSQL 16.4</span><span>Ln 6, Col 41</span><span class="sp"></span><span>No background tasks</span><span>🔔︎</span></div>
+  <div class="status"><span class="dot ok"></span>billing-prod<span>PostgreSQL 16.4</span><span>Ln 6, Col 41</span><span class="sp"></span><span style="display:inline-flex;align-items:center;gap:6px"><svg class="i spin" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M21 12a9 9 0 1 1-9-9"/></svg>2 tasks running</span><span class="ghost" title="Notifications"><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg></span></div>
 
   <div class="hc" style="left:262px;top:178px">
     <div class="t"><span class="dot bad"></span>Can't connect to events-cluster<span class="sp"></span><small>2 min ago</small></div>
@@ -228,20 +229,86 @@ tr.act td{background:var(--accent-wash)}
   <li><b>Sentence case.</b> "Connections", "Staging", column headers and every section label lose the uppercase and the tracking.</li>
   <li><b>Rows.</b> 26 px tree rows with a 6 px radius. Hover and selection are neutral washes inset from the sidebar edge, as in Linear.</li>
   <li><b>Connection state.</b> A dot at the row's right end: green when connected, a hollow ring when idle, red when failed, with a spinner while connecting. Only a failed row adds a word.</li>
-  <li><b>Results.</b> The result bar shows the outcome as plain text, with a segmented Grid / JSON / Chart switch and ghost actions.</li>
+  <li><b>Results.</b> The result bar shows the outcome as plain text, a Grid / JSON / Chart switch, Export, and the below / beside layout switch.</li>
+  <li><b>Database icons.</b> Every connection shows its database's own full-color logo, as in DBeaver. Drivers without a readable color logo keep their monochrome glyph.</li>
+  <li><b>No emoji.</b> The status bar, task count and row actions use the same monochrome icon set as the rest of the interface.</li>
 </ul>
+
+<h2>Results beside the editor</h2>
+<p class="lede">The layout switch at the right end of the result bar moves results between below and beside the editor, as in DBeaver. It is also the command "Move results beside or below the editor", which can take a shortcut in Settings. Each editor remembers its own choice.</p>
+<div class="scroll"><div class="win">
+  <aside class="side">
+    <div class="rail">
+      <b class="on" title="Connections"><svg class="i" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></b>
+      <b title="Explorer"><svg class="i" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></b>
+      <b title="Dashboards"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></b>
+      <b title="Audit"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></b>
+      <span class="sp"></span>
+      <b title="Settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></b>
+    </div>
+    <div class="head">Connections<span class="sp"></span><span class="ghost">+</span></div>
+    <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Filter connections and schema<kbd>/</kbd></div>
+    <div class="tree">
+      <div class="row"><span class="tw">▾</span><span class="logo pg"></span>billing-prod<span class="dot ok" style="margin-left:auto"></span></div>
+      <div class="row ind"><span class="tw">▾</span>public</div>
+      <div class="row ind2 sel"><span class="tw"></span>invoices<span class="meta">12.4k</span></div>
+      <div class="row ind2"><span class="tw"></span>customers<span class="meta">3.1k</span></div>
+      <div class="row ind2"><span class="tw"></span>payments<span class="meta">48k</span></div>
+      <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg"></span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo my"></span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="row"><span class="tw">▸</span><span class="logo sq"></span>scratch.db<span class="dot idle" style="margin-left:auto"></span></div>
+      <div class="grp">Staging</div>
+      <div class="row"><span class="tw">▸</span><span class="logo pg"></span>billing-staging<span class="dot idle" style="margin-left:auto"></span></div>
+    </div>
+  </aside>
+  <main class="card">
+    <div class="top">
+      <div class="crumb"><span class="logo pg"></span>billing-prod <i>›</i> billing <i>›</i> public <i>›</i> <b>overdue_invoices.sql</b></div>
+      <span class="sp"></span>
+      <span class="chip">Saved</span>
+      <span class="run"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M7 4l12 8-12 8z" fill="currentColor" stroke="none"/></svg>Run <kbd>Ctrl Enter</kbd></span>
+      <span class="ghost"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span>
+    </div>
+    <div class="split"><div class="ed" style="flex:1 1 50%">
+      <div class="ln">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div>
+      <div class="code"><span class="c">-- Invoices more than 30 days past due</span>
+<span class="k">select</span> i.id, c.name, i.amount_cents, i.due_on
+<span class="k">from</span> invoices i
+<span class="k">join</span> customers c <span class="k">on</span> c.id = i.customer_id
+<span class="k">where</span> i.status = <span class="s">'open'</span>
+  <span class="k">and</span> i.due_on &lt; now() - <span class="k">interval</span> <span class="s">'30 days'</span>
+<span class="k">order by</span> i.due_on
+<span class="k">limit</span> <span class="n">200</span>;</div>
+    </div>
+    <div class="res rgt">
+      <div class="rbar"><span class="dot ok"></span> 37 rows · 18 ms<span class="sp"></span><span class="ghost" title="Export"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></span><span class="seg lay" title="Results below or beside the editor"><span><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 13h18"/></svg></span><span class="on"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M13 4v16"/></svg></span></span></div>
+      <div style="overflow:hidden;flex:1">
+      <table>
+        <tr><th>id</th><th>name</th><th style="text-align:right">amount_cents</th><th>due_on</th></tr>
+        <tr><td>inv_8841</td><td>Northwind Traders</td><td class="num">129900</td><td>2026-09-02</td></tr>
+        <tr class="act"><td>inv_8857</td><td>Contoso Ltd</td><td class="num">48000</td><td>2026-09-11</td></tr>
+        <tr><td>inv_8862</td><td>Fabrikam</td><td class="num">7250</td><td>2026-09-14</td></tr>
+        <tr><td>inv_8890</td><td>Tailspin Toys</td><td class="num">310000</td><td>2026-09-30</td></tr>
+        <tr><td>inv_8902</td><td>Adventure Works</td><td class="num">15500</td><td class="nul">null</td></tr>
+        <tr><td>inv_8915</td><td>Wide World Importers</td><td class="num">92040</td><td>2026-10-08</td></tr>
+      </table>
+      </div>
+    </div>
+  </div></main>
+  <div class="status"><span class="dot ok"></span>billing-prod<span>PostgreSQL 16.4</span><span>Ln 6, Col 41</span><span class="sp"></span><span>No background tasks</span></div>
+</div></div>
 
 <h2>Connection row states</h2>
 <div class="states">
   <div class="pane"><div class="cap">Idle, connecting, connected</div>
-    <div class="row"><span class="tw">▸</span><span class="logo my">My</span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
-    <div class="row"><span class="tw">▸</span><span class="logo my">My</span>legacy-shop<span class="meta">Connecting…</span><svg class="i spin" viewBox="0 0 24 24" style="width:13px;height:13px;margin-left:6px"><path d="M21 12a9 9 0 1 1-9-9"/></svg></div>
-    <div class="row"><span class="tw">▾</span><span class="logo my">My</span>legacy-shop<span class="dot ok" style="margin-left:auto"></span></div>
+    <div class="row"><span class="tw">▸</span><span class="logo my"></span>legacy-shop<span class="dot idle" style="margin-left:auto"></span></div>
+    <div class="row"><span class="tw">▸</span><span class="logo my"></span>legacy-shop<span class="meta">Connecting…</span><svg class="i spin" viewBox="0 0 24 24" style="width:13px;height:13px;margin-left:6px"><path d="M21 12a9 9 0 1 1-9-9"/></svg></div>
+    <div class="row"><span class="tw">▾</span><span class="logo my"></span>legacy-shop<span class="dot ok" style="margin-left:auto"></span></div>
   </div>
   <div class="pane"><div class="cap">Failed: at rest, hovered, selected</div>
-    <div class="row"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
-    <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="acts"><span title="Retry">↻</span><span title="Edit">✎</span></span><span class="dot bad" style="margin-left:6px"></span></div>
-    <div class="row sel"><span class="tw">▸</span><span class="logo mg">Mg</span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+    <div class="row"><span class="tw">▸</span><span class="logo mg"></span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
+    <div class="row" style="background:var(--hover)"><span class="tw">▸</span><span class="logo mg"></span>events-cluster<span class="acts"><span title="Retry"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><span title="Edit"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span></span><span class="dot bad" style="margin-left:6px"></span></div>
+    <div class="row sel"><span class="tw">▸</span><span class="logo mg"></span>events-cluster<span class="meta bad">Failed</span><span class="dot bad" style="margin-left:8px"></span></div>
   </div>
 </div>
 <ul class="notes">

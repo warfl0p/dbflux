@@ -2,6 +2,6 @@
   "title": "Inset card overhaul (light)",
   "brief": "Fork-only overhaul toward Linear/Cursor: sidebar on the #191A1B ground, document as a rounded #121314 card, sentence-case labels, no upstream branding, connection failures as a row dot plus hover card.",
   "artboards": [
-    { "file": "01-inset-card-shell.html", "title": "Shell, connection states, welcome, tokens", "tradeoff": "One board covers the shell and the states it adds; settings and dialogs follow once the direction is approved.", "width": 1320, "height": 2400 }
+    { "file": "01-inset-card-shell.html", "title": "Shell, connection states, welcome, tokens", "tradeoff": "One board covers the shell and the states it adds; settings and dialogs follow once the direction is approved.", "width": 1320, "height": 3200 }
   ]
 }
