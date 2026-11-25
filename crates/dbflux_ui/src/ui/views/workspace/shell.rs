@@ -355,20 +355,11 @@ impl Workspace {
         let now = chrono::Utc::now().timestamp();
         let recent = recent_rows(self.app_state.read(cx).recent_files(), now);
 
-        let glyph_path = match dbflux_core::ReleaseChannel::current() {
-            dbflux_core::ReleaseChannel::Nightly => "branding/nightly/mark-small-256.png",
-            _ => "branding/stable/mark-small-256.png",
-        };
-
         let head = div()
             .flex()
             .items_center()
             .gap(ShellMetrics::EMPTY_HEAD_GAP)
-            .child(
-                img(glyph_path)
-                    .size(ShellMetrics::EMPTY_GLYPH)
-                    .flex_shrink_0(),
-            )
+            .child(brand_tile(ShellMetrics::EMPTY_GLYPH, cx))
             .child(
                 div()
                     .flex()
@@ -376,11 +367,10 @@ impl Workspace {
                     .gap(ShellMetrics::EMPTY_TITLE_GAP)
                     .child(
                         div()
-                            .font_family(dbflux_components::fonts::display_family(cx))
-                            .font_weight(FontWeight::BLACK)
+                            .font_weight(FontWeight::SEMIBOLD)
                             .text_size(ShellMetrics::EMPTY_TITLE_FONT)
                             .text_color(dbflux_components::tokens::ChromeColors::strong(theme))
-                            .child(dbflux_i18n::t!("workspace.empty.title").to_uppercase()),
+                            .child(dbflux_i18n::t!("workspace.empty.title")),
                     )
                     .child(
                         Text::body(dbflux_i18n::t!("workspace.empty.subtitle")).muted_foreground(),
@@ -553,6 +543,26 @@ impl Workspace {
 
         Self::empty_card(dbflux_i18n::t!("workspace.empty.recent").into(), rows, cx)
     }
+}
+
+/// The app mark as the interface draws it: the bolt glyph in the strong text
+/// color on a raised, rounded tile.
+pub(crate) fn brand_tile(size: Rems, cx: &App) -> impl IntoElement {
+    let theme = cx.theme();
+
+    div()
+        .flex()
+        .flex_shrink_0()
+        .items_center()
+        .justify_center()
+        .size(size)
+        .rounded(dbflux_components::tokens::Radii::LG)
+        .bg(theme.secondary)
+        .child(
+            Icon::new(AppIcon::Zap)
+                .size(size * 0.5)
+                .color(dbflux_components::tokens::ChromeColors::strong(theme)),
+        )
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ use gpui::{AnyElement, App, Div, Hsla, Pixels, StyleRefinement, Window, div};
 use gpui_component::ActiveTheme;
 
 use crate::primitives::{Chamfer, ChamferRing};
-use crate::tokens::{ChromeColorSlot, ChromeColors, IslandMetrics};
+use crate::tokens::{Borders, ChamferCut, ChromeColorSlot, ChromeColors, IslandMetrics};
 
 /// Render-free description of an island.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -53,6 +53,7 @@ pub fn island_edge_ring(theme: &gpui_component::Theme) -> Option<ChamferRing> {
 pub struct Island {
     base: Div,
     children: Vec<AnyElement>,
+    card: bool,
 }
 
 impl Island {
@@ -60,6 +61,16 @@ impl Island {
         Self {
             base: div().relative().flex().flex_col().overflow_hidden(),
             children: Vec::new(),
+            card: false,
+        }
+    }
+
+    /// The document card: the editor color with rounded corners and a faint
+    /// edge, inset from the panel ground around it.
+    pub fn card() -> Self {
+        Self {
+            card: true,
+            ..Self::new()
         }
     }
 }
@@ -86,16 +97,29 @@ impl RenderOnce for Island {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let inspection = inspect_island();
-        let fill = island_fill(theme);
+        let (fill, cut, ring) = if self.card {
+            (
+                theme.background,
+                ChamferCut::CARD,
+                Some(ChamferRing {
+                    color: ChromeColors::island_edge(theme),
+                    thickness: Borders::THIN,
+                    offset: -Borders::THIN,
+                    focus_visible: false,
+                }),
+            )
+        } else {
+            (island_fill(theme), inspection.cut, island_edge_ring(theme))
+        };
 
-        let mut mask = Chamfer::new(inspection.cut).outside_fill(ChromeColors::desk(theme));
+        let mut mask = Chamfer::new(cut).outside_fill(ChromeColors::desk(theme));
 
-        if let Some(ring) = island_edge_ring(theme) {
+        if let Some(ring) = ring {
             mask = mask.ring(ring);
         }
 
         self.base
-            .child(Chamfer::new(inspection.cut).fill(fill))
+            .child(Chamfer::new(cut).fill(fill))
             .children(self.children)
             .child(mask)
     }
@@ -135,21 +159,17 @@ mod tests {
     }
 
     #[test]
-    fn the_desk_and_the_hairline_follow_the_theme_mode() {
+    fn the_hairline_follows_the_theme_mode() {
         let mut theme = gpui_component::Theme {
             mode: gpui_component::ThemeMode::Dark,
             ..gpui_component::Theme::default()
         };
 
-        let dark_desk = ChromeColors::desk(&theme);
         let dark_edge = ChromeColors::island_edge(&theme);
 
         theme.mode = gpui_component::ThemeMode::Light;
-        let light_desk = ChromeColors::desk(&theme);
         let light_edge = ChromeColors::island_edge(&theme);
 
-        assert_ne!(dark_desk, light_desk);
-        assert!(dark_desk.l < light_desk.l);
         assert!((dark_edge.a - 0.05).abs() < f32::EPSILON);
         assert!((light_edge.a - 0.06).abs() < f32::EPSILON);
     }

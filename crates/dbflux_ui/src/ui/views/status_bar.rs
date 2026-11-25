@@ -287,30 +287,26 @@ impl StatusBar {
         let tint = dbflux_components::tokens::ChromeColors::tint(theme);
 
         let (icon, icon_color, text) = match summary {
-            StatementSummary::Running(text) => (AppIcon::Loader, tint, text),
+            StatementSummary::Running(text) => (Some(AppIcon::Loader), tint, text),
             StatementSummary::Finished { status, text } => match status {
-                TaskStatus::Failed(_) => (AppIcon::CircleX, theme.danger, text),
-                TaskStatus::Cancelled => (AppIcon::CircleX, theme.muted_foreground, text),
-                TaskStatus::Completed | TaskStatus::Running => {
-                    (AppIcon::Check, theme.success, text)
-                }
+                TaskStatus::Failed(_) => (Some(AppIcon::CircleX), theme.danger, text),
+                TaskStatus::Cancelled => (None, theme.muted_foreground, text),
+                TaskStatus::Completed | TaskStatus::Running => (None, theme.success, text),
             },
-            StatementSummary::Ready => (
-                AppIcon::Check,
-                theme.success,
-                dbflux_i18n::t!("status_bar.ready"),
-            ),
+            StatementSummary::Ready => (None, theme.success, dbflux_i18n::t!("status_bar.ready")),
         };
 
         Self::chip("status-bar-statement", false, cx)
             .flex_shrink(1.0)
             .min_w_0()
             .overflow_hidden()
-            .child(
-                Icon::new(icon)
-                    .size(ShellMetrics::STATUS_ICON)
-                    .color(icon_color),
-            )
+            .when_some(icon, |chip, icon| {
+                chip.child(
+                    Icon::new(icon)
+                        .size(ShellMetrics::STATUS_ICON)
+                        .color(icon_color),
+                )
+            })
             .child(
                 div()
                     .min_w_0()
@@ -326,12 +322,12 @@ impl StatusBar {
         let danger = theme.danger;
         let muted = theme.muted_foreground;
 
-        let mut segments: Vec<(SharedString, AppIcon, Hsla, String)> = Vec::new();
+        let mut segments: Vec<(SharedString, Option<AppIcon>, Hsla, String)> = Vec::new();
 
         if counts.running > 0 {
             segments.push((
                 "tasks-toggle".into(),
-                AppIcon::Loader,
+                Some(AppIcon::Loader),
                 tint,
                 crate::ui::labels::tasks_running_label(counts.running),
             ));
@@ -340,7 +336,7 @@ impl StatusBar {
         if counts.failed > 0 {
             segments.push((
                 "tasks-failed".into(),
-                AppIcon::CircleX,
+                Some(AppIcon::CircleX),
                 danger,
                 dbflux_i18n::t!("status_bar.tasks_failed", count = counts.failed),
             ));
@@ -349,7 +345,7 @@ impl StatusBar {
         if segments.is_empty() {
             segments.push((
                 "tasks-toggle".into(),
-                AppIcon::Activity,
+                None,
                 muted,
                 crate::ui::labels::background_tasks_label(0),
             ));
@@ -361,7 +357,9 @@ impl StatusBar {
                 Self::chip(ElementId::Name(id.clone()), true, cx)
                     .debug_selector(move || id.to_string())
                     .text_color(color)
-                    .child(Icon::new(icon).size(ShellMetrics::STATUS_ICON).color(color))
+                    .when_some(icon, |chip, icon| {
+                        chip.child(Icon::new(icon).size(ShellMetrics::STATUS_ICON).color(color))
+                    })
                     .child(label)
                     .on_click(cx.listener(|_this, _, _, cx| {
                         cx.emit(ToggleTasksPanel);
@@ -429,7 +427,7 @@ impl Render for StatusBar {
             .px(ShellMetrics::STATUS_BAR_PADDING_X)
             .font_family(dbflux_components::fonts::ui_family(cx))
             .text_size(ShellMetrics::STATUS_FONT)
-            .bg(cx.theme().background)
+            .bg(cx.theme().popover)
             .text_color(cx.theme().muted_foreground)
             .overflow_hidden()
             .child(self.render_connection(cx))

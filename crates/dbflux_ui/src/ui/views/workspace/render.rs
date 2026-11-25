@@ -462,11 +462,14 @@ impl Render for Workspace {
             }
         });
         let notification_bell = self.render_notification_bell(cx);
-        let document_island = Island::new()
+        let document_island = Island::card()
             .flex_1()
             .min_w_0()
-            .h_full()
-            .when(!sidebar_collapsed, |island| island.ml(IslandMetrics::GAP))
+            .mt(IslandMetrics::CARD_INSET)
+            .mr(IslandMetrics::CARD_INSET)
+            .when(sidebar_collapsed, |island| {
+                island.ml(IslandMetrics::CARD_INSET)
+            })
             .child(
                 div()
                     .flex()

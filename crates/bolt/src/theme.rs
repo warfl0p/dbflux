@@ -441,9 +441,10 @@ impl Palette {
         Self {
             mode: ThemeMode::Dark,
 
-            // Neutral VS Code-style grays: every pane shares one background.
-            background: rgb_to_hsla(BACKGROUND_DARK),
-            panel: rgb_to_hsla(0x191A1B),
+            // The document card shares the editor's color; the sidebar,
+            // status bar and menus sit on the lighter panel ground.
+            background: rgb_to_hsla(0x121314),
+            panel: rgb_to_hsla(BACKGROUND_DARK),
             raised: rgb_to_hsla(0x232425),
             line: rgb_to_hsla(0x2B2C2E),
             line_strong: rgb_to_hsla(0x3C3D40),
@@ -623,7 +624,7 @@ fn apply_palette(palette: &Palette, density: Density, cx: &mut App) {
     theme.scrollbar_thumb = with_alpha(palette.text_muted, 0.30);
     theme.scrollbar_thumb_hover = with_alpha(palette.text_muted, 0.50);
 
-    theme.sidebar = palette.background;
+    theme.sidebar = palette.panel;
     theme.sidebar_foreground = palette.text_body;
     theme.sidebar_border = palette.line;
     theme.sidebar_accent = palette.selected_item_wash;
@@ -638,7 +639,7 @@ fn apply_palette(palette: &Palette, density: Density, cx: &mut App) {
     theme.tab_active_foreground = palette.text_strong;
     theme.tab_bar_segmented = palette.raised;
 
-    theme.table = palette.panel;
+    theme.table = palette.background;
     theme.table_head = palette.background;
     theme.table_head_foreground = palette.text_strong;
     theme.table_even = palette.alternating_row_wash;
@@ -949,7 +950,7 @@ mod tests {
         cx.update(|cx| install(brand.clone(), PaletteMode::Dark, Density::Default, cx));
         cx.update(|cx| {
             let theme = Theme::global(cx);
-            assert_eq!(theme.colors.background, rgb_to_hsla(0x191A1B));
+            assert_eq!(theme.colors.background, rgb_to_hsla(0x121314));
             assert_eq!(theme.tokens.button_primary.color, brand.accent);
             assert_eq!(theme.tokens.primary.color, brand.accent);
             assert_eq!(theme.colors.ring, brand.accent_tint);

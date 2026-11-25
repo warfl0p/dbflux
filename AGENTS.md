@@ -228,9 +228,11 @@ fn table_details(&self, name: &str) -> TableDetails // Columns, indexes
 
 ### Visual style
 
-Read `DESIGN.md` before any UI or styling work. This fork's look follows VS
-Code's default dark theme (flat neutral panes, a rare blue accent, small
-rounded corners, minimal chrome), not upstream's byzantine cut-corner look.
+Read `DESIGN.md` before any UI or styling work. This fork's look follows
+modern desktop tools such as Linear and Cursor (the sidebar on a neutral
+ground, the document as one rounded darker card, sentence-case labels, a rare
+blue accent, no emoji), with DBeaver's database conventions, not upstream's
+byzantine cut-corner look.
 Build from `bolt` tokens and components (see `docs/DESIGN_SYSTEM.md`), and
 change only the colors and screens the task names.
 

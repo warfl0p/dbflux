@@ -67,12 +67,12 @@ chart:
   engine:
     no_data: Sem dados
   point_inspector:
-    series: SÉRIE
-    hovered_point: PONTO SOB O CURSOR
+    series: Série
+    hovered_point: Ponto sob o cursor
     time: Hora
     value: Valor
-    source_row: LINHA DE ORIGEM
-    quick_actions: AÇÕES RÁPIDAS
+    source_row: Linha de origem
+    quick_actions: Ações rápidas
     show_in_tree: Mostrar na árvore
 common:
   time_range:
@@ -444,9 +444,9 @@ connection_manager:
     client_cert: Certificado do cliente
     client_key: Chave do cliente
   section:
-    transport: TRANSPORTE
-    navigator: "NAVEGADOR"
-    safety: "SEGURANÇA"
+    transport: Transporte
+    navigator: "Navegador"
+    safety: "Segurança"
   banner:
     correct_following: Corrija os itens a seguir
     testing_connection: "Testando conexão…"
@@ -1186,7 +1186,7 @@ document:
       period: "Período…"
       statistic: "Estatística…"
     toolbar:
-      type_label: TIPO
+      type_label: Tipo
       stats: Estatísticas
       save_chart: Salvar gráfico
       points:
@@ -2002,8 +2002,8 @@ document:
         not_found: "— não encontrado"
         resolving: "Resolvendo…"
       section:
-        references: REFERÊNCIAS
-        row: LINHA
+        references: Referências
+        row: Linha
       title: "Linha %{row}"
     table_views:
       tab:
@@ -3552,12 +3552,12 @@ document:
       having: "HAVING"
       limit_offset: "LIMIT E OFFSET"
       set: "SET"
-      columns: COLUNAS
-      execution: EXECUÇÃO
-      filters: FILTROS
+      columns: Colunas
+      execution: Execução
+      filters: Filtros
       filters_where: FILTROS (WHERE)
-      sort_limit: "ORDENAÇÃO E LIMITE"
-      sql_preview: PRÉ-VISUALIZAÇÃO DO SQL
+      sort_limit: "Ordenação e limite"
+      sql_preview: Pré-visualização do SQL
     sort:
       direction:
         asc: ASC
@@ -3671,8 +3671,8 @@ document:
         indexes:
           one: "%{count} índice"
           many: "%{count} índices"
-      foreign_keys: CHAVES ESTRANGEIRAS
-      indexes: ÍNDICES
+      foreign_keys: Chaves estrangeiras
+      indexes: Índices
       referenced_by: "Referenciada por"
       summary_full: "%{columns} · %{indexes} · %{foreign_keys} · referenciada por %{referenced_by}"
     layout:
@@ -6022,7 +6022,7 @@ sidebar:
       untitled_chart: Gráfico sem título
     status:
       connecting_inline: "conectando"
-      retry_inline: "tentar novamente"
+      failed_inline: "Falhou"
       loading: Carregando…
       profile_connecting: "Conectando a %{name}…"
       database_loading: "%{name} (carregando…)"

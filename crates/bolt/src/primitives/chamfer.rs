@@ -685,10 +685,10 @@ impl Chamfer {
     }
 }
 
-/// Corner radius drawn for a cut depth: half the cut, at most 6 px and at
-/// most half the smaller side, so the corners read like VS Code's.
+/// Corner radius drawn for a cut depth: half the cut plus one, at most 8 px
+/// and at most half the smaller side (controls 4 px, menus 7 px, cards 8 px).
 fn corner_radius(size: gpui::Size<Pixels>, cut: Pixels) -> Pixels {
-    let radius = px((f32::from(cut) / 2.0).min(6.0));
+    let radius = px((f32::from(cut) / 2.0 + 1.0).min(8.0));
     clamp_cut(size, radius)
 }
 
@@ -1128,8 +1128,8 @@ mod tests {
     fn rounded_corners_follow_the_cut_and_the_outside_traces_the_arc() {
         let bounds = rect(10.0, 20.0, 100.0, 30.0);
 
-        assert_eq!(corner_radius(bounds.size, ChamferCut::CONTROL), px(3.0));
-        assert_eq!(corner_radius(bounds.size, ChamferCut::MODAL), px(6.0)); // guardrail-allow: the 6 px radius cap under test
+        assert_eq!(corner_radius(bounds.size, ChamferCut::CONTROL), px(4.0)); // guardrail-allow: the control radius under test
+        assert_eq!(corner_radius(bounds.size, ChamferCut::MODAL), px(8.0)); // guardrail-allow: the 8 px radius cap under test
         assert_eq!(
             corner_radius(rect(0.0, 0.0, 8.0, 4.0).size, ChamferCut::MODAL),
             px(2.0)

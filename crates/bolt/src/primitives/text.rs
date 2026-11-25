@@ -8,9 +8,6 @@ use crate::density;
 use crate::tokens::{ChromeColors, FontSizes};
 use crate::typography::AppFonts;
 
-/// Tracking of the uppercase `Label` role, in em.
-const LABEL_TRACKING_EM: f32 = 0.04;
-
 /// The eight text roles of the design system.
 ///
 /// Every piece of interface copy picks one of these; size, weight, family
@@ -26,8 +23,8 @@ pub enum TextVariant {
     Body,
     /// Secondary interface text: Archivo 500, `FontSizes::XS`, body color.
     BodySm,
-    /// Section labels: Archivo Expanded 800, `FontSizes::LABEL`, uppercase,
-    /// 0.14em tracking, muted.
+    /// Section labels: interface family 600, `FontSizes::LABEL`, sentence
+    /// case as written, no tracking, muted.
     Label,
     /// Metadata and helper text: Archivo 500, `FontSizes::XS`, muted.
     Caption,
@@ -122,17 +119,9 @@ pub struct Text {
 
 impl Text {
     pub fn new(variant: TextVariant, content: impl Into<SharedString>) -> Self {
-        let content = content.into();
-
-        let content = if variant.is_uppercase() {
-            SharedString::from(content.to_uppercase())
-        } else {
-            content
-        };
-
         Self {
             variant,
-            content,
+            content: content.into(),
             color_override: None,
             size_override: None,
             weight_override: None,
@@ -273,20 +262,6 @@ impl TextVariant {
         }
     }
 
-    /// The `Label` role renders its text in capitals, so call sites pass
-    /// ordinary text.
-    pub fn is_uppercase(self) -> bool {
-        matches!(self, Self::Label)
-    }
-
-    /// Extra space after every character, as a fraction of the font size.
-    pub fn letter_spacing_em(self) -> f32 {
-        match self {
-            Self::Label => LABEL_TRACKING_EM,
-            _ => 0.0,
-        }
-    }
-
     /// The font this role renders with: the role's bundled family resolved
     /// to the family the product chose, with the role's fallbacks.
     pub fn resolved_font(self, cx: &App) -> Font {
@@ -343,7 +318,7 @@ impl TextVariant {
                 family: AppFonts::DISPLAY,
                 fallbacks: INTERFACE,
                 size: FontSizes::LABEL.into(),
-                weight: FontWeight::BOLD,
+                weight: FontWeight::SEMIBOLD,
                 color: TextDefaultColor::MutedForeground,
             },
             Self::Caption => TextRoleContract {
@@ -372,7 +347,7 @@ impl TextVariant {
 }
 
 impl RenderOnce for Text {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let contract = self.variant.role_contract();
 
@@ -386,16 +361,12 @@ impl RenderOnce for Text {
             .resolve(theme);
 
         let text_font = self.variant.resolved_font(cx);
-        let letter_spacing_em = self.variant.letter_spacing_em();
 
         div()
             .font(text_font)
             .text_size(size)
             .font_weight(weight)
             .text_color(color)
-            .when(letter_spacing_em > 0.0, |el| {
-                el.letter_spacing(size.to_pixels(window.rem_size()) * letter_spacing_em)
-            })
             .child(self.content)
     }
 }
@@ -446,7 +417,7 @@ mod tests {
 
         let label = TextVariant::Label.role_contract();
         assert_eq!(label.size, FontSizes::LABEL.into());
-        assert_eq!(label.weight, FontWeight::BOLD);
+        assert_eq!(label.weight, FontWeight::SEMIBOLD);
     }
 
     #[test]
@@ -469,21 +440,10 @@ mod tests {
     }
 
     #[test]
-    fn label_role_uppercases_and_tracks_its_text() {
-        assert!(TextVariant::Label.is_uppercase());
-        assert_eq!(TextVariant::Label.letter_spacing_em(), 0.04);
-
-        for role in ALL_ROLES
-            .into_iter()
-            .filter(|role| *role != TextVariant::Label)
-        {
-            assert!(!role.is_uppercase(), "{role:?}");
-            assert_eq!(role.letter_spacing_em(), 0.0, "{role:?}");
-        }
-
+    fn labels_keep_their_sentence_case() {
         assert_eq!(
             Text::label("Connection details").content.as_ref(),
-            "CONNECTION DETAILS"
+            "Connection details"
         );
         assert_eq!(
             Text::body("Connection details").content.as_ref(),

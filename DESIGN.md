@@ -3,17 +3,19 @@ version: alpha
 name: DBFlux Desktop (fork)
 description: >-
   The look of this fork of DBFlux, a keyboard-first database client built with
-  GPUI. The reference is Visual Studio Code's default dark theme: flat neutral
-  gray panes, a blue accent used sparingly, the system interface font, small
-  rounded corners, and as little chrome as the task allows. Upstream's look
+  GPUI. The reference is modern desktop tools such as Linear and Cursor, with
+  DBeaver's conventions for working with a database: the sidebar and status
+  bar on one neutral ground, the open document as one rounded darker card,
+  sentence-case labels, real database logos, a blue accent used sparingly,
+  and as little chrome as the task allows. Upstream's look
   (byzantine purple, 45 degree cut corners, floating islands, Archivo) is not
   the target here. Tokens below record the Dark palette at Default density,
   which is what ships. Source of truth is the `bolt` crate:
   crates/bolt/src/{tokens.rs,theme.rs,brand.rs,fonts.rs,colors/mod.rs}, with
   the accent supplied by crates/dbflux_components/src/theme.rs.
 colors:
-  desk: "#2A2B2C"
-  background: "#191A1B"
+  desk: "#191A1B"
+  background: "#121314"
   panel: "#191A1B"
   raised: "#232425"
   line: "#2B2C2E"
@@ -43,17 +45,15 @@ typography:
   label:
     fontFamily: "{typography.body.fontFamily}"
     fontSize: 11px
-    fontWeight: 700
-    letterSpacing: 0.04em
-    textTransform: uppercase
+    fontWeight: 600
   code:
     fontFamily: JetBrains Mono
     fontSize: 13px
     fontWeight: 500
 rounded:
-  sm: 3px
-  md: 4px
-  lg: 6px
+  sm: 4px
+  md: 6px
+  lg: 8px
   full: 9999px
 spacing:
   xs: 4px
@@ -62,9 +62,9 @@ spacing:
   md: 12px
   lg: 16px
   xl: 24px
-  pane-gap: 1px
+  card-inset: 6px
   control: 30px
-  tree-row: 22px
+  tree-row: 26px
   top-row: 35px
   sidebar-header: 35px
   filter-field: 26px
@@ -81,16 +81,19 @@ icons:
 
 # DBFlux Desktop: the fork's look
 
-This checkout is a fork whose look follows **Visual Studio Code's default dark
-theme**, not upstream DBFlux. When a design question comes up, ask "what does
-VS Code do here?" and do that, within the components and tokens of the `bolt`
-crate. This look is fork-only: keep it out of upstream pull requests.
+This checkout is a fork whose look follows **modern desktop tools such as
+Linear and Cursor**, not upstream DBFlux. How you work with a database follows
+**DBeaver**: real database logos, results below or beside the editor. Pickers,
+the command palette and keyboard behavior still follow VS Code. The approved
+boards are `design/inset-card-overhaul-{dark,light}/`. This look is fork-only:
+keep it out of upstream pull requests.
 
 ## Principles
 
-1. **VS Code is the reference.** Layout, density, selection, focus, pickers and
-   wording follow VS Code. When a screen has no VS Code counterpart, make it
-   look like it belongs next to VS Code's own panels.
+1. **Ground and card.** The sidebar, activity rail and status bar sit on one
+   neutral ground. The open document is one rounded card in the editor color,
+   inset 6 px from the window's top and right edges. There are no gaps or
+   lines between panes.
 2. **Calm, flat, neutral.** Panes are one flat gray. Regions are separated by a
    1 px line or a 1 px gap, never by shadow, gradient or a darker band. The only
    shadows are on floating things: menus, popovers, the command palette.
@@ -101,8 +104,11 @@ crate. This look is fork-only: keep it out of upstream pull requests.
    strip is off, a single result shows no result tab, footers and headers that
    only repeat information are removed. Give vertical space back to the
    document.
-5. **Real logos, plain glyphs.** Database and file brands use their own
-   full-color logos. Interface glyphs are monochrome Material Symbols.
+5. **Real logos, plain glyphs, no emoji.** Database and file brands use their
+   own full-color logos, as in DBeaver. Interface glyphs are monochrome
+   Material Symbols. An icon marks a state that needs attention (running,
+   failed); idle states such as "Ready" or "0 background tasks" are plain text.
+   Labels and titles are sentence case and drawn as written.
 6. **Change only what was asked.** Do not swap in a named theme (Tokyo Night,
    One Dark, ...), shift the palette, or restyle neighbouring screens unless
    asked. A color change names the exact role and value it changes.
@@ -113,9 +119,8 @@ crate. This look is fork-only: keep it out of upstream pull requests.
 
 | Role | Value | Theme field / accessor | Use |
 |---|---|---|---|
-| desk | `#2A2B2C` | `ChromeColors::desk` | the 1 px gaps between panes, window frames of Settings and Connection Manager |
-| editor | `#121314` | `highlight_theme.style.editor_background` | the code editor text area |
-| background / panel | `#191A1B` | `background`, `popover`, `table` | every pane, the sidebar, the status bar, cards, menus, modals |
+| ground / panel | `#191A1B` | `popover`, `sidebar`, `ChromeColors::desk` | the window ground: sidebar, activity rail, status bar, menus, modals |
+| card / editor | `#121314` | `background`, `table`, `highlight_theme.style.editor_background` | the document card: the code editor, results, every open document |
 | raised | `#232425` | `secondary` | secondary buttons, keycaps, chips |
 | line | `#2B2C2E` | `border` | separators inside a pane, input edges |
 | line-2 | `#3C3D40` | `input`, `muted` | control edges on raised surfaces, card and modal edges |
@@ -164,45 +169,47 @@ Text roles are the `Text` constructors in `bolt::primitives::text`; base size is
 | `Text::title` | 20 px | 700 | page and window titles |
 | `Text::heading` | 18 px | 700 | dialog and section headings |
 | `Text::body`, `Text::body_sm` | 13 / 12 px | 500 | interface copy |
-| `Text::label` | 11 px | 700 | uppercase, 0.04 em tracking, muted, like VS Code's section headers. Never accent-colored |
+| `Text::label` | 11 px | 600 | sentence case as written, no tracking, muted. Never accent-colored |
 | `Text::caption` | 12 px | 500 | metadata, muted |
 | `Text::code`, `Text::key_hint` | 13 / 12 px | 500 | mono |
 
-View titles in the sidebar header ("CONNECTIONS", the workspace name) are
-`Text::label` at regular weight, as VS Code's "EXPLORER".
+View titles in the sidebar header ("Connections", the workspace name) are
+sentence case.
 
 Sizes are rems from `tokens::ui(px)` so they follow the interface size setting;
 see AGENTS.md § Font Size Scaling.
 
 ## Shapes
 
-- **Rounded, small.** Controls round at 3 px, menus and popovers at 4 px,
-  modals, cards and the palette card at 6 px (`Radii::SM/MD/LG`).
+- **Rounded.** Controls round at 4 px, tree rows and menus at 6 px, the
+  document card, popovers and modals at 8 px (`Radii::SM/MD/LG`).
 - **`Chamfer` draws rounded rectangles.** The `Chamfer` primitive and the
   `ChamferCut` tokens keep their names, but in this fork they paint a rounded
-  rectangle with a radius of half the cut, at most 6 px. Keep using them through
-  `Button`, `Input`, `surface`, `Kbd` and friends; never paint 45 degree cuts.
-- **Panes are square.** Panes meet at a 1 px gap of desk (`IslandMetrics`:
-  `CUT 0`, `GAP 1`, `EDGE 0`). There are no floating islands and no hairline
-  outlines.
+  rectangle with a radius of half the cut plus one, at most 8 px. Keep using
+  them through `Button`, `Input`, `surface`, `Kbd` and friends; never paint
+  45 degree cuts.
+- **One card.** The document is `Island::card()`: the card color, an 8 px
+  radius and a 1 px white 5 % edge, `IslandMetrics::CARD_INSET` from the top
+  and right of the window. The desk is the panel color, so other panes show
+  no gap.
 - **Data is square.** Grid cells, rows, code and charts have no radius.
 
 ## Shell
 
 ```mermaid
 flowchart TB
-    subgraph body["Window: panes 1 px apart on the desk"]
+    subgraph body["Window: the ground with one document card"]
         direction LR
-        subgraph sidebar["Sidebar, 290 px, resizable"]
+        subgraph sidebar["Sidebar on the ground, 290 px, resizable"]
             rail["Activity rail: a row of 28 px buttons on the sidebar fill"]
             tree["View title, filter field, tree"]
         end
-        subgraph document["Document area"]
+        subgraph document["Document card, inset 6 px"]
             top["Top row, 35 px: active document title, context pickers, editor actions, notifications bell"]
-            doc["The active document; results below with no tab for a single result"]
+            doc["The active document; results below or beside, no tab for a single result"]
         end
     end
-    status["Status bar, 24 px: flat items on the pane background"]
+    status["Status bar, 24 px: flat items on the ground"]
     body --> status
 ```
 
@@ -211,10 +218,15 @@ flowchart TB
 - **Activity rail** is a horizontal row of 28 px ghost buttons at the top of the
   sidebar, on the sidebar's fill, and it hides with the sidebar. The active
   button takes the neutral selected wash, not the accent.
-- **Sidebar**: a 35 px header with the uppercase view title and a ghost `+`
-  button; a 26 px filter field on the raised fill with no icon or keycap and an
-  accent border while focused; 22 px tree rows with 16 px twisties and icons
-  and a neutral selected row.
+- **Sidebar**: a 35 px header with the view title and a ghost `+` button; a
+  26 px filter field on the raised fill with no icon or keycap and an accent
+  border while focused; 26 px tree rows inset 6 px from the sidebar edges, with
+  a 6 px radius, 16 px twisties and full-color database logos, and a neutral
+  selected row.
+- **Connection state** sits at the right end of a profile row. A failed
+  connection shows "Failed" and a red dot, and the dot's tooltip holds the
+  error. While the row is hovered, Retry and Edit ghost buttons replace the
+  label. Errors never add rows to the tree.
 - **Document tab strip is off.** The 35 px top row shows the active
   document's title, its context pickers drawn as breadcrumbs (no box until
   hovered, interface font), the run summary and file state, and at the right
@@ -227,7 +239,9 @@ flowchart TB
   item keeps a tone wash, so a production connection still stands out.
 - **Results**: Refresh and the pane buttons sit in the result toolbar; the
   result tab row only appears with more than one result. Refresh and Export
-  are ghost buttons. The grid has a 30 px header and 27 px rows; the view row
+  are ghost buttons. A two-button switch puts the results below or beside the
+  editor, as DBeaver's layout toggle; the choice is one setting for every
+  query editor. The grid has a 30 px header and 27 px rows; the view row
   above it is 32 px and the footer under it 30 px.
 - **Menus** (context menus, add menus, dropdown lists): 26 px rows, 4 px
   vertical padding, 8 px between icon, label and shortcut.
@@ -305,7 +319,9 @@ ghost.
   accent.
 - Don't paint 45 degree cuts, floating islands, hairline pane outlines or
   shadows between panes.
-- Don't use Archivo Expanded, extra-bold or wide-tracked labels.
+- Don't uppercase labels or titles, and don't use Archivo, extra-bold or
+  tracked labels.
+- Don't use emoji, or the upstream purple mark, in the interface.
 - Don't introduce a new palette, accent or named theme unasked.
 - Don't change the syntax highlighting colors (`SyntaxColors::dark()` /
   `light()` in `crates/bolt/src/tokens.rs`, the keyword color from the

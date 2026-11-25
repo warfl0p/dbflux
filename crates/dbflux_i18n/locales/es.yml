@@ -67,12 +67,12 @@ chart:
   engine:
     no_data: Sin datos
   point_inspector:
-    series: SERIE
-    hovered_point: PUNTO SELECCIONADO
+    series: Serie
+    hovered_point: Punto seleccionado
     time: Hora
     value: Valor
-    source_row: FILA DE ORIGEN
-    quick_actions: ACCIONES RÁPIDAS
+    source_row: Fila de origen
+    quick_actions: Acciones rápidas
     show_in_tree: Mostrar en árbol
 common:
   time_range:
@@ -447,9 +447,9 @@ connection_manager:
     client_cert: Certificado de cliente
     client_key: Clave de cliente
   section:
-    transport: TRANSPORTE
-    navigator: "NAVEGADOR"
-    safety: "SEGURIDAD"
+    transport: Transporte
+    navigator: "Navegador"
+    safety: "Seguridad"
   banner:
     correct_following: Corrige lo siguiente
     testing_connection: "Probando la conexión…"
@@ -1189,7 +1189,7 @@ document:
       period: "Periodo…"
       statistic: "Estadística…"
     toolbar:
-      type_label: TIPO
+      type_label: Tipo
       stats: Estadísticas
       save_chart: Guardar gráfico
       points:
@@ -1251,7 +1251,7 @@ document:
         validation:
           empty: la estadística no debe estar vacía
       dimensions:
-        title: DIMENSIONES
+        title: Dimensiones
         loading: "Cargando dimensiones…"
         error: "Se produjo un error: %{message}"
         retry: Reintentar
@@ -2005,8 +2005,8 @@ document:
         not_found: "— no encontrado"
         resolving: "Resolviendo…"
       section:
-        references: REFERENCIAS
-        row: FILA
+        references: Referencias
+        row: Fila
       title: "Fila %{row}"
     table_views:
       tab:
@@ -3555,12 +3555,12 @@ document:
       having: "HAVING"
       limit_offset: "LIMIT & OFFSET"
       set: "SET"
-      columns: COLUMNAS
-      execution: EJECUCIÓN
-      filters: FILTROS
+      columns: Columnas
+      execution: Ejecución
+      filters: Filtros
       filters_where: FILTROS (WHERE)
-      sort_limit: "ORDEN Y LÍMITE"
-      sql_preview: VISTA PREVIA SQL
+      sort_limit: "Orden y límite"
+      sql_preview: Vista previa SQL
     sort:
       direction:
         asc: ASC
@@ -3674,8 +3674,8 @@ document:
         indexes:
           one: "%{count} índice"
           many: "%{count} índices"
-      foreign_keys: CLAVES FORÁNEAS
-      indexes: ÍNDICES
+      foreign_keys: Claves foráneas
+      indexes: Índices
       referenced_by: "Referenciada por"
       summary_full: "%{columns} · %{indexes} · %{foreign_keys} · referenciada por %{referenced_by}"
     layout:
@@ -6029,7 +6029,7 @@ sidebar:
       untitled_chart: Gráfico sin título
     status:
       connecting_inline: "conectando"
-      retry_inline: "reintentar"
+      failed_inline: "Falló"
       loading: Cargando…
       profile_connecting: "Conectando a %{name}…"
       database_loading: "%{name} (cargando…)"

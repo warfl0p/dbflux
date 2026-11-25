@@ -6358,7 +6358,7 @@ mod tests {
     fn chart_toolbar_type_label_matches_english_catalog() {
         assert_eq!(
             dbflux_i18n::t!("document.chart.toolbar.type_label", locale = "en"),
-            "TYPE"
+            "Type"
         );
     }
 
@@ -6540,7 +6540,7 @@ mod tests {
                 "document.chart.metric_picker.dimensions.title",
                 locale = "en"
             ),
-            "DIMENSIONS"
+            "Dimensions"
         );
     }
 

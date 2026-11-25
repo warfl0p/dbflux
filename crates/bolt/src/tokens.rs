@@ -79,12 +79,12 @@ pub struct Radii;
 /// rounded corners). For style-aware radii at render sites, prefer the
 /// `density::radius_*(cx)` accessors so the active `AppStyle` is honoured.
 impl Radii {
-    /// Small radius — controls, inputs, badges (Default: 3 px).
-    pub const SM: Pixels = px(3.0);
-    /// Medium radius — dropdowns, popovers (Default: 4 px).
-    pub const MD: Pixels = px(4.0);
-    /// Large radius — modals, cards (Default: 6 px).
-    pub const LG: Pixels = px(6.0);
+    /// Small radius — controls, inputs, badges (Default: 4 px).
+    pub const SM: Pixels = px(4.0);
+    /// Medium radius — tree rows, menus, dropdowns (Default: 6 px).
+    pub const MD: Pixels = px(6.0);
+    /// Large radius — the document card, popovers, modals (Default: 8 px).
+    pub const LG: Pixels = px(8.0);
     /// Full radius — pill shapes, avatars, status dots.
     pub const FULL: Pixels = px(9999.0);
 }
@@ -620,11 +620,7 @@ impl ChromeColors {
     /// the Settings and Connection Manager windows, showing as the 1 px
     /// separator between panes. `#2A2B2C` on dark, `#E6E1E9` on light.
     pub fn desk(theme: &gpui_component::Theme) -> Hsla {
-        if theme.mode.is_dark() {
-            rgb(0x2A2B2C).into()
-        } else {
-            rgb(0xE6E1E9).into()
-        }
+        theme.popover
     }
 
     /// Hairline that traces an island's outline, cuts included: white at
@@ -1090,12 +1086,14 @@ impl PopoverMetrics {
 pub struct TreeMetrics;
 
 impl TreeMetrics {
-    /// Row height, as VS Code's lists. (22 px)
-    pub const ROW_HEIGHT: Rems = ui(22.0);
+    /// Row height, as Linear's lists. (26 px)
+    pub const ROW_HEIGHT: Rems = ui(26.0);
     /// Indent added per depth level. (12 px)
     pub const INDENT: Rems = ui(12.0);
     /// Padding before the depth-0 chevron and after the trailing slot. (8 px)
     pub const PADDING_X: Pixels = px(8.0);
+    /// Space between a row's rounded wash and the sidebar edges.
+    pub const ROW_INSET: Pixels = px(6.0);
     /// Gap between chevron, icon, label and trailing slot. (6 px)
     pub const GAP: Pixels = px(6.0);
     /// Expand chevron, as VS Code's twistie. (16 px)
@@ -1906,23 +1904,10 @@ impl ShellMetrics {
     pub const RECENT_ROW_ICON: Rems = ui(15.0);
     pub const RECENT_META_FONT: Rems = ui(11.5);
 
-    /// Failed connection block under its tree row: 34 px from the sidebar's
-    /// left edge at the first level, 10 px from its right edge, 2 px above
-    /// and 6 px below, 10 by 12 px padding, a 2 px danger edge on an 8%
-    /// danger wash, 11.5 px mono text on a 1.5 line height, 8 px above the
-    /// action buttons, which are 6 px apart.
-    pub const FAILURE_MARGIN_RIGHT: Pixels = px(10.0);
-    pub const FAILURE_MARGIN_TOP: Pixels = px(2.0);
-    pub const FAILURE_PADDING_Y: Pixels = px(10.0);
-    pub const FAILURE_PADDING_X: Pixels = px(12.0);
-    pub const FAILURE_EDGE: Pixels = px(2.0);
-    pub const FAILURE_ALPHA: f32 = 0.08;
-    pub const FAILURE_FONT: Rems = ui(11.5);
-    pub const FAILURE_LINE_HEIGHT: Rems = ui(17.25);
-    pub const FAILURE_ACTIONS_GAP_TOP: Pixels = px(8.0);
-    pub const FAILURE_ACTION_GAP: Pixels = px(6.0);
+    /// Failed profile row: 13 px Retry and Edit icons, a 7 px danger dot.
     pub const FAILURE_ACTION_ICON: Rems = ui(13.0);
-    /// Inline status of a tree row ("retry", "connecting"): 11 px, 5 px gap.
+    pub const FAILURE_DOT: Pixels = px(7.0);
+    /// Inline status of a tree row ("Failed", "connecting"): 11 px, 5 px gap.
     pub const ROW_STATUS_FONT: Rems = ui(11.0);
     pub const ROW_STATUS_GAP: Pixels = px(5.0);
 }
@@ -2048,8 +2033,10 @@ impl IslandMetrics {
     /// Islands are square, like VS Code's panes.
     pub const CUT: Pixels = px(0.0);
     /// Space between neighbouring islands and between an island and the
-    /// window's side edges: 1 px of desk, which reads as the separator line.
+    /// window's side edges. The desk is the panel color, so it reads as none.
     pub const GAP: Pixels = px(1.0);
+    /// Inset of the document card from the window's top and right edges.
+    pub const CARD_INSET: Pixels = px(6.0);
     /// Thickness of the hairline along the island outline; zero draws none.
     /// The desk between islands already separates them.
     pub const EDGE: Pixels = px(0.0);
@@ -2657,9 +2644,9 @@ mod tests {
 
     #[test]
     fn radii_match_default_style_scale() {
-        assert_eq!(Radii::SM, px(3.0));
-        assert_eq!(Radii::MD, px(4.0));
-        assert_eq!(Radii::LG, px(6.0));
+        assert_eq!(Radii::SM, px(4.0));
+        assert_eq!(Radii::MD, px(6.0));
+        assert_eq!(Radii::LG, px(8.0));
         assert_eq!(Radii::FULL, px(9999.0));
     }
 

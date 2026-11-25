@@ -6027,7 +6027,7 @@ sidebar:
       untitled_chart: 未命名图表
     status:
       connecting_inline: "连接中"
-      retry_inline: "重试"
+      failed_inline: "失败"
       loading: 加载中…
       profile_connecting: "正在连接 %{name}…"
       database_loading: "%{name}（加载中…）"

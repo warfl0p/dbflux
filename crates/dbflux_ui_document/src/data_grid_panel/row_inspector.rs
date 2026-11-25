@@ -1875,7 +1875,7 @@ mod tests {
         let en = dbflux_i18n::t!("document.data.row_inspector.section.row", locale = "en");
         let es = dbflux_i18n::t!("document.data.row_inspector.section.row", locale = "es");
 
-        assert_eq!(en, "ROW");
+        assert_eq!(en, "Row");
         assert_ne!(en, es);
     }
 

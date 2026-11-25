@@ -28,7 +28,7 @@ impl Density {
     /// Corner radius of a small element, such as a badge or a checkbox.
     pub fn radius_sm(self) -> Pixels {
         match self {
-            Density::Default => px(3.0),
+            Density::Default => px(4.0),
             Density::Compact => px(2.0),
         }
     }
@@ -36,7 +36,7 @@ impl Density {
     /// Corner radius of a control.
     pub fn radius(self) -> Pixels {
         match self {
-            Density::Default => px(4.0),
+            Density::Default => px(6.0),
             Density::Compact => px(2.0),
         }
     }
@@ -44,7 +44,7 @@ impl Density {
     /// Corner radius of a large surface, such as a popover shell.
     pub fn radius_lg(self) -> Pixels {
         match self {
-            Density::Default => px(6.0),
+            Density::Default => px(8.0),
             Density::Compact => px(3.0),
         }
     }
@@ -152,12 +152,12 @@ pub fn radius_sm(cx: &App) -> Pixels {
     active(cx).radius_sm()
 }
 
-/// Medium radius: 4 px (Default) / 2 px (Compact).
+/// Medium radius: 6 px (Default) / 2 px (Compact).
 pub fn radius_md(cx: &App) -> Pixels {
     active(cx).radius()
 }
 
-/// Large radius: 6 px (Default) / 3 px (Compact).
+/// Large radius: 8 px (Default) / 3 px (Compact).
 pub fn radius_lg(cx: &App) -> Pixels {
     active(cx).radius_lg()
 }
@@ -170,8 +170,8 @@ mod tests {
     #[test]
     fn the_baseline_tier_rounds_its_corners() {
         assert_eq!(Density::default(), Density::Default);
-        assert_eq!(Density::Default.radius(), px(4.0));
-        assert_eq!(Density::Default.radius_lg(), px(6.0));
+        assert_eq!(Density::Default.radius(), px(6.0));
+        assert_eq!(Density::Default.radius_lg(), px(8.0));
     }
 
     #[test]
@@ -193,9 +193,9 @@ mod tests {
             assert_eq!(font_xl(cx), ui(18.0));
             assert_eq!(font_title(cx), ui(20.0));
 
-            assert_eq!(radius_sm(cx), px(3.0));
-            assert_eq!(radius_md(cx), px(4.0));
-            assert_eq!(radius_lg(cx), px(6.0));
+            assert_eq!(radius_sm(cx), px(4.0));
+            assert_eq!(radius_md(cx), px(6.0));
+            assert_eq!(radius_lg(cx), px(8.0));
         });
     }
 
@@ -225,7 +225,7 @@ mod tests {
             assert_eq!(active(cx), Density::Default);
             // Accessors should still return Default-tier values.
             assert_eq!(font_xs(cx), ui(12.0));
-            assert_eq!(radius_sm(cx), px(3.0));
+            assert_eq!(radius_sm(cx), px(4.0));
         });
     }
 
@@ -250,7 +250,7 @@ mod tests {
             assert_eq!(font_label(cx).to_pixels(doubled_rem), px(22.0));
             assert_eq!(font_sm(cx).to_pixels(doubled_rem), px(26.0));
             assert_eq!(font_title(cx).to_pixels(doubled_rem), px(40.0));
-            assert_eq!(radius_sm(cx), px(3.0));
+            assert_eq!(radius_sm(cx), px(4.0));
 
             set(cx, Density::Compact);
             assert_eq!(font_xs(cx).to_pixels(doubled_rem), px(22.0));

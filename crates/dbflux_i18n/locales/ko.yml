@@ -6028,7 +6028,7 @@ sidebar:
       untitled_chart: 제목 없는 차트
     status:
       connecting_inline: "연결 중"
-      retry_inline: "다시 시도"
+      failed_inline: "실패"
       loading: 불러오는 중…
       profile_connecting: "%{name}에 연결하는 중…"
       database_loading: "%{name} (불러오는 중…)"

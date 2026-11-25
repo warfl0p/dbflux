@@ -13,6 +13,7 @@ mod shell;
 use actions::TabPlacement;
 
 pub use inspector::{WorkspaceInspector, WorkspaceInspectorEvent};
+pub(crate) use shell::brand_tile;
 
 use crate::app::{AppStateChanged, AppStateEntity};
 use dbflux_components;

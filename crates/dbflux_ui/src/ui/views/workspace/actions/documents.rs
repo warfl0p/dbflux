@@ -2807,8 +2807,12 @@ mod tests {
         });
 
         let browses = connection.browses();
+        // The fresh tab's first, unfiltered load can reach the connection after
+        // the filtered reload that cancelled it (the grid drops its result), so
+        // the reload is looked up rather than taken last.
         let reload = browses
-            .last()
+            .iter()
+            .find(|browse| browse.filter.is_some())
             .expect("the fresh tab reloaded under the equality");
         assert_eq!(reload.pagination.offset(), 0);
         assert_eq!(reload.filter.as_deref(), Some("\"id\" = 7"));

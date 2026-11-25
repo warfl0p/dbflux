@@ -149,7 +149,7 @@ fn dark_theme_maps_palette_roles_and_editor_chrome(cx: &mut TestAppContext) {
         let theme = Theme::global_mut(cx);
 
         assert_centralized_fonts(theme);
-        assert_eq!(theme.background, rgb_to_hsla(0x191A1B));
+        assert_eq!(theme.background, rgb_to_hsla(0x121314));
         assert_eq!(theme.foreground, rgb_to_hsla(0xCCCCCF));
         assert_eq!(theme.muted_foreground, rgb_to_hsla(0x9A9B9F));
         assert_eq!(theme.primary, rgb_to_hsla(0x7AA2F7));

@@ -94,7 +94,7 @@ mod tests {
     fn source_row_label_is_translated_in_every_locale() {
         let key = "chart.point_inspector.source_row";
         let english = dbflux_i18n::t!(key, locale = "en");
-        assert_eq!(english, "SOURCE ROW");
+        assert_eq!(english, "Source row");
 
         for locale in ["es", "pt_BR", "ko", "zh_Hans"] {
             let value = dbflux_i18n::t!(key, locale = locale);

@@ -67,12 +67,12 @@ chart:
   engine:
     no_data: No data
   point_inspector:
-    series: SERIES
-    hovered_point: HOVERED POINT
+    series: Series
+    hovered_point: Hovered point
     time: Time
     value: Value
-    source_row: SOURCE ROW
-    quick_actions: QUICK ACTIONS
+    source_row: Source row
+    quick_actions: Quick actions
     show_in_tree: Show in tree
 common:
   time_range:
@@ -447,9 +447,9 @@ connection_manager:
     client_cert: Client cert
     client_key: Client key
   section:
-    transport: TRANSPORT
-    navigator: "NAVIGATOR"
-    safety: "SAFETY"
+    transport: Transport
+    navigator: "Navigator"
+    safety: "Safety"
   banner:
     correct_following: Please correct the following
     testing_connection: "Testing connection…"
@@ -1189,7 +1189,7 @@ document:
       period: "Period…"
       statistic: "Statistic…"
     toolbar:
-      type_label: TYPE
+      type_label: Type
       stats: Stats
       save_chart: Save chart
       points:
@@ -1251,7 +1251,7 @@ document:
         validation:
           empty: statistic must not be empty
       dimensions:
-        title: DIMENSIONS
+        title: Dimensions
         loading: "Loading dimensions…"
         error: "Error: %{message}"
         retry: Retry
@@ -2005,8 +2005,8 @@ document:
         not_found: "— not found"
         resolving: "Resolving…"
       section:
-        references: REFERENCES
-        row: ROW
+        references: References
+        row: Row
       title: "Row %{row}"
     table_views:
       tab:
@@ -3555,12 +3555,12 @@ document:
       having: "HAVING"
       limit_offset: "LIMIT & OFFSET"
       set: "SET"
-      columns: COLUMNS
-      execution: EXECUTION
-      filters: FILTERS
+      columns: Columns
+      execution: Execution
+      filters: Filters
       filters_where: FILTERS (WHERE)
-      sort_limit: "SORT AND LIMIT"
-      sql_preview: SQL PREVIEW
+      sort_limit: "Sort and limit"
+      sql_preview: SQL preview
     sort:
       direction:
         asc: ASC
@@ -3674,8 +3674,8 @@ document:
         indexes:
           one: "%{count} index"
           many: "%{count} indexes"
-      foreign_keys: FOREIGN KEYS
-      indexes: INDEXES
+      foreign_keys: Foreign keys
+      indexes: Indexes
       referenced_by: "Referenced by"
       summary_full: "%{columns} · %{indexes} · %{foreign_keys} · referenced by %{referenced_by}"
     layout:
@@ -6029,7 +6029,7 @@ sidebar:
       untitled_chart: Untitled chart
     status:
       connecting_inline: "connecting"
-      retry_inline: "retry"
+      failed_inline: "Failed"
       loading: Loading…
       profile_connecting: "Connecting to %{name}…"
       database_loading: "%{name} (loading…)"

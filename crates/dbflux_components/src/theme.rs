@@ -464,7 +464,7 @@ mod tests {
         cx.update(|cx| apply_theme(ThemeSetting::Dark, AppStyle::Default, None, cx));
         cx.update(|cx| {
             let theme = Theme::global(cx);
-            assert_eq!(theme.colors.background, rgb_to_hsla(0x191A1B));
+            assert_eq!(theme.colors.background, rgb_to_hsla(0x121314));
             let primary = expected_primary(ThemeSetting::Dark);
             assert_eq!(theme.tokens.button_primary.color, primary);
             assert_eq!(theme.tokens.primary.color, primary);

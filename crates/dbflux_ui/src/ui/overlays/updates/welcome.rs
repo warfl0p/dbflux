@@ -5,8 +5,8 @@ use dbflux_app::updates::{self, ChangelogRelease, SectionKind, changelog};
 use dbflux_components::controls::Button;
 use dbflux_components::icons::AppIcon;
 use dbflux_components::modals::{Modal, ModalFocus};
-use dbflux_components::primitives::{Chamfer, Icon, Text};
-use dbflux_components::tokens::{ChamferCut, ChromeColors, FontSizes, Spacing, ui};
+use dbflux_components::primitives::{Icon, Text};
+use dbflux_components::tokens::{ChamferCut, ChromeColors, Spacing, ui};
 use dbflux_core::{LogErr, ReleaseChannel};
 use dbflux_ui_base::AppStateEntity;
 #[cfg(feature = "telemetry")]
@@ -23,12 +23,12 @@ use super::{
     render_section, scroll_region, set_update_preference,
 };
 #[cfg(feature = "telemetry")]
-use dbflux_components::primitives::{ChamferRing, focus_underline};
+use dbflux_components::primitives::{Chamfer, ChamferRing, focus_underline};
 
 const DIALOG_WIDTH: Pixels = px(1000.0);
 const WHATS_NEW_COLUMN_WIDTH: Pixels = px(330.0);
-const MARK_SIZE: Pixels = px(56.0);
-const TITLE_SIZE: Rems = ui(24.0);
+const MARK_SIZE: Rems = ui(44.0);
+const TITLE_SIZE: Rems = ui(22.0);
 const HEADER_GAP: Pixels = Spacing::LG;
 const HEADER_PADDING_X: Pixels = px(28.0);
 const HEADER_PADDING_TOP: Pixels = px(18.0);
@@ -46,11 +46,6 @@ const FULL_CHANGELOG_PADDING_TOP: Pixels = px(10.0);
 const FOOTER_GAP: Pixels = px(10.0);
 const FOOTER_PADDING_Y: Pixels = px(16.0);
 const FOOTER_ICON_SIZE: Rems = ui(14.0);
-const BADGE_HEIGHT: Rems = ui(20.0);
-const BADGE_PADDING_X: Pixels = px(7.0);
-
-/// Tint share of the version badge fill.
-const BADGE_FILL_OPACITY: f32 = 0.12;
 
 /// Element id of the scrolling release highlights.
 const HIGHLIGHTS_ID: &str = "welcome-whats-new-list";
@@ -215,12 +210,7 @@ impl WelcomeDialog {
 
     fn render_header(&self, cx: &App) -> impl IntoElement {
         let theme = cx.theme();
-        let tint = ChromeColors::tint(theme);
-        let mark_path = match ReleaseChannel::current() {
-            ReleaseChannel::Nightly => "branding/nightly/mark-256.png",
-            ReleaseChannel::Stable | ReleaseChannel::Rc => "branding/stable/mark-256.png",
-        };
-        let badge_text = format!(
+        let version_text = format!(
             "{} \u{b7} {}",
             updates::display_version(updates::current_version()),
             channel_label(ReleaseChannel::current())
@@ -238,7 +228,7 @@ impl WelcomeDialog {
             .pb(HEADER_PADDING_BOTTOM)
             .border_b_1()
             .border_color(theme.border)
-            .child(img(mark_path).size(MARK_SIZE).flex_shrink_0())
+            .child(crate::ui::views::workspace::brand_tile(MARK_SIZE, cx))
             .child(
                 div()
                     .flex_1()
@@ -248,12 +238,11 @@ impl WelcomeDialog {
                     .gap(Spacing::XXS)
                     .child(
                         div()
-                            .font_family(dbflux_components::fonts::display_family(cx))
-                            .font_weight(FontWeight::BLACK)
+                            .font_weight(FontWeight::SEMIBOLD)
                             .text_size(TITLE_SIZE)
-                            .line_height(px(24.0))
+                            .line_height(px(28.0))
                             .text_color(ChromeColors::strong(theme))
-                            .child(dbflux_i18n::t!("updates.welcome.title").to_uppercase()),
+                            .child(dbflux_i18n::t!("updates.welcome.title")),
                     )
                     .child(
                         Text::caption(dbflux_i18n::t!("updates.welcome.tagline"))
@@ -263,22 +252,9 @@ impl WelcomeDialog {
             )
             .child(
                 div()
-                    .relative()
                     .flex_shrink_0()
-                    .flex()
-                    .items_center()
-                    .h(BADGE_HEIGHT)
-                    .px(BADGE_PADDING_X)
-                    .child(Chamfer::new(ChamferCut::KEYCAP).fill(tint.opacity(BADGE_FILL_OPACITY)))
-                    .child(
-                        div()
-                            .font_family(dbflux_components::fonts::editor_family(cx))
-                            .text_size(FontSizes::LABEL)
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_color(tint)
-                            .whitespace_nowrap()
-                            .child(badge_text),
-                    ),
+                    .whitespace_nowrap()
+                    .child(Text::caption(version_text).text_color(theme.muted_foreground)),
             )
     }
 
