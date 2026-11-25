@@ -33,6 +33,13 @@ serde_json.workspace = true
 notify = "8.2"
 futures = "0.3"
 
+# `gpui_linux::restore_child_environment` owns the rule that keeps the Vulkan driver selection
+# this process may carry out of the children this crate starts (the system handler a download
+# opens). The crate already reaches every GPUI app through `gpui`; declaring it makes the call
+# reachable from `open_external`.
+[target.'cfg(target_os = "linux")'.dependencies]
+gpui_linux = { package = "gpui-pre-linux", version = "=0.3.9" }
+
 [dev-dependencies]
 # Tests open profiles of every built-in driver; the fork keeps these four out
 # of dbflux_app's defaults, so test builds enable them here.
