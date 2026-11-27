@@ -1471,12 +1471,15 @@ impl EditorMetrics {
     pub const FILE_GAP: Pixels = px(8.0);
     pub const FILE_STATE_GAP: Pixels = px(5.0);
     /// Statement gutter: no run markers (the editor action strip runs the
-    /// statement), a 6 px gap between the line numbers and a 3 px statement
-    /// bar, the statement fill at 6 % of the tint and the cursor line at 11 %.
-    pub const GUTTER_BAR_GAP: Pixels = px(6.0);
-    pub const GUTTER_BAR_WIDTH: Pixels = px(3.0);
-    pub const STATEMENT_FILL_ALPHA: f32 = 0.06;
-    pub const CURSOR_LINE_FILL_ALPHA: f32 = 0.11;
+    /// statement), a 10 px gap between the line numbers and a 2 px statement
+    /// bar, 8 px between the bar and the text. Line numbers outside the
+    /// marked rows at 55 % of the muted text, the bar at 40 % while the
+    /// editor does not have focus.
+    pub const GUTTER_BAR_GAP: Pixels = px(10.0);
+    pub const GUTTER_BAR_WIDTH: Pixels = px(2.0);
+    pub const GUTTER_BAR_TRAILING_GAP: Pixels = px(8.0);
+    pub const GUTTER_LINE_NUMBER_ALPHA: f32 = 0.55;
+    pub const GUTTER_UNFOCUSED_BAR_ALPHA: f32 = 0.4;
     /// Result sub-toolbar: 11.5 px mono statement caption, 240 px search field
     /// with a 13 px search icon.
     pub const RESULT_CAPTION_FONT: Rems = ui(11.5);

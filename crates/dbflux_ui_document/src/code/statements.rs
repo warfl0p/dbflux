@@ -12,10 +12,11 @@ use dbflux_components::tokens::{ChromeColors, EditorMetrics};
 use gpui_base::input::{GutterStatementStyle, GutterStatements};
 use std::ops::Range;
 
-/// Gutter colours and sizes from the active theme: the tint
-/// for the statement under the cursor, the byzantine bar.
+/// Gutter colours and sizes from the active theme: quiet line numbers that
+/// brighten over the rows a run executes, the cursor row in strong text,
+/// and an accent bar beside those rows that dims when the editor loses focus.
 fn gutter_style(theme: &gpui_component::theme::Theme) -> GutterStatementStyle {
-    let tint = ChromeColors::tint(theme);
+    let accent = ChromeColors::tint(theme);
 
     GutterStatementStyle {
         marker_slot_width: px(0.0),
@@ -23,12 +24,16 @@ fn gutter_style(theme: &gpui_component::theme::Theme) -> GutterStatementStyle {
         marker_icon_size: px(0.0),
         bar_gap: EditorMetrics::GUTTER_BAR_GAP,
         bar_width: EditorMetrics::GUTTER_BAR_WIDTH,
+        bar_trailing_gap: EditorMetrics::GUTTER_BAR_TRAILING_GAP,
         marker: theme.input,
-        active_marker: tint,
-        active_line_number: tint,
-        bar: theme.primary,
-        statement_fill: tint.opacity(EditorMetrics::STATEMENT_FILL_ALPHA),
-        cursor_line_fill: tint.opacity(EditorMetrics::CURSOR_LINE_FILL_ALPHA),
+        active_marker: accent,
+        line_number: theme
+            .muted_foreground
+            .opacity(EditorMetrics::GUTTER_LINE_NUMBER_ALPHA),
+        statement_line_number: theme.muted_foreground,
+        active_line_number: ChromeColors::strong(theme),
+        bar: accent,
+        unfocused_bar: accent.opacity(EditorMetrics::GUTTER_UNFOCUSED_BAR_ALPHA),
     }
 }
 

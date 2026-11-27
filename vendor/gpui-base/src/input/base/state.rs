@@ -452,23 +452,28 @@ pub struct GutterStatementStyle {
     pub bar_gap: Pixels,
     /// Width of the statement bar.
     pub bar_width: Pixels,
+    /// Space between the statement bar and the text.
+    pub bar_trailing_gap: Pixels,
     /// Run marker of a statement the cursor is not in.
     pub marker: Hsla,
     /// Run marker of the statement under the cursor.
     pub active_marker: Hsla,
-    /// Line numbers of the statement under the cursor.
+    /// Line numbers outside the marked rows.
+    pub line_number: Hsla,
+    /// Line numbers of the marked rows other than the cursor row.
+    pub statement_line_number: Hsla,
+    /// Line number of the cursor row.
     pub active_line_number: Hsla,
-    /// Bar beside the lines of the statement under the cursor.
+    /// Bar beside the marked rows while the editor has focus.
     pub bar: Hsla,
-    /// Gutter fill beside the statement under the cursor.
-    pub statement_fill: Hsla,
-    /// Gutter fill beside the cursor line inside that statement.
-    pub cursor_line_fill: Hsla,
+    /// Bar beside the marked rows while the editor does not have focus.
+    pub unfocused_bar: Hsla,
 }
 
 /// Statement decorations for a code editor's gutter: a run marker on the
-/// first line of every statement, and the statement under the cursor
-/// highlighted in the gutter with a bar, a fill and strong line numbers. The
+/// first line of every statement, and the rows a run executes marked with a
+/// bar and brighter line numbers. Those rows are the selected lines when the
+/// selection is not empty, and the statement under the cursor otherwise. The
 /// text area keeps the editor background.
 ///
 /// The ranges are byte ranges into the buffer in buffer order; the owner
