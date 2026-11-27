@@ -13,6 +13,7 @@ window is organized into sections down the left side.
 | [Updates & privacy](#updates--privacy) | Update checks, the changelog, and the optional telemetry levels. |
 | [Audit](#audit) | What the audit log captures and how long it's kept. |
 | [Keybindings](#keybindings) | Browse and change the keymap. |
+| [Snippets](#snippets) | Templates inserted into the query editor by prefix or from the picker. |
 | [Auth Profiles](#auth-profiles-proxies-ssh-tunnels) | AWS SSO / shared-credentials profiles. |
 | [Proxies](#auth-profiles-proxies-ssh-tunnels) | SOCKS5 / HTTP proxy profiles. |
 | [SSH Tunnels](#auth-profiles-proxies-ssh-tunnels) | Reusable SSH tunnel profiles. |
@@ -95,6 +96,10 @@ dismisses them together.
 
 A failed connection raises no toast: its error shows on the connection in the
 sidebar, and Audit records it.
+
+**Notify when an MCP agent requests approval** (default on, builds with MCP
+support only) shows a desktop notification when an MCP agent creates a pending
+approval, or a toast when DBFlux is focused.
 
 ### Execution safety (dangerous-query confirmation)
 
@@ -471,6 +476,20 @@ to see whether the longer one follows), and "takes typed text" when a plain
 letter is bound where text is typed, such as a text field or the code editor
 outside Vim's Normal and Visual modes.
 
+**Commands without a default shortcut.** Settings lists the commands that
+declare a home context and ship with no key there, such as **Copy as Markdown**
+under Results, in that context with **No shortcut**. A command with no home
+context, such as **Go to query error**, is not listed. Press the pencil to give it keys, like any other row:
+the shortcut works at once, is checked for conflicts, and counts as overridden.
+Its reset arrow, or **Remove shortcut**, returns it to no binding. DBFlux builds
+that predate this feature ignore the stored row.
+
+A bare printable key (a letter, digit, symbol or Space) that you assign, to such a
+command or by moving a default binding, applies in Results, Audit and Inspector
+only while no text field has focus, so the letter is still typed into a filter
+or search field. Other keys, such as chords with Ctrl, Alt or Cmd, function keys and arrows, keep the binding's own condition,
+and a context condition you set yourself is used as written.
+
 **Resetting.** An overridden binding shows a reset arrow that restores its
 default keys and context (`r` on a selected binding does the same, and `Delete`
 removes its shortcut). **Reset to defaults** in the footer drops every override,
@@ -481,6 +500,36 @@ Changes apply at once in every window, without a restart. Only your overrides
 are stored, in the `cfg_keybinding_overrides` table of `dbflux.db`, so bindings
 you did not change follow the defaults of future releases. An override whose
 default binding a later release removes is ignored.
+
+---
+
+## Snippets
+
+This section manages the templates you insert into the query editor, by prefix
+or from the snippet picker (see [Editor → Snippets](EDITOR.md#snippets)). It sits
+in the General group, right after Keybindings.
+
+The list on the left shows every snippet with its name, its prefix, its
+language, and a **Built-in** tag on the ones DBFlux ships. **New snippet** opens
+a blank form; selecting a row opens that snippet. With the keyboard, `j` / `k`
+move through the list, `n` starts a new snippet and `d` deletes the open one.
+
+| Field | Description |
+|---|---|
+| **Name** | What the snippet is called in the list and the picker. Names need not be unique. |
+| **Prefix** | What you type in the editor to see the snippet in the completion menu. Unique per language: two SQL snippets cannot share a prefix. |
+| **Language** | The query language of the editors where the snippet appears. SQL is the only choice for now. |
+| **Body** | The text that is inserted, with `$1`, `${1:default}` and `$0` placeholders. Repeating a number mirrors the field. |
+
+**Save** (`Ctrl+S`; the button reads **Update** for an existing snippet) checks
+the form and shows what is wrong under the field: *Name is required*, *Prefix is
+required*, *Body is required*, *Another SQL snippet already uses the prefix
+sel*, or the placeholder error with its line, column and the offending text
+(*Unclosed placeholder at line 2, column 6: ${1:table*). Nothing is stored until
+every field is valid. **Delete** asks for confirmation first.
+
+The six built-in SQL snippets are ordinary rows: edit or delete them like your
+own. A built-in you delete stays deleted.
 
 ---
 

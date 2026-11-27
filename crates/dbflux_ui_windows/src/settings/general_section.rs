@@ -66,6 +66,7 @@ pub(super) enum GeneralFormRow {
     ObjectPreviewLimit,
     KeyValueSizeLimit,
     ToastTimeout,
+    McpApprovalNotifications,
     ShareStableDb,
     SyntaxVariant,
     SyntaxColor(SyntaxRole),

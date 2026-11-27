@@ -136,6 +136,7 @@ pub static METADATA: LazyLock<DriverMetadata> = LazyLock::new(|| DriverMetadata 
         supports_window_functions: true,
         supports_ctes: true,
         supports_explain: true,
+        supports_explain_analyze: true,
         max_query_parameters: 32767,
         max_order_by_columns: 0,
         max_group_by_columns: 0,
@@ -2800,6 +2801,29 @@ impl Connection for PostgresConnection {
 
         let sql = format!("EXPLAIN (FORMAT JSON) {}", query);
         self.execute(&QueryRequest::new(sql))
+    }
+
+    fn query_plan(
+        &self,
+        request: &dbflux_core::QueryPlanRequest,
+    ) -> Result<dbflux_core::QueryPlan, DbError> {
+        let query_request = match request.mode {
+            dbflux_core::QueryPlanMode::Estimate => {
+                QueryRequest::new(crate::plan::explain_statement(&request.query)?)
+            }
+            dbflux_core::QueryPlanMode::Analyze => {
+                // The statement runs, so the server must refuse writes even
+                // when the classifier missed one (a volatile function):
+                // `execute` runs a `read_only` request inside `BEGIN READ
+                // ONLY` and always rolls it back.
+                let mut query_request =
+                    QueryRequest::new(crate::plan::analyze_explain_statement(&request.query)?);
+                query_request.read_only = dbflux_core::ReadOnlyEnforcement::Required;
+                query_request
+            }
+        };
+        let result = self.execute(&query_request)?;
+        crate::plan::parse_explain_json(&crate::plan::raw_plan_from_result(&result)?)
     }
 
     fn describe_table(&self, request: &DescribeRequest) -> Result<QueryResult, DbError> {
@@ -9040,12 +9064,14 @@ mod tests {
                     type_name: Some("integer".to_string()),
                     nullable: false,
                     is_primary_key: true,
+                    kind: dbflux_core::ColumnKind::Unknown,
                 },
                 dbflux_core::TransferColumn {
                     name: "name".to_string(),
                     type_name: Some("text".to_string()),
                     nullable: true,
                     is_primary_key: false,
+                    kind: dbflux_core::ColumnKind::Unknown,
                 },
             ],
             if_not_exists: false,

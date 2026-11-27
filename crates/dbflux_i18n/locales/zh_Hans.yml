@@ -1259,6 +1259,169 @@ document:
         empty: 无维度组合
         connection_not_found: 连接不存在或未激活
         catalog_unsupported: 连接不支持指标目录
+  query_plan:
+    tab:
+      title: 计划
+      analyzed: "已分析"
+    view:
+      switch: 计划视图
+      diagram: 图表
+      tree: 树
+      raw: 原始
+    rows:
+      one: "%{count} 行"
+      many: "%{count} 行"
+    run_mode:
+      switch: "计划模式"
+      estimate: "估算"
+      analyze: "分析"
+    analyze:
+      refusal:
+        title: "此语句无法分析。"
+        changes_data: "它会修改数据，因此只运行估算。"
+        several: "分析一次只运行一条语句。"
+      gate:
+        title: "分析将在 %{connection} 上运行此查询"
+        body: "该语句会真正运行，以测量实际耗时和行数。它在事务之外所做的事情，例如加锁或远程调用，仍然会发生。"
+        production: "%{connection} 是生产连接。"
+        cancel: "取消"
+        run: "运行分析"
+    scope:
+      selection: "选区 L%{start}–%{end}"
+      script: "整个脚本 · %{count} 条语句"
+    totals:
+      cost: 总成本
+      rows: 行
+      planning: "规划"
+      execution: "执行"
+    controls:
+      zoom_out: 缩小
+      zoom_in: 放大
+      zoom_reset: 重置缩放
+      fit: 适应
+    warnings:
+      one: 1 条警告。
+      many: "%{count} 条警告。"
+      estimate_gap: "%{node} 返回了 %{actual}，而估算为 %{estimated}（%{ratio}）。"
+    node:
+      costliest: 成本最高
+      table: 表
+      index: 索引
+      cost: 成本
+      rows: 行
+      self: 自身
+      slowest: "最慢"
+      est: "估算"
+      actual: "实际"
+    tree:
+      node: 节点
+      index: 索引
+      cost: 成本
+      self_cost: 自身成本
+      rows: 行
+      on_relation: 于
+      est_rows: "估算行数"
+      actual_rows: "实际行数"
+      time: "耗时"
+      loops: "循环"
+      self_time: "自身耗时"
+    raw:
+      copy: 复制
+    footer:
+      nodes:
+        one: "%{count} 个节点"
+        many: "%{count} 个节点"
+      not_run: 未执行查询
+      analyze_cancelled: "分析已取消"
+      analyze_failed: "分析失败"
+      format:
+        json: JSON 计划
+        xml: XML 计划
+        text: 文本计划
+      analyzed: "已分析 · 查询已运行"
+    inspector:
+      node: "节点 %{id}"
+      estimate: 估算
+      reads: 读取
+      details: 详情
+      startup_cost: 启动成本
+      total_cost: 总成本
+      self_cost: 自身成本
+      rows: 行
+      relation: 关系
+      index: 索引
+      actual: "实际"
+      rows_per_loop: "每次循环行数"
+      startup_time: "启动耗时"
+      total_time: "总耗时"
+      self_time: "自身耗时"
+      loops: "循环"
+      versus: "与估算对比"
+      versus_more: "多出 %{ratio} 行"
+      versus_fewer: "少了 %{ratio} 行"
+      versus_same: "与估算一致"
+    loading:
+      running: 正在生成查询计划…
+      cancel: 取消
+      analyzing: "正在运行查询以进行测量…"
+    state:
+      retry: 重试
+      unsupported:
+        title: 此驱动不支持查询计划
+        body: "%{connection} 没有可显示的命令计划。"
+      multi_statement:
+        title: 包含多条语句
+      failed:
+        title: 计划失败
+      origin_gone: "生成此结果的连接已断开。请重新连接并再次运行该查询，然后再解释它。"
+      origin_database_changed: "生成此结果的数据库（%{origin}）已不是此连接当前使用的数据库（%{current}）。请切回 %{origin} 后再次解释该查询；现在获取的计划会描述另一个数据库。"
+      editor_database_changed: "此编辑器所用的数据库（%{origin}）已不是此连接当前使用的数据库（%{current}）。请切回 %{origin} 后再次解释该查询；现在获取的计划会描述另一个数据库。"
+      analyze_connection_changed: "编辑器当前指向的连接与生成此计划时不同。请先在新连接上重新运行 Explain，再进行分析。"
+      analyze_database_changed: "编辑器所在的数据库与生成此计划时不同。请先重新运行 Explain，再进行分析。"
+      analyze_query_running: "此编辑器中仍有查询在运行。请等待其完成或取消它，然后再运行分析。"
+      cancelled:
+        title: 计划已取消
+    explain:
+      unavailable: "%{connection} 不提供查询计划"
+    tooltip:
+      diagram_body: 以图形显示计划：每个步骤一个方框，从左向右读取，最终得到结果。
+      tree_body: 以缩进列表显示计划，数值按列排列。
+      raw_body: 引擎返回的原始计划。
+      totals_title: 计划合计
+      totals_body: 整个计划的总成本（规划器单位）以及预计返回的行数。
+      cost_title: 估算成本
+      cost_body: 使用规划器自己的单位，包含子节点。仅可在此计划内部比较。
+      startup_cost_title: 启动成本
+      startup_cost_body: 返回第一行之前的估算成本。
+      self_cost_title: 自身成本
+      self_cost_node_body: 仅此节点（不含子节点）消耗的计划总量占比。
+      self_cost_column_body: 节点成本减去子节点成本，占计划总量的比例。进度条显示同一比例。
+      rows_title: 估算行数
+      rows_body: 此步骤传给下一步的行数。线越粗，行数越多。
+      costliest_title: 成本最高
+      costliest_body: 此计划中自身成本最高的节点。
+      index_title: 索引
+      index_body: 此步骤用来查找行的索引。
+      relation_title: 关系
+      relation_body: 此步骤读取的表或视图。
+      condition_body: 最能说明此步骤的条件，按引擎报告的原样显示。
+      estimate_body: "只生成查询计划，不运行查询。"
+      analyze_body: "运行查询并测量实际耗时和行数。估算只生成计划。"
+      totals_analyzed_body: "规划是构建计划所用的时间，执行是运行计划所用的时间。两者都在服务器上测量。"
+      edge_actual_title: "实际行数"
+      edge_actual_body: "此步骤在所有运行中传给下一步的行数。线越粗，行数越多。"
+      gap_title: "行数偏离估算"
+      gap_body: "返回了 %{actual}，而估算为 %{estimated}，这是此计划中最大的偏差。"
+      slowest_title: "最慢"
+      slowest_body: "此计划中自身耗时最高的节点。"
+      actual_rows_title: "实际行数"
+      actual_rows_body: "此步骤每次运行返回的行数，可与旁边的估算对比。"
+      time_title: "耗时"
+      time_body: "此步骤及其子步骤在所有运行中花费的时间总和。"
+      self_time_title: "自身耗时"
+      self_time_body: "仅此节点自身（不含子节点）花费的时间，占执行时间的比例。进度条显示相同的比例。"
+      loops_title: "循环"
+      loops_body: "引擎运行此步骤的次数。耗时是所有循环的总和；行数与估算一样按每次循环计。"
   code:
     gutter:
       run_statement: 运行此语句
@@ -1306,6 +1469,21 @@ document:
       alias: "别名"
       keyword: "关键字"
       cte: "cte"
+      snippet: "代码片段"
+    snippets:
+      picker:
+        title: "插入代码片段"
+        search_placeholder: "搜索 %{language} 代码片段"
+        builtin: "内置"
+        no_match: "没有与“%{query}”匹配的代码片段"
+        empty: "还没有 %{language} 代码片段"
+        empty_hint: "代码片段属于某一种查询语言，只会出现在该语言的编辑器中。可在 设置 › 代码片段 中添加。"
+        count_one: "1 个代码片段"
+        count_many: "%{count} 个代码片段"
+        hint_insert: "Enter 插入"
+        hint_close: "Esc 关闭"
+        load_error: "无法加载代码片段"
+        invalid_body: "代码片段“%{prefix}”的内容无效，未插入"
     layout:
       split_save_failed: "无法保存编辑器与结果的分割比例：%{error}"
     vim:
@@ -1626,6 +1804,7 @@ document:
       header: "%{column} · 第 %{row} 行"
       item:
         copy: 复制
+        copy_as_markdown: 复制为 Markdown
         copy_column_name: 复制列名
         view_document: 查看文档
         add_document: 添加文档
@@ -1650,6 +1829,7 @@ document:
         duplicate_row: 复制行
         delete_row: 删除行
         chart_this_query: 将此查询制作成图表
+        explain_this_query: 解释此查询
       submenu:
         copy_query:
           sql: 复制为 SQL
@@ -4514,6 +4694,8 @@ palette:
       name: 切换注释
     format_query:
       name: 格式化查询
+    insert_snippet:
+      name: "插入代码片段"
     go_to_query_error:
       name: 转到查询错误
     open_history:
@@ -4532,6 +4714,8 @@ palette:
       name: 向右移动标签页
     export_results:
       name: 导出结果
+    results_copy_as_markdown:
+      name: 复制为 Markdown
     open_connection_manager:
       name: 打开连接管理器
     disconnect:
@@ -4864,6 +5048,9 @@ settings:
         "8s": "8 秒"
         "15s": "15 秒"
         never: "保留直到关闭"
+    mcp_approval_notifications:
+      label: "MCP 代理请求批准时通知"
+      hint: "显示桌面通知；当 DBFlux 处于焦点时显示应用内通知。"
     share_stable_db:
       label: 使用稳定数据库
       error: 更新共享数据库设置失败
@@ -4991,6 +5178,7 @@ settings:
       open_folder: "打开文件夹…"
       toggle_comment: 切换注释
       format_query: 格式化查询
+      insert_snippet: "插入代码片段"
       go_to_query_error: 转到查询错误
       export_results: 导出结果
       clear_filter: 清除筛选
@@ -5008,6 +5196,7 @@ settings:
       results_duplicate_row: 复制行
       results_copy_row: 复制行
       results_copy_cell: 复制单元格
+      results_copy_as_markdown: 复制为 Markdown
       toggle_record_view: 切换记录视图
       cycle_document_view: 切换树 / 表格 / JSON
       cycle_result_view: "切换结果视图"
@@ -5387,6 +5576,9 @@ settings:
       get_pending_execution:
         name: 获取待处理项
         description: 检索特定待处理执行的详情
+      wait_for_approval:
+        name: 等待审批
+        description: 等待待处理执行被批准、拒绝或过期
       query_audit_logs:
         name: 查询审计日志
         description: 搜索和筛选审计记录
@@ -5742,6 +5934,58 @@ settings:
       save_failed_copy: "保存失败：%{error}"
     toast:
       saved: 审计设置已保存。
+  snippets:
+    header:
+      title: "代码片段"
+      subtitle: "可通过前缀或代码片段选择器插入到查询编辑器中的模板。每个代码片段属于一种查询语言。"
+    list:
+      new: "新建代码片段"
+      empty: "还没有代码片段"
+      builtin: "内置"
+    empty:
+      title: "还没有代码片段"
+      hint: "创建一个，即可从补全菜单或代码片段选择器中插入。"
+    form:
+      group:
+        snippet: "代码片段"
+        body: "内容"
+      name: "名称"
+      name_placeholder: "代码片段名称"
+      prefix: "前缀"
+      prefix_placeholder: "前缀"
+      prefix_hint: "在编辑器中输入它，即可在补全菜单中看到该代码片段"
+      language: "语言"
+      language_hint: "代码片段只会出现在该语言的编辑器中"
+      body: "内容"
+      body_hint: "用 $1、$2… 表示字段，用 ${1:默认值} 表示带默认值的字段，用 $0 表示光标最终停留的位置。重复同一个编号会同步镜像该字段。"
+    language:
+      sql: "SQL"
+    action:
+      save: "保存"
+      update: "更新"
+      delete: "删除"
+      cancel: "取消"
+    delete:
+      title: "删除代码片段"
+      message: "确定要删除代码片段“%{name}”吗？"
+    validation:
+      name_required: "名称不能为空"
+      prefix_required: "前缀不能为空"
+      body_required: "内容不能为空"
+      duplicate_prefix: "另一个 %{language} 代码片段已使用前缀 %{prefix}"
+      parse:
+        unclosed_placeholder: "第 %{line} 行第 %{column} 列存在未闭合的占位符：%{excerpt}"
+        nested_placeholder: "第 %{line} 行第 %{column} 列存在嵌套的占位符：%{excerpt}"
+        unsupported_choice: "第 %{line} 行第 %{column} 列不支持选项：%{excerpt}"
+        unsupported_variable: "第 %{line} 行第 %{column} 列不支持变量：%{excerpt}"
+        invalid_placeholder: "第 %{line} 行第 %{column} 列存在无效的占位符：%{excerpt}"
+    toast:
+      saved: "代码片段已保存"
+      deleted: "代码片段已删除"
+    error:
+      save: "无法保存代码片段"
+      delete: "无法删除代码片段"
+      load: "无法加载代码片段"
   nav:
     no_results: "没有匹配的设置"
     search_placeholder: "搜索设置"
@@ -5749,6 +5993,7 @@ settings:
     general: 常规
     appearance: 外观
     keybindings: 键盘快捷键
+    snippets: "代码片段"
     updates: 更新与隐私
     audit: 审计
     about: 关于
@@ -6362,6 +6607,9 @@ notifications:
     title: 一切都是最新的
     message: 审批、更新和失败的任务会显示在这里。已读项目会保留，直到你清除它们。
   approval:
+    alert_title: "请求审批"
+    alert_body: "%{client} 想在 %{connection} 上运行 %{tool}（%{classification}）"
+    alert_body_many: "%{count} 个 MCP 请求正在等待你的审批"
     meta: "%{connection} · %{client} · %{waiting}"
     review: 查看
   update:

@@ -13,6 +13,7 @@ DBFlux용 Microsoft SQL Server 드라이버로, [`tiberius`](https://crates.io/c
 ## 주요 기능
 
 - SQL 쿼리 실행과 스키마 검색을 지원하는 SQL Server / Azure SQL 관계형 드라이버입니다.
+- 구조화된 쿼리 계획(`Connection::query_plan`): 예상 계획은 `SET SHOWPLAN_XML`에서 가져오므로 문은 컴파일만 되고 실행되지 않으며, 비용, 행 수 추정치, 인덱스 사용, 경고가 포함된 연산자 트리로 반환됩니다. `SHOWPLAN_XML`은 세션 상태이므로 연결을 점유하는 동안 켜고 끄며, 되돌릴 수 없는 세션은 교체됩니다.
 - 네이티브 콘솔(`NATIVE_CONSOLE`): 테이블에는 콘솔이 붙고, 사이드바의 데이터베이스 메뉴에서는 콘솔을 별도 탭으로 열 수 있습니다. 콘솔은 `Connection::execute`를 통해 SQL 문 한 줄씩 실행하며, 편집기의 검증, 위험 쿼리 확인, 감사 행, 쿼리 기록을 사용합니다. 이 드라이버는 `QueryRequest::limit`(`REQUEST_ROW_LIMIT`)을 적용하므로 콘솔 명령에도 편집기의 행 제한이 적용됩니다.
 - SQL Server 로그인(사용자 이름 + 비밀번호)을 통한 인증을 지원합니다. URI 모드에서는 ADO, JDBC, `sqlserver://user:pass@host:port/db` 형식의 연결 문자열을 받습니다.
 - 연결 문자열이나 URI가 이미 `Application Name`을 설정하고 있지 않는 한 `Application Name`을 `dbflux/<version>`으로 보고하며, 이미 설정되어 있다면 사용자가 지정한 값이 항상 우선합니다. 이를 위해 `sqlserver://`/`mssql://` URL 스킴은 `applicationname` 쿼리 파라미터를 받습니다.
@@ -184,3 +185,4 @@ DBFlux용 Microsoft SQL Server 드라이버로, [`tiberius`](https://crates.io/c
 - SQL Server에는 `sys.objects.type` 분류에 `Window` 함수 종류가 없으므로, 이 드라이버는 `RoutineKind::Window`를 절대 내보내지 않습니다.
 - 데이터 전송 엔진의 마이그레이션 경로에 대한 참조 무결성 토글이 없습니다(`DriverCapabilities::DISABLE_FK_CHECKS`가 설정되지 않음; `Connection::set_referential_integrity`는 `NotSupported`를 반환합니다). SQL Server는 `ALTER TABLE ... NOCHECK CONSTRAINT`로 테이블별로 FK 검사를 비활성화하는데, 이는 엔진의 단일 전역 토글에 맞지 않습니다. 테이블별 변형은 향후 추가 가능성이 있습니다.
 - 데이터베이스가 강제하는 읽기 전용 모드가 없습니다. 이를 요구하는 요청은 거부되므로 MCP `execute_script`는 `Read` 또는 `Metadata`로 분류된 스크립트를 쓰기로 처리하며, SQL Server 연결에서는 편집기 자동 새로 고침을 사용할 수 없습니다.
+- 분석된 쿼리 계획(실측 행 수와 시간)은 아직 지원되지 않으며, `SHOWPLAN_XML`의 예상 계획만 제공됩니다.

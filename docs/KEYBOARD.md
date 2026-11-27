@@ -106,6 +106,7 @@ When the tree gains focus with no row selected, the row selected last is selecte
 | `Ctrl+Shift+s` / `Cmd+Shift+s` | Save file as |
 | `Ctrl+/` / `Cmd+/` | Toggle line comment |
 | `Ctrl+Shift+f` / `Cmd+Option+l` | Format the selection, or the statement under the cursor |
+| `Ctrl+Alt+j` / `Cmd+j` | Insert snippet (opens the snippet picker) |
 | `Shift+F10` | Open the pane actions menu |
 | `Enter` | Focus / execute |
 
@@ -130,6 +131,11 @@ it with the next / previous one, wrapping at either end. Once `Tab` has inserted
 a suggestion, the arrow keys also update the text. `Enter`, or typing any other
 character, keeps the inserted suggestion and closes the menu; `Escape` restores
 the word you typed. The whole cycle is one undo step.
+
+While a snippet is being filled in and no completion menu is open, `Tab` /
+`Shift+Tab` move to the next / previous snippet field instead of indenting.
+`Tab` on the last field, or `Escape`, ends the snippet. With a completion menu
+open, `Tab` keeps cycling its suggestions.
 
 The action strip on the editor's left edge is also a menu. `Shift+F10` opens the **pane actions** menu
 from the editor text, in every Vim mode and without Vim. `Ctrl+k` moves focus to
@@ -860,6 +866,9 @@ While a text field or an open dropdown has focus, these keys (including `Enter`)
 | `Ctrl+Enter` / `Cmd+Enter` | Run the query |
 | `Ctrl+Shift+Enter` / `Cmd+Shift+Enter` | Run the query in a new tab |
 | `Ctrl+Shift+z` | Redo (Linux and Windows; macOS uses `Cmd+Shift+z`) |
+| `Ctrl+Insert` | Copy the selection (Linux and Windows) |
+| `Shift+Insert` | Paste (Linux and Windows) |
+| `Shift+Delete` | Cut the selection, or delete the next character when nothing is selected (Linux and Windows). In a password field it deletes the selection without copying it |
 
 While you type in a text field outside a dialog, such as the sidebar search or
 the execution context bar, the global shortcuts that hold `Ctrl` or `Cmd`, or

@@ -417,6 +417,7 @@ fn command_icon(id: &str) -> AppIcon {
         | "close_workspace" => AppIcon::Folder,
         "toggle_comment" | "focus_editor" => AppIcon::Code,
         "format_query" => AppIcon::Zap,
+        "insert_snippet" => AppIcon::Braces,
         "go_to_query_error" => AppIcon::CircleAlert,
         "open_history" => AppIcon::History,
         "cancel_query" | "close_tab" => AppIcon::CircleX,

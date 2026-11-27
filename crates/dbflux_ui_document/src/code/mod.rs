@@ -73,15 +73,18 @@ mod focus;
 mod format;
 mod live_output;
 pub(crate) mod pane;
+mod plan_tab;
 mod query_error;
 mod render;
 mod results_split;
 pub(crate) mod schema_highlight;
+mod snippet_insert;
+mod snippet_session;
 mod statements;
 mod vim;
 
 use code_actions::SqlCodeActionProvider;
-pub(crate) use completion::QueryCompletionProvider;
+pub(crate) use completion::{QueryCompletionProvider, SnippetOffers};
 pub(crate) use execution_session::ExecutionSessionBinding;
 use live_output::LiveOutputState;
 pub(crate) use vim::VimMode;
@@ -108,7 +111,7 @@ pub(super) struct ResultTab {
 }
 
 /// Internal layout of the document.
-#[derive(Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub(crate) enum SqlQueryLayout {
     #[default]
     Split,
@@ -407,6 +410,11 @@ pub(super) enum LanguageBinding {
 pub(super) struct EditorState {
     pub(super) input_state: Entity<GpuiEditorState>,
     pub(super) _input_subscriptions: Vec<Subscription>,
+    /// Tabstop session state, shared with the editor's Tab interceptor.
+    pub(super) snippet: snippet_session::SnippetHooks,
+    /// The snippets the last completion request offered, to recognise the
+    /// commit of one of them.
+    pub(super) snippet_offers: SnippetOffers,
     pub(super) original_content: String,
     pub(super) saved_query_id: Option<Uuid>,
     pub(super) current_editor_mode: String,
@@ -594,6 +602,8 @@ pub struct CodeDocument {
     execution_session: Arc<ExecutionSessionBinding>,
     execution_session_context: Option<ExecutionSessionContext>,
     result_tabs: ResultTabs,
+    /// The Plan tab Explain opens beside the result tabs.
+    plan: plan_tab::PlanSlot,
 
     // History modal and refresh timer.
     history: HistoryState,
@@ -608,6 +618,8 @@ pub struct CodeDocument {
     script_confirm_focus: ModalFocus,
     /// Keyboard focus for the dangerous query confirmation.
     dangerous_query_focus: ModalFocus,
+    /// The Insert snippet picker, while it is open.
+    snippet_picker: Option<snippet_insert::OpenSnippetPicker>,
     context_bar_slot: ContextBarSlot,
     results_maximized: bool,
 
@@ -858,6 +870,7 @@ impl CodeDocument {
                 cx,
             );
         });
+        let snippet_offers = SnippetOffers::default();
         let supports_connection_context = editor_profile.supports_connection_context;
 
         let input_change_sub = cx.subscribe_in(
@@ -865,6 +878,7 @@ impl CodeDocument {
             window,
             |this, input, event: &InputEvent, _window, cx| match event {
                 InputEvent::Change => {
+                    this.snippet_after_change(_window, cx);
                     this.finish_replace_once(_window, cx);
                     this.clear_query_error(cx);
                     this.refresh_statements(cx);
@@ -1081,8 +1095,8 @@ impl CodeDocument {
             exec_ctx.schema = Some("public".to_string());
         }
 
-        let completion_provider: Rc<dyn CompletionProvider> =
-            Rc::new(QueryCompletionProvider::new(
+        let completion_provider: Rc<dyn CompletionProvider> = Rc::new(
+            QueryCompletionProvider::new(
                 query_language.clone(),
                 app_state.clone(),
                 connection_id,
@@ -1090,7 +1104,9 @@ impl CodeDocument {
                 exec_ctx.schema.clone(),
                 completion_query_generation.clone(),
                 catalog_names.clone(),
-            ));
+            )
+            .with_snippets(snippet_offers.clone()),
+        );
 
         let code_action_provider: Rc<dyn CodeActionProvider> = Rc::new(SqlCodeActionProvider::new(
             app_state.clone(),
@@ -1098,11 +1114,21 @@ impl CodeDocument {
             exec_ctx.database.clone(),
         ));
 
-        input_state.update(cx, |state, _cx| {
+        let snippet = input_state.update(cx, |state, cx| {
             state.lsp_mut().completion_provider =
                 supports_connection_context.then_some(completion_provider.clone());
             state.lsp_mut().code_action_providers = vec![code_action_provider.clone()];
+            snippet_session::SnippetHooks::install(state, snippet_offers.clone(), cx)
         });
+        let snippet_caret_sub = cx.subscribe(
+            &input_state,
+            |this, _input, event: &gpui_base::input::InputPointerEvent, cx| match event {
+                gpui_base::input::InputPointerEvent::CaretPlaced => {
+                    this.snippet_after_caret_placed(cx);
+                }
+            },
+        );
+        let snippet_vim_sub = cx.observe_self(|this, cx| this.snippet_follow_vim_mode(cx));
 
         let (connection_dropdown, conn_sub) =
             Self::create_connection_dropdown(&app_state, &exec_ctx, window, cx);
@@ -1193,7 +1219,14 @@ impl CodeDocument {
             app_state,
             editor: EditorState {
                 input_state,
-                _input_subscriptions: vec![input_change_sub, completion_menu_width_sub],
+                _input_subscriptions: vec![
+                    input_change_sub,
+                    completion_menu_width_sub,
+                    snippet_caret_sub,
+                    snippet_vim_sub,
+                ],
+                snippet,
+                snippet_offers,
                 original_content: String::new(),
                 saved_query_id: None,
                 current_editor_mode: editor_profile.editor_mode.clone(),
@@ -1256,6 +1289,7 @@ impl CodeDocument {
                 result_tab_counter: 0,
                 run_in_new_tab: false,
             },
+            plan: plan_tab::PlanSlot::default(),
             history: HistoryState {
                 history_panel,
                 _history_subscriptions: vec![query_selected_sub, history_closed_sub],
@@ -1265,6 +1299,7 @@ impl CodeDocument {
             focus_handle: cx.focus_handle(),
             focus_mode: SqlQueryFocus::Editor,
             script_confirm_focus: ModalFocus::new(cx),
+            snippet_picker: None,
             dangerous_query_focus: ModalFocus::new(cx),
             context_bar_slot: ContextBarSlot::Connection,
             results_maximized: false,
@@ -1351,7 +1386,9 @@ impl CodeDocument {
     pub fn set_active_tab(&mut self, active: bool, cx: &mut Context<Self>) {
         self.is_active_tab = active;
 
-        if active && let Some(grid) = self.active_result_grid() {
+        if active && self.plan_shown() {
+            self.restore_plan_inspector(cx);
+        } else if active && let Some(grid) = self.active_result_grid() {
             grid.update(cx, |grid, cx| grid.set_active_tab(true, cx));
         }
     }
@@ -1359,6 +1396,7 @@ impl CodeDocument {
     /// Drops every result grid's inspector state after the user dismissed the
     /// workspace rail, so no grid re-opens it on the next activation.
     pub fn mark_inspector_closed(&mut self, cx: &mut Context<Self>) {
+        self.mark_plan_inspector_closed(cx);
         for tab in &self.result_tabs.result_tabs {
             tab.grid
                 .update(cx, |grid, cx| grid.clear_inspector_state(cx));
@@ -1421,9 +1459,12 @@ impl CodeDocument {
     /// cannot reach the dirty-marking handler at all.
     pub fn set_content(&mut self, sql: &str, window: &mut Window, cx: &mut Context<Self>) {
         let sql_owned = sql.to_string();
-        self.editor
-            .input_state
-            .update(cx, |state, cx| state.set_value(&sql_owned, window, cx));
+        let snippet = self.editor.snippet.clone();
+        self.editor.input_state.update(cx, |state, cx| {
+            // Its anchors and undo group do not survive a replaced buffer.
+            snippet.end(state, cx);
+            state.set_value(&sql_owned, window, cx)
+        });
         self.editor.original_content = sql_owned;
         self.editor.is_dirty = false;
         self.refresh_editor_diagnostics(window, cx);
@@ -1976,6 +2017,11 @@ impl CodeDocument {
             }
         }
 
+        // The Insert snippet picker owns the keyboard while it is open.
+        if self.snippet_picker.is_some() && self.dispatch_to_snippet_picker(cmd, window, cx) {
+            return true;
+        }
+
         // While the history panel owns the keyboard, route commands to it first
         if self.history.history_panel.read(cx).owns_keyboard()
             && self.dispatch_to_history_panel(cmd, window, cx)
@@ -1990,8 +2036,32 @@ impl CodeDocument {
             return true;
         }
 
-        // When focused on results, delegate to active DataGridPanel
-        if self.focus_mode == SqlQueryFocus::Results
+        // The palette runs this with the query text focused, so it cannot
+        // wait for the results to own the keyboard.
+        if cmd == Command::ResultsCopyAsMarkdown {
+            return match self.active_result_grid() {
+                Some(grid) => grid.update(cx, |g, cx| g.dispatch_command(cmd, window, cx)),
+                None => false,
+            };
+        }
+
+        // The Plan tab takes the commands that mean something there; the
+        // rest go on to the document like any other.
+        if self.focus_mode == SqlQueryFocus::Results && self.plan_shown() {
+            if cmd == Command::FocusUp {
+                self.reveal_editor(cx);
+                self.focus_mode = SqlQueryFocus::Editor;
+                self.editor
+                    .input_state
+                    .update(cx, |state, cx| state.focus(window, cx));
+                cx.notify();
+                return true;
+            }
+
+            if self.dispatch_plan_command(cmd, window, cx) {
+                return true;
+            }
+        } else if self.focus_mode == SqlQueryFocus::Results
             && let Some(grid) = self.active_result_grid()
         {
             // Special handling for FocusUp to exit results
@@ -2033,6 +2103,7 @@ impl CodeDocument {
             }
             Command::ToggleComment => self.toggle_comment(window, cx),
             Command::FormatQuery => self.format_query(window, cx),
+            Command::InsertSnippet => self.open_snippet_picker(window, cx),
             Command::GoToQueryError => self.go_to_query_error(window, cx),
             Command::Cancel | Command::CancelQuery if self.runner.is_primary_active() => {
                 self.cancel_query(cx);
@@ -2046,11 +2117,12 @@ impl CodeDocument {
             }
 
             Command::FocusDown
-                if self.focus_mode == SqlQueryFocus::Editor
-                    && !self.result_tabs.result_tabs.is_empty() =>
+                if self.focus_mode == SqlQueryFocus::Editor && self.has_result_content() =>
             {
                 self.focus_mode = SqlQueryFocus::Results;
-                if let Some(grid) = self.active_result_grid() {
+                if self.plan_shown() {
+                    self.focus_plan(window, cx);
+                } else if let Some(grid) = self.active_result_grid() {
                     grid.update(cx, |g, cx| g.focus_active_view(window, cx));
                 }
                 cx.notify();

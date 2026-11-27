@@ -16,6 +16,12 @@ Driver de Microsoft SQL Server para DBFlux, construido sobre el cliente TDS
 
 - Driver relacional para SQL Server / Azure SQL con ejecución de queries SQL y
   descubrimiento de schema.
+- Planes de query estructurados (`Connection::query_plan`): el plan estimado
+  proviene de `SET SHOWPLAN_XML`, así que el statement se compila y nunca se
+  ejecuta, y se devuelve como un árbol de operadores con costos, estimaciones de
+  filas, uso de índices y advertencias. `SHOWPLAN_XML` es estado de la sesión,
+  por lo que se activa y desactiva mientras se retiene la conexión, y una sesión
+  que no puede revertirse se reemplaza.
 - Consola nativa (`NATIVE_CONSOLE`): las tablas acoplan una consola, y el menú
   de una base de datos en la barra lateral abre una en su propia pestaña, que
   ejecuta una línea de sentencia SQL a la vez mediante `Connection::execute`
@@ -457,3 +463,4 @@ Requiere el permiso `VIEW SERVER STATE`.
   NOCHECK CONSTRAINT`, lo cual no encaja con el toggle global único del motor;
   una variante por tabla es una posible mejora futura.
 - Sin modo de solo lectura aplicado por la base de datos: las peticiones que lo requieren se rechazan, así que `execute_script` en MCP gobierna como escrituras los scripts clasificados `Read` o `Metadata`, y el auto-refresh del editor no está disponible en conexiones de SQL Server.
+- Los planes de query analizados (valores reales y tiempos) aún no están soportados; solo está disponible el plan estimado de `SHOWPLAN_XML`.

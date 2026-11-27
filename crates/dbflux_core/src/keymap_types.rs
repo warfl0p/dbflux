@@ -95,6 +95,9 @@ pub enum Command {
     /// Reformats the selection, or the statement under the cursor, with
     /// the connection's language service.
     FormatQuery,
+    /// Opens the picker that lists the snippets of the editor's language and
+    /// inserts the chosen one at the cursor.
+    InsertSnippet,
     /// Moves the cursor to the token the server named in the last failed
     /// run, while the editor still marks it.
     GoToQueryError,
@@ -124,6 +127,9 @@ pub enum Command {
     ResultsDuplicateRow,
     ResultsCopyRow,
     ResultsCopyCell,
+    /// Copies the selected cells, or the whole loaded result when one cell is
+    /// selected, as a Markdown table. Bound to nothing by default.
+    ResultsCopyAsMarkdown,
     ToggleRecordView,
     CycleDocumentView,
     /// Shows the next view of a result (Data, JSON, Chart and the others
@@ -331,6 +337,7 @@ impl Command {
             "open_script_file" => Some(Command::OpenScriptFile),
             "toggle_comment" => Some(Command::ToggleComment),
             "format_query" => Some(Command::FormatQuery),
+            "insert_snippet" => Some(Command::InsertSnippet),
             "go_to_query_error" => Some(Command::GoToQueryError),
             "open_history" => Some(Command::ToggleHistoryDropdown),
             "cancel_query" => Some(Command::CancelQuery),
@@ -340,6 +347,7 @@ impl Command {
             "move_tab_left" => Some(Command::MoveTabLeft),
             "move_tab_right" => Some(Command::MoveTabRight),
             "export_results" => Some(Command::ExportResults),
+            "results_copy_as_markdown" => Some(Command::ResultsCopyAsMarkdown),
             "open_connection_manager" => Some(Command::OpenConnectionManager),
             "export_connections" => Some(Command::ExportConnections),
             "disconnect" => Some(Command::Disconnect),
@@ -457,6 +465,7 @@ impl Command {
             Command::CloseWorkspace => "Close workspace",
             Command::ToggleComment => "Toggle line comment",
             Command::FormatQuery => "Format query",
+            Command::InsertSnippet => "Insert snippet",
             Command::GoToQueryError => "Go to query error",
 
             Command::ExportResults => "Export results",
@@ -475,6 +484,7 @@ impl Command {
             Command::ResultsDuplicateRow => "Duplicate row",
             Command::ResultsCopyRow => "Copy row",
             Command::ResultsCopyCell => "Copy cell",
+            Command::ResultsCopyAsMarkdown => "Copy as Markdown",
             Command::ToggleRecordView => "Toggle record view",
             Command::CycleDocumentView => "Cycle tree / table / JSON",
             Command::CycleResultView => "Cycle result view",
@@ -676,6 +686,7 @@ impl Command {
             Command::CloseWorkspace => "close_workspace",
             Command::ToggleComment => "toggle_comment",
             Command::FormatQuery => "format_query",
+            Command::InsertSnippet => "insert_snippet",
             Command::GoToQueryError => "go_to_query_error",
 
             Command::ExportResults => "export_results",
@@ -694,6 +705,7 @@ impl Command {
             Command::ResultsDuplicateRow => "results_duplicate_row",
             Command::ResultsCopyRow => "results_copy_row",
             Command::ResultsCopyCell => "results_copy_cell",
+            Command::ResultsCopyAsMarkdown => "results_copy_as_markdown",
             Command::ToggleRecordView => "toggle_record_view",
             Command::CycleDocumentView => "cycle_document_view",
             Command::CycleResultView => "cycle_result_view",
@@ -913,6 +925,7 @@ impl Command {
             Command::CloseWorkspace,
             Command::ToggleComment,
             Command::FormatQuery,
+            Command::InsertSnippet,
             Command::GoToQueryError,
             Command::ExportResults,
             Command::ClearFilter,
@@ -930,6 +943,7 @@ impl Command {
             Command::ResultsDuplicateRow,
             Command::ResultsCopyRow,
             Command::ResultsCopyCell,
+            Command::ResultsCopyAsMarkdown,
             Command::ToggleRecordView,
             Command::CycleDocumentView,
             Command::CycleResultView,
@@ -1126,6 +1140,7 @@ impl Command {
             | Command::CloseWorkspace
             | Command::ToggleComment
             | Command::FormatQuery
+            | Command::InsertSnippet
             | Command::GoToQueryError => "Editor",
 
             Command::ExportResults
@@ -1141,6 +1156,7 @@ impl Command {
             | Command::ResultsDuplicateRow
             | Command::ResultsCopyRow
             | Command::ResultsCopyCell
+            | Command::ResultsCopyAsMarkdown
             | Command::ToggleRecordView
             | Command::CycleDocumentView
             | Command::CycleResultView
@@ -1270,6 +1286,21 @@ impl Command {
             | Command::EditBindingContext
             | Command::FilterByContext => "Actions",
             Command::OpenPaneActions => "Actions",
+        }
+    }
+
+    /// The context that lists this command in Settings → Keyboard although
+    /// the default keymap gives it no binding there, so a user can assign it
+    /// a shortcut. `None` for every command that is either bound by default
+    /// or not offered for binding.
+    ///
+    /// Declare a command here only while the default keymap leaves it
+    /// unbound in that context; a command the default keymap binds is listed
+    /// through its binding.
+    pub fn home_context(&self) -> Option<ContextId> {
+        match self {
+            Command::ResultsCopyAsMarkdown => Some(ContextId::Results),
+            _ => None,
         }
     }
 
@@ -1878,6 +1909,7 @@ mod tests {
             "next_tab",
             "prev_tab",
             "export_results",
+            "results_copy_as_markdown",
             "open_connection_manager",
             "export_connections",
             "disconnect",
@@ -1967,6 +1999,29 @@ mod tests {
         assert!(
             ContextId::global_chords_predicate().starts_with(ContextId::GLOBAL_CHORDS_IDENTIFIER)
         );
+    }
+
+    #[test]
+    fn copy_as_markdown_is_a_palette_command_with_no_default_binding_slot() {
+        assert_eq!(
+            Command::from_palette_id("results_copy_as_markdown"),
+            Some(Command::ResultsCopyAsMarkdown)
+        );
+        assert_eq!(
+            Command::ResultsCopyAsMarkdown.id(),
+            "results_copy_as_markdown"
+        );
+        assert!(Command::all_variants().contains(&Command::ResultsCopyAsMarkdown));
+    }
+
+    #[test]
+    fn copy_as_markdown_declares_the_results_context_as_its_home() {
+        assert_eq!(
+            Command::ResultsCopyAsMarkdown.home_context(),
+            Some(ContextId::Results)
+        );
+        assert_eq!(Command::ResultsCopyRow.home_context(), None);
+        assert_eq!(Command::ToggleCommandPalette.home_context(), None);
     }
 
     #[test]

@@ -270,7 +270,8 @@ impl CodeDocument {
             self.source.exec_ctx.schema.clone(),
             self.editor.completion_query_generation.clone(),
             self.editor.catalog_names.clone(),
-        );
+        )
+        .with_snippets(self.editor.snippet_offers.clone());
         // The schema list arrives with the connection, not with the first
         // completion, so the highlighter learns it here.
         let catalog_names_changed = query_completion.refresh_catalog_names(cx);

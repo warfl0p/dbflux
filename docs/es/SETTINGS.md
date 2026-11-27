@@ -14,6 +14,7 @@ lateral. La ventana está organizada en secciones a lo largo del lado izquierdo.
 | [Actualizaciones y privacidad](#actualizaciones-y-privacidad) | Comprobaciones de actualizaciones, el changelog y los niveles de telemetría opcionales. |
 | [Audit](#audit)                                     | Qué captura el audit log y cuánto tiempo se conserva.                        |
 | [Keybindings](#keybindings)                         | Explora y cambia el keymap.                                                  |
+| [Snippets](#snippets) | Plantillas que se insertan en el editor de queries por prefijo o desde el selector. |
 | [Auth Profiles](#auth-profiles-proxies-ssh-tunnels) | Perfiles AWS SSO / shared-credentials.                                       |
 | [Proxies](#auth-profiles-proxies-ssh-tunnels)       | Perfiles de proxy SOCKS5 / HTTP.                                             |
 | [SSH Tunnels](#auth-profiles-proxies-ssh-tunnels)   | Perfiles reutilizables de túnel SSH.                                         |
@@ -106,6 +107,11 @@ roja, donde puedes abrirlo en Audit o descartarlo. Los errores que nunca llegan
 al centro de notificaciones, como una query fallida en el editor, siguen
 mostrando un aviso. Ver
 [Centro de notificaciones](KEYBOARD.md#centro-de-notificaciones).
+
+**Avisar cuando un agente MCP solicita aprobación** (activado de forma
+predeterminada, solo en builds con soporte MCP) muestra una notificación de
+escritorio cuando un agente MCP crea una aprobación pendiente, o un aviso dentro
+de la app cuando DBFlux tiene el foco.
 
 ### Seguridad de ejecución (confirmación de queries peligrosas)
 
@@ -513,6 +519,22 @@ tras el más corto para ver si sigue el más largo), y "captura texto escrito"
 cuando una letra sola se asigna donde se escribe texto, como un campo de texto o
 el editor de código fuera de los modos Normal y Visual de Vim.
 
+**Comandos sin atajo por defecto.** Settings lista los comandos que declaran un
+contexto propio y se distribuyen sin tecla en él, como **Copiar como Markdown**
+en Results, en ese contexto con **Sin atajo**. Un comando sin contexto propio,
+como **Ir al error de la consulta**, no aparece. Pulsa el lápiz para asignarle teclas, como en
+cualquier otra fila: el atajo funciona al instante, se comprueban sus conflictos
+y cuenta como modificado. Su flecha de restablecer, o **Quitar atajo**, lo
+devuelve a sin binding. Las versiones de DBFlux anteriores a esta función
+ignoran la fila guardada.
+
+Una tecla imprimible sola (letra, dígito, símbolo o Espacio) que asignes a un
+comando así, o a la que muevas un binding por defecto, se aplica en Results,
+Audit e Inspector solo mientras ningún campo de texto tiene el foco, así que la
+letra se sigue escribiendo en un filtro o un campo de búsqueda. Los acordes con
+Ctrl, Alt o Cmd, las teclas de función y las flechas mantienen la condición propia del atajo, y una condición de
+contexto que fijes tú se usa tal cual.
+
 **Restablecer.** Un binding modificado muestra una flecha que restablece sus
 teclas y su contexto por defecto (`r` sobre un binding seleccionado hace lo
 mismo, y `Delete` quita su atajo). **Restablecer predeterminados** en el pie
@@ -525,6 +547,39 @@ guardan tus modificaciones, en la tabla `cfg_keybinding_overrides` de
 `dbflux.db`, así que los bindings que no cambiaste siguen los valores por defecto
 de futuras versiones. Una modificación cuyo binding por defecto elimina una
 versión posterior se ignora.
+
+---
+
+## Snippets
+
+Esta sección gestiona las plantillas que insertas en el editor de queries, por
+prefijo o desde el selector de snippets (ver [Editor → Snippets](EDITOR.md#snippets)).
+Está en el grupo General, justo después de Keybindings (**Fragmentos** en la
+interfaz en español).
+
+La lista de la izquierda muestra cada snippet con su nombre, su prefijo, su
+lenguaje y una etiqueta **Integrado** en los que incluye DBFlux. **Nuevo
+fragmento** abre un formulario en blanco; al seleccionar una fila se abre ese
+snippet. Con el teclado, `j` / `k` recorren la lista, `n` empieza un snippet
+nuevo y `d` borra el abierto.
+
+| Campo | Descripción |
+|---|---|
+| **Nombre** | Cómo se llama el snippet en la lista y en el selector. Los nombres no tienen que ser únicos. |
+| **Prefijo** | Lo que escribes en el editor para ver el snippet en el menú de autocompletado. Único por lenguaje: dos snippets de SQL no pueden compartir prefijo. |
+| **Lenguaje** | El lenguaje de query de los editores donde aparece el snippet. Por ahora SQL es la única opción. |
+| **Cuerpo** | El texto que se inserta, con los marcadores `$1`, `${1:default}` y `$0`. Repetir un número refleja el campo. |
+
+**Guardar** (`Ctrl+S`; el botón dice **Actualizar** en un snippet existente)
+comprueba el formulario y muestra bajo el campo lo que falla: *El nombre es
+obligatorio*, *El prefijo es obligatorio*, *El cuerpo es obligatorio*, *Otro
+fragmento de SQL ya usa el prefijo sel*, o el error del marcador con su línea,
+su columna y el texto afectado (*Marcador sin cerrar en la línea 2, columna 6:
+${1:table*). No se guarda nada hasta que todos los campos son válidos.
+**Eliminar** pide confirmación antes.
+
+Los seis snippets de SQL integrados son filas normales: edítalos o bórralos como
+los tuyos. Un snippet integrado que borras sigue borrado.
 
 ---
 

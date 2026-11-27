@@ -107,6 +107,7 @@ Cuando el árbol recibe el foco sin ninguna fila seleccionada, se vuelve a selec
 | `Ctrl+Shift+s` / `Cmd+Shift+s` | Guardar archivo como                     |
 | `Ctrl+/` / `Cmd+/`             | Alternar comentario de línea             |
 | `Ctrl+Shift+f` / `Cmd+Option+l` | Formatear la selección, o la sentencia bajo el cursor |
+| `Ctrl+Alt+j` / `Cmd+j` | Insertar snippet (abre el selector de snippets) |
 | `Shift+F10`                    | Abrir el menú de acciones del panel      |
 | `Enter`                        | Enfocar / ejecutar                       |
 
@@ -134,6 +135,11 @@ menú. Una vez que `Tab` insertó una sugerencia, las flechas también actualiza
 texto. `Enter`, o escribir cualquier otro carácter, conserva la sugerencia
 insertada y cierra el menú; `Escape` restaura la palabra escrita. Todo el ciclo
 es un único paso de deshacer.
+
+Mientras se completa un snippet y no hay un menú de sugerencias abierto, `Tab` /
+`Shift+Tab` pasan al campo siguiente / anterior del snippet en lugar de indentar.
+`Tab` en el último campo, o `Escape`, termina el snippet. Con un menú de
+sugerencias abierto, `Tab` sigue recorriendo sus sugerencias.
 
 La barra de acciones del borde izquierdo del editor también es un menú. `Shift+F10` abre el menú de **acciones
 del panel** desde el texto del editor, en cualquier modo de Vim y sin Vim.
@@ -897,6 +903,9 @@ Mientras un campo de texto o un desplegable abierto tiene el foco, estas teclas 
 | `Ctrl+Enter` / `Cmd+Enter` | Ejecutar la consulta |
 | `Ctrl+Shift+Enter` / `Cmd+Shift+Enter` | Ejecutar la consulta en una pestaña nueva |
 | `Ctrl+Shift+z` | Rehacer (Linux y Windows; macOS usa `Cmd+Shift+z`) |
+| `Ctrl+Insert` | Copiar la selección (Linux y Windows) |
+| `Shift+Insert` | Pegar (Linux y Windows) |
+| `Shift+Delete` | Cortar la selección, o borrar el carácter siguiente si no hay nada seleccionado (Linux y Windows). En un campo de contraseña borra la selección sin copiarla |
 
 Mientras escribes en un campo de texto fuera de un diálogo, como la búsqueda de
 la sidebar o la barra de contexto de ejecución, los atajos globales que llevan

@@ -14,8 +14,10 @@ license.workspace = true
 gpui.workspace = true
 gpui-base = { path = "../../vendor/gpui-base" }
 gpui-component.workspace = true
+bolt.workspace = true
 dbflux_ui_base.workspace = true
 dbflux_components.workspace = true
+dbflux_diagram.workspace = true
 dbflux_core.workspace = true
 dbflux_app.workspace = true
 dbflux_audit.workspace = true

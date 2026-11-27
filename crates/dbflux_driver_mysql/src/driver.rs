@@ -109,6 +109,7 @@ pub static MYSQL_METADATA: LazyLock<DriverMetadata> = LazyLock::new(|| DriverMet
         supports_window_functions: true,
         supports_ctes: true,
         supports_explain: true,
+        supports_explain_analyze: true,
         max_query_parameters: 65535,
         max_order_by_columns: 0,
         max_group_by_columns: 0,
@@ -275,6 +276,7 @@ pub static MARIADB_METADATA: LazyLock<DriverMetadata> = LazyLock::new(|| DriverM
         supports_window_functions: true,
         supports_ctes: true,
         supports_explain: true,
+        supports_explain_analyze: true,
         max_query_parameters: 65535,
         max_order_by_columns: 0,
         max_group_by_columns: 0,
@@ -2986,7 +2988,41 @@ impl Connection for MysqlConnection {
         };
 
         let sql = format!("EXPLAIN FORMAT=JSON {}", query);
-        self.execute(&QueryRequest::new(sql))
+        self.execute_plan_statement(&sql, &query)
+    }
+
+    fn query_plan(
+        &self,
+        request: &dbflux_core::QueryPlanRequest,
+    ) -> Result<dbflux_core::QueryPlan, DbError> {
+        match request.mode {
+            dbflux_core::QueryPlanMode::Estimate => {
+                let sql = crate::plan::explain_statement(&request.query)?;
+                let result = self.execute_plan_statement(&sql, &request.query)?;
+                crate::plan::parse_explain_json(&dbflux_core::plan_text_from_result(&result)?)
+            }
+            dbflux_core::QueryPlanMode::Analyze => {
+                let version = self.execute(&QueryRequest::new("SELECT VERSION()"))?;
+                let version = match version.rows.first().and_then(|row| row.first()) {
+                    Some(Value::Text(version)) => Some(version.as_str()),
+                    _ => None,
+                };
+                if let Some(version) = version {
+                    crate::plan::analyze_version_gate(self.kind, version)?;
+                }
+                let sql = crate::plan::analyze_statement(self.kind, version, &request.query)?;
+                // The statement runs, so it always runs in a read-only
+                // transaction that is rolled back; the server refuses any
+                // write that got past the classifier.
+                let result = self.execute_plan_in_transaction(&sql, TransactionAccess::ReadOnly)?;
+                let raw = dbflux_core::plan_text_from_result(&result)?;
+
+                match self.kind {
+                    DbKind::MariaDB => crate::plan::parse_explain_json(&raw),
+                    _ => crate::plan::parse_analyze_tree(&raw),
+                }
+            }
+        }
     }
 
     fn describe_table(&self, request: &DescribeRequest) -> Result<QueryResult, DbError> {
@@ -3233,8 +3269,9 @@ fn ensure_read_only_statements(statements: &[String]) -> Result<(), DbError> {
             .unwrap_or_default()
             .to_ascii_uppercase();
 
-        let allowed =
-            stripped.starts_with('(') || READ_ONLY_LEADING_KEYWORDS.contains(&first_word.as_str());
+        let allowed = stripped.starts_with('(')
+            || READ_ONLY_LEADING_KEYWORDS.contains(&first_word.as_str())
+            || is_analyze_plan_statement(stripped);
         if !allowed {
             return Err(DbError::NotSupported(
                 "MySQL/MariaDB: a read-only request may only contain SELECT, WITH, SHOW, DESCRIBE, EXPLAIN, TABLE or VALUES statements; the request was rejected before execution".to_string(),
@@ -3249,6 +3286,53 @@ fn ensure_read_only_statements(statements: &[String]) -> Result<(), DbError> {
     }
 
     Ok(())
+}
+
+/// Whether `statement` is MariaDB's `ANALYZE FORMAT=<format> <statement>` over
+/// a `SELECT` or `WITH`. The wrapped statement runs, so `ANALYZE FORMAT=JSON
+/// DELETE ...` stays refused (a non-transactional `TEMPORARY` table would
+/// accept it even in a read-only transaction), and so does `ANALYZE TABLE`,
+/// which refreshes index statistics.
+fn is_analyze_plan_statement(stripped: &str) -> bool {
+    let Some(after_analyze) = strip_keyword(stripped, "ANALYZE") else {
+        return false;
+    };
+    let Some(after_format) = strip_keyword(after_analyze, "FORMAT") else {
+        return false;
+    };
+    let Some(after_equals) = after_format.trim_start().strip_prefix('=') else {
+        return false;
+    };
+
+    let wrapped = after_equals
+        .trim_start()
+        .split_once(char::is_whitespace)
+        .map_or("", |(_format, wrapped)| wrapped);
+    let wrapped = dbflux_core::strip_leading_comments(wrapped).trim_start();
+
+    let first_word = wrapped
+        .split(|character: char| !character.is_ascii_alphabetic())
+        .next()
+        .unwrap_or_default();
+
+    wrapped.starts_with('(')
+        || first_word.eq_ignore_ascii_case("SELECT")
+        // A CTE can front a `DELETE`, `INSERT` or `UPDATE` that a `TEMPORARY`
+        // table would accept in a read-only transaction.
+        || (first_word.eq_ignore_ascii_case("WITH") && dbflux_core::is_safe_read_query(wrapped))
+}
+
+/// `text` without its leading `keyword` (ASCII case-insensitive), when the
+/// keyword ends at a word boundary.
+fn strip_keyword<'text>(text: &'text str, keyword: &str) -> Option<&'text str> {
+    let text = text.trim_start();
+    let head = text.get(..keyword.len())?;
+    let rest = text.get(keyword.len()..)?;
+
+    (head.eq_ignore_ascii_case(keyword)
+        && !rest
+            .starts_with(|character: char| character.is_ascii_alphanumeric() || character == '_'))
+    .then_some(rest)
 }
 
 /// Whether `statement` contains a MySQL `/*! ... */` or MariaDB `/*M! ... */`
@@ -3385,13 +3469,68 @@ fn mysql_execute_read_only(
     cancelled: &AtomicBool,
     limit: Option<u32>,
 ) -> Result<QueryResult, DbError> {
+    mysql_execute_rolled_back(
+        conn,
+        sql,
+        statements,
+        TransactionAccess::ReadOnly,
+        start,
+        cancelled,
+        limit,
+    )
+}
+
+/// Sets the session's `explain_json_format_version` to 1 when it is something
+/// else, returning the value to restore. Servers without the variable (MariaDB,
+/// MySQL before 8.3) already return version 1 and yield `None`.
+fn pin_json_format_version(conn: &mut Conn) -> Option<String> {
+    let current: Option<String> = conn
+        .query_first("SELECT CAST(@@session.explain_json_format_version AS CHAR)")
+        .ok()
+        .flatten();
+    let current = current.filter(|version| version != "1")?;
+
+    match conn.query_drop("SET SESSION explain_json_format_version = 1") {
+        Ok(()) => Some(current),
+        Err(error) => {
+            log::warn!("[PLAN] could not set explain_json_format_version: {error}");
+            None
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum TransactionAccess {
+    ReadOnly,
+    ReadWrite,
+}
+
+/// Runs a request inside a transaction that is always rolled back: a read-only
+/// one, which the server refuses to write in, or a read-write one for an
+/// `EXPLAIN` of a write, which the server refuses in a read-only transaction.
+/// The probes are those of [`mysql_execute_read_only`].
+fn mysql_execute_rolled_back(
+    conn: &mut Conn,
+    sql: &str,
+    statements: &[String],
+    access: TransactionAccess,
+    start: Instant,
+    cancelled: &AtomicBool,
+    limit: Option<u32>,
+) -> Result<QueryResult, DbError> {
     if matches!(read_in_transaction_variable(conn), Ok(true)) {
         return Err(open_transaction_refusal());
     }
 
-    set_transaction_probe_verdict(conn.query_drop("SET TRANSACTION READ ONLY"))?;
+    let (probe, begin) = match access {
+        TransactionAccess::ReadOnly => ("SET TRANSACTION READ ONLY", "START TRANSACTION READ ONLY"),
+        TransactionAccess::ReadWrite => {
+            ("SET TRANSACTION READ WRITE", "START TRANSACTION READ WRITE")
+        }
+    };
+    set_transaction_probe_verdict(conn.query_drop(probe))?;
 
-    conn.query_drop("START TRANSACTION READ ONLY")
+    conn.query_drop(begin)
         .map_err(|error| format_mysql_query_error(&error))?;
 
     let outcome = if statements.len() > 1 {
@@ -3403,7 +3542,7 @@ fn mysql_execute_read_only(
     match conn.query_drop("ROLLBACK") {
         Ok(()) => outcome,
         Err(error) => {
-            log::warn!("[TRANSACTION] ROLLBACK of a read-only request failed: {error}");
+            log::warn!("[TRANSACTION] ROLLBACK of a rolled-back request failed: {error}");
             outcome.and(Err(format_mysql_query_error(&error)))
         }
     }
@@ -4442,6 +4581,74 @@ fn index_key_part_label(column_name: Option<String>, expression: Option<String>)
 // Code generators
 
 impl MysqlConnection {
+    /// Runs an `EXPLAIN` of `explained` inside a transaction that is rolled back.
+    ///
+    /// Some servers (MySQL 5.7, for one) run a stored function that appears
+    /// in a derived table while explaining, so a plain `EXPLAIN` of a query
+    /// that calls a writing function would write and commit. An explained read
+    /// runs in a read-only transaction, so the server refuses that write. An
+    /// explained write cannot, because the server refuses to explain a write in
+    /// a read-only transaction; it runs in a read-write transaction that is
+    /// rolled back, which undoes the writes of transactional tables.
+    fn execute_plan_statement(&self, sql: &str, explained: &str) -> Result<QueryResult, DbError> {
+        let access = if ensure_read_only_statements(&QueryLanguage::Sql.split_statements(explained))
+            .is_ok()
+        {
+            TransactionAccess::ReadOnly
+        } else {
+            TransactionAccess::ReadWrite
+        };
+
+        self.execute_plan_in_transaction(sql, access)
+    }
+
+    /// Runs `sql` in a transaction of the given access that is always rolled
+    /// back, with the session's EXPLAIN JSON version pinned to 1.
+    fn execute_plan_in_transaction(
+        &self,
+        sql: &str,
+        access: TransactionAccess,
+    ) -> Result<QueryResult, DbError> {
+        self.cancelled.store(false, Ordering::SeqCst);
+        let start = Instant::now();
+
+        let mut state = match self.query_conn.lock() {
+            Ok(guard) => guard,
+            Err(poison_err) => poison_err.into_inner(),
+        };
+
+        if state.table_locks_possible {
+            return Err(DbError::NotSupported(
+                "MySQL/MariaDB: a query plan cannot run while this session may hold LOCK TABLES locks, which START TRANSACTION would release; run UNLOCK TABLES first. The request was rejected before execution".to_string(),
+            ));
+        }
+
+        let statements = QueryLanguage::Sql.split_statements(sql);
+        // MySQL 8.3+ can return a different JSON shape when the session asks
+        // for `explain_json_format_version = 2`; the plan parser reads version 1.
+        let restore_version = pin_json_format_version(&mut state.conn);
+
+        let result = mysql_execute_rolled_back(
+            &mut state.conn,
+            sql,
+            &statements,
+            access,
+            start,
+            &self.cancelled,
+            None,
+        );
+
+        if let Some(previous) = restore_version
+            && let Err(error) = state.conn.query_drop(format!(
+                "SET SESSION explain_json_format_version = {previous}"
+            ))
+        {
+            log::warn!("[PLAN] could not restore explain_json_format_version: {error}");
+        }
+
+        result
+    }
+
     fn mysql_generate_create_table(&self, table: &TableInfo) -> Result<String, DbError> {
         let mut conn = self
             .catalog_conn
@@ -5816,6 +6023,7 @@ mod tests {
                 type_name: Some("int".to_string()),
                 nullable: false,
                 is_primary_key: true,
+                kind: dbflux_core::ColumnKind::Unknown,
             }],
             if_not_exists: false,
         };
@@ -6286,6 +6494,33 @@ mod read_only_tests {
 
     fn statements(sql: &str) -> Vec<String> {
         QueryLanguage::Sql.split_statements(sql)
+    }
+
+    #[test]
+    fn a_read_only_request_accepts_analyze_format_but_not_analyze_table() {
+        assert!(ensure_read_only_statements(&statements("ANALYZE FORMAT=JSON SELECT 1")).is_ok());
+        assert!(ensure_read_only_statements(&statements("analyze format = json SELECT 1")).is_ok());
+        assert!(
+            ensure_read_only_statements(&statements(
+                "ANALYZE FORMAT=JSON WITH c AS (SELECT 1 AS id) SELECT * FROM c"
+            ))
+            .is_ok()
+        );
+        for write in [
+            "DELETE FROM tmp WHERE id IN (SELECT id FROM c)",
+            "INSERT INTO tmp SELECT id FROM c",
+            "UPDATE tmp SET id = 2 WHERE id IN (SELECT id FROM c)",
+        ] {
+            let sql = format!("ANALYZE FORMAT=JSON WITH c AS (SELECT 1 AS id) {write}");
+            assert!(
+                ensure_read_only_statements(&statements(&sql)).is_err(),
+                "{sql}"
+            );
+        }
+        assert!(ensure_read_only_statements(&statements("ANALYZE TABLE t")).is_err());
+        assert!(
+            ensure_read_only_statements(&statements("ANALYZE NO_WRITE_TO_BINLOG TABLE t")).is_err()
+        );
     }
 
     #[test]

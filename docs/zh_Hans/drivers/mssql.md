@@ -14,6 +14,7 @@ Microsoft SQL Server 关系型数据库。
 ## 功能
 
 - 面向 SQL Server / Azure SQL 的关系型驱动程序，支持 SQL 查询执行与 Schema 发现。
+- 结构化查询计划（`Connection::query_plan`）：预估计划来自 `SET SHOWPLAN_XML`，因此语句只会被编译而不会运行，并以带有成本、行数预估、索引使用情况和警告的算子树形式返回。`SHOWPLAN_XML` 是会话状态，所以会在持有连接期间开启和关闭，无法切换回去的会话会被替换。
 - 原生控制台（`NATIVE_CONSOLE`）：表会停靠一个控制台，数据库在侧边栏中的菜单也可以在单独的标签页中打开一个控制台；它通过 `Connection::execute` 一次运行一行 SQL 语句，并使用编辑器的校验、危险查询确认、审计记录和查询历史。该驱动会执行 `QueryRequest::limit`（`REQUEST_ROW_LIMIT`），因此控制台命令会带上编辑器的行数上限。
 - 通过 SQL Server 登录账户（用户名 + 密码）认证；URI 模式接受 ADO、JDBC 以及 `sqlserver://user:pass@host:port/db` 形式的连接串。
 - 把 `Application Name` 上报为 `dbflux/<version>`，除非连接串或 URI 已设置了该值 —— 此时始终以用户提供的值为准；`sqlserver://`/`mssql://` URL 方案可用 `applicationname` 查询参数来设置它。
@@ -180,3 +181,4 @@ Microsoft SQL Server 关系型数据库。
 - SQL Server 在 `sys.objects.type` 分类中没有 `Window` 函数类型；该驱动程序从不产生 `RoutineKind::Window`。
 - 数据传输引擎的迁移路径没有参照完整性开关（未设置 `DriverCapabilities::DISABLE_FK_CHECKS`；`Connection::set_referential_integrity` 返回 `NotSupported`）。SQL Server 是通过 `ALTER TABLE ... NOCHECK CONSTRAINT` 按表禁用外键检查的，这与引擎的单一全局开关不匹配；按表的变体可作为未来的扩展方向。
 - 没有由数据库强制的只读模式：需要该模式的请求会被拒绝，因此 MCP `execute_script` 会把分类为 `Read` 或 `Metadata` 的脚本按写入处理，SQL Server 连接上也无法使用编辑器自动刷新。
+- 暂不支持分析查询计划（实际行数与耗时）；只提供来自 `SHOWPLAN_XML` 的预估计划。

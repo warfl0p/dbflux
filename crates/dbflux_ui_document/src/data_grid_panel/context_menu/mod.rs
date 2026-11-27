@@ -32,11 +32,14 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::time::Instant;
 
+mod explain;
 mod items;
 mod sections;
+mod selection_copy;
 mod set_value;
 mod tree;
 
+pub(crate) use explain::ExplainHost;
 pub(super) use set_value::SetValueEntry;
 pub(super) use tree::build_menu_tree;
 
@@ -894,6 +897,11 @@ impl DataGridPanel {
             return;
         }
 
+        if id == explain::EXPLAIN_THIS_QUERY_ID {
+            self.explain_this_query(window, cx);
+            return;
+        }
+
         if let Some(action) = tree::action_from_key(id) {
             self.handle_context_menu_action(action, window, cx);
         }
@@ -1358,8 +1366,11 @@ impl DataGridPanel {
             return;
         }
 
+        let selected = self.copied_cells_result(cx);
+        let copied = selected.as_ref().unwrap_or(&self.result);
+
         let mut buffer: Vec<u8> = Vec::new();
-        let export_result = dbflux_export::export(&self.result, format, &mut buffer);
+        let export_result = dbflux_export::export(copied, format, &mut buffer);
 
         let format_name = format.name();
         let audit_service = self.app_state.read(cx).audit_service().clone();
@@ -1370,7 +1381,7 @@ impl DataGridPanel {
                     let byte_len = text.len();
                     cx.write_to_clipboard(ClipboardItem::new_string(text));
                     record_clipboard_audit(&audit_service, format_name, Some(byte_len), None);
-                    let message = match loaded_row_count(&self.result) {
+                    let message = match loaded_row_count(copied) {
                         Some(count) => crate::labels::context_menu_clipboard_copied_rows_toast(
                             count,
                             format_name,
@@ -1593,6 +1604,9 @@ impl DataGridPanel {
                 } else {
                     self.handle_copy(window, cx);
                 }
+            }
+            ContextMenuAction::CopyAsMarkdown => {
+                self.copy_to_clipboard_with_format(ExportFormat::Markdown, window, cx);
             }
             ContextMenuAction::Paste => self.handle_paste(window, cx),
             ContextMenuAction::Edit => self.handle_edit(menu.row, menu.col, window, cx),
@@ -4542,6 +4556,7 @@ mod tests {
             labels(&items),
             vec![
                 item_label("document.data.context_menu.item.copy"),
+                item_label("document.data.context_menu.item.copy_as_markdown"),
                 item_label("document.data.context_menu.item.copy_column_name"),
             ]
         );
@@ -4562,19 +4577,28 @@ mod tests {
         assert!(!without_row.contains(&item_label("document.data.context_menu.item.view_value")));
     }
 
-    /// Copy column name sits right after Copy, and the document menu, which
-    /// has no columns, leaves it out.
+    /// Copy as Markdown and Copy column name sit right after Copy, and the
+    /// document menu, which has no columns or table, leaves both out.
     #[test]
     fn copy_column_name_follows_copy_in_the_table_menu_only() {
         let table = DataGridPanel::build_context_menu_items(false, false, true, false, true);
         assert_eq!(
             table[1].action,
+            Some(dbflux_components::components::data_table::ContextMenuAction::CopyAsMarkdown)
+        );
+        assert_eq!(
+            table[2].action,
             Some(dbflux_components::components::data_table::ContextMenuAction::CopyColumnName)
         );
 
         let document = DataGridPanel::build_context_menu_items(true, true, true, false, true);
-        assert!(!document.iter().any(|item| item.action
-            == Some(dbflux_components::components::data_table::ContextMenuAction::CopyColumnName)));
+        assert!(!document.iter().any(|item| matches!(
+            item.action,
+            Some(
+                dbflux_components::components::data_table::ContextMenuAction::CopyColumnName
+                    | dbflux_components::components::data_table::ContextMenuAction::CopyAsMarkdown
+            )
+        )));
     }
 
     #[test]

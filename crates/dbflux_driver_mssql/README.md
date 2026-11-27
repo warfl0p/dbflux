@@ -16,6 +16,7 @@ Microsoft SQL Server driver for DBFlux, built on the
 
 - SQL Server / Azure SQL relational driver with SQL query execution and schema
   discovery.
+- Structured query plans (`Connection::query_plan`): the estimated plan comes from `SET SHOWPLAN_XML`, so the statement is compiled and never run, and is returned as an operator tree with costs, row estimates, index usage and warnings. `SHOWPLAN_XML` is session state, so it is switched on and off while the connection is held, and a session that cannot be switched back is replaced.
 - Native console (`NATIVE_CONSOLE`): tables dock a console, and a database's sidebar menu opens one in its own tab, that runs one SQL statement line at a time through `Connection::execute` with the editor's validation, dangerous-query confirmation, audit rows and query history. The driver enforces `QueryRequest::limit` (`REQUEST_ROW_LIMIT`), so console commands carry the editor row limit.
 - Authentication via SQL Server logins (username + password); URI mode accepts
   ADO, JDBC, and `sqlserver://user:pass@host:port/db` connection strings.
@@ -286,6 +287,7 @@ Requires the `VIEW SERVER STATE` permission.
 
 ## Limitations
 
+- Analyzed query plans (actual rows and timings) are not supported yet; only the estimated plan from `SHOWPLAN_XML` is available.
 - The `required` mode's CA certificate replaces the system trust store
   rather than extending it, must hold exactly one certificate, and must
   use a `.pem`, `.crt` or `.der` extension (tiberius with rustls).

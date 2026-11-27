@@ -64,6 +64,7 @@ impl GeneralSection {
             current.blank_line_delimits_statements != saved.blank_line_delimits_statements,
             current.grid_fk_labels != saved.grid_fk_labels,
             current.toast_auto_dismiss_secs != saved.toast_auto_dismiss_secs,
+            current.mcp_approval_notifications != saved.mcp_approval_notifications,
         ];
 
         let appearance_inputs = [
@@ -172,6 +173,9 @@ impl GeneralSection {
             GeneralFormRow::KeyValueSizeLimit,
             GeneralFormRow::ToastTimeout,
         ];
+
+        #[cfg(feature = "mcp")]
+        rows.push(GeneralFormRow::McpApprovalNotifications);
 
         // The shared-database toggle only makes sense on nightly, which is the
         // only channel that uses a separate database by default.
@@ -358,6 +362,11 @@ impl GeneralSection {
             Some(GeneralFormRow::PauseRefreshOnError) => {
                 self.gen_settings.auto_refresh_pause_on_error =
                     !self.gen_settings.auto_refresh_pause_on_error;
+                cx.notify();
+            }
+            Some(GeneralFormRow::McpApprovalNotifications) => {
+                self.gen_settings.mcp_approval_notifications =
+                    !self.gen_settings.mcp_approval_notifications;
                 cx.notify();
             }
             Some(GeneralFormRow::RefreshOnlyIfVisible) => {
@@ -1258,7 +1267,20 @@ impl GeneralSection {
                 self.dropdown_toast_timeout.clone(),
                 GeneralFormRow::ToastTimeout,
                 cx,
-            ));
+            ))
+            .when(cfg!(feature = "mcp"), |this| {
+                this.child(self.render_gen_checkbox(
+                    "mcp-approval-notifications",
+                    dbflux_i18n::t!("settings.general.mcp_approval_notifications.label"),
+                    Some(dbflux_i18n::t!(
+                        "settings.general.mcp_approval_notifications.hint"
+                    )),
+                    self.gen_settings.mcp_approval_notifications,
+                    GeneralFormRow::McpApprovalNotifications,
+                    |this, value, _cx| this.gen_settings.mcp_approval_notifications = value,
+                    cx,
+                ))
+            });
 
         let nightly_storage = Self::is_nightly().then(|| {
             div()

@@ -260,12 +260,27 @@ command palette. The available formats depend on the result shape and include:
 
 - **CSV**
 - **JSON (pretty)** and **JSON (compact)**
+- **Markdown** (a GitHub Flavored Markdown table, for table results; integer and float columns are right-aligned)
 - **Text**
 - **Binary** (for binary-shaped results)
 
 The menu's **Save loaded rows as file** and **Copy loaded rows to clipboard**
 sections write the rows the grid holds, which for a table is the current page,
 and the toast states how many rows went into the file or the clipboard.
+When the table view has a range of more than one cell selected, the copy
+entries copy only the selected rows and columns, in grid order and as the grid
+shows them, unsaved edits and pending inserts included. A single selected cell
+is the cursor, so the copy takes every loaded row.
+
+The table cell context menu (right click, or `m`) lists **Copy as Markdown**
+right after **Copy**. It copies the selected range as a Markdown table, or every
+loaded row when one cell is selected, exactly like **Markdown** in the export
+menu's copy section. The command palette lists the same action as **Copy as
+Markdown** (`results_copy_as_markdown`); it has no default key binding, and
+Settings → Keybindings lists it under Results with **No shortcut**, ready to
+take one. Right-clicking a cell inside
+the current selection keeps that selection, so these copy entries act on the
+whole range; right-clicking outside it selects the clicked cell.
 
 When the grid shows a table or a collection read page by page, the menu adds
 **Export all rows to file**, in CSV, JSON (one array with an object per

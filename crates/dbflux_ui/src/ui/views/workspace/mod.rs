@@ -1,4 +1,6 @@
 mod actions;
+#[cfg(feature = "mcp")]
+mod approval_alerts;
 mod dispatch;
 pub mod inspector;
 pub(crate) mod keyboard_coverage;
@@ -418,6 +420,12 @@ pub struct Workspace {
     /// Background task handle for periodic audit purge.
     /// Kept to ensure the task stays alive for the workspace lifetime.
     _background_purge_task: Option<Task<()>>,
+    /// Requests already announced by the MCP approval alerts.
+    #[cfg(feature = "mcp")]
+    approval_alerts: approval_alerts::ApprovalAlertTracker,
+    /// Poll of the approval queue that raises those alerts.
+    #[cfg(feature = "mcp")]
+    _approval_alert_task: Option<Task<()>>,
     #[cfg(feature = "telemetry")]
     _telemetry_task: Option<Task<()>>,
     #[cfg(feature = "telemetry")]
@@ -1872,6 +1880,10 @@ impl Workspace {
             pane_actions_menu: None,
             last_user_error: None,
             _background_purge_task: None,
+            #[cfg(feature = "mcp")]
+            approval_alerts: approval_alerts::ApprovalAlertTracker::default(),
+            #[cfg(feature = "mcp")]
+            _approval_alert_task: None,
             #[cfg(feature = "telemetry")]
             _telemetry_task: None,
             #[cfg(feature = "telemetry")]
@@ -1901,6 +1913,11 @@ impl Workspace {
                     }
                 }
             }
+        }
+
+        #[cfg(feature = "mcp")]
+        {
+            workspace._approval_alert_task = Some(Self::spawn_approval_alerts(window, cx));
         }
 
         // Spawn periodic audit purge task if configured.
@@ -2084,6 +2101,11 @@ impl Workspace {
                 dbflux_i18n::t!("palette.category.editor"),
             ),
             PaletteCommand::new(
+                "insert_snippet",
+                dbflux_i18n::t!("palette.command.insert_snippet.name"),
+                dbflux_i18n::t!("palette.category.editor"),
+            ),
+            PaletteCommand::new(
                 "go_to_query_error",
                 dbflux_i18n::t!("palette.command.go_to_query_error.name"),
                 dbflux_i18n::t!("palette.category.editor"),
@@ -2129,6 +2151,11 @@ impl Workspace {
             PaletteCommand::new(
                 "export_results",
                 dbflux_i18n::t!("palette.command.export_results.name"),
+                dbflux_i18n::t!("palette.category.results"),
+            ),
+            PaletteCommand::new(
+                "results_copy_as_markdown",
+                dbflux_i18n::t!("palette.command.results_copy_as_markdown.name"),
                 dbflux_i18n::t!("palette.category.results"),
             ),
             // Connections

@@ -247,6 +247,44 @@ fn format_query_is_bound_in_the_editor_without_taking_replace() {
 }
 
 #[test]
+fn insert_snippet_is_bound_in_the_editor_next_to_the_pane_move() {
+    let keymap = default_keymap();
+
+    #[cfg(target_os = "macos")]
+    let snippet_chord = KeyChord::new("j", Modifiers::primary());
+    #[cfg(not(target_os = "macos"))]
+    let snippet_chord = KeyChord::new(
+        "j",
+        Modifiers {
+            ctrl: true,
+            alt: true,
+            ..Modifiers::none()
+        },
+    );
+
+    assert_eq!(
+        keymap.resolve(ContextId::Editor, &snippet_chord),
+        Some(Command::InsertSnippet)
+    );
+    // Insert snippet is an editor command; the sidebar keeps whatever the
+    // chord had there.
+    assert_ne!(
+        keymap.resolve(ContextId::Sidebar, &snippet_chord),
+        Some(Command::InsertSnippet)
+    );
+    // Plain Ctrl+J stays the pane move.
+    assert_eq!(
+        keymap.resolve(ContextId::Editor, &KeyChord::new("j", Modifiers::ctrl())),
+        Some(Command::FocusDown)
+    );
+    assert_eq!(
+        Command::from_palette_id("insert_snippet"),
+        Some(Command::InsertSnippet)
+    );
+    assert_eq!(Command::InsertSnippet.id(), "insert_snippet");
+}
+
+#[test]
 fn test_global_fallback_from_sidebar() {
     let keymap = default_keymap();
 
@@ -3089,6 +3127,218 @@ fn run_command_for_returns_the_bound_action(cx: &mut gpui::TestAppContext) {
     );
 }
 
+/// A command declares a home context only while the default keymap leaves it
+/// unbound there: a default binding would list it through that binding, and
+/// the declaration would be stale.
+#[test]
+fn commands_with_a_home_context_have_no_default_binding_in_it() {
+    let slots = dbflux_app::keymap::default_slots(default_keymap());
+    let mut declared = 0;
+
+    for command in Command::all_variants() {
+        let Some(context) = command.home_context() else {
+            continue;
+        };
+        declared += 1;
+
+        assert!(
+            !slots.iter().any(|slot| slot.context == context
+                && slot.command == command
+                && slot.default_keys.is_some()),
+            "{command:?} has a default binding in {context:?}: drop its home_context"
+        );
+        assert!(
+            slots.iter().any(|slot| slot.context == context
+                && slot.command == command
+                && slot.default_keys.is_none()),
+            "{command:?} is listed as an unbound slot of {context:?}"
+        );
+    }
+
+    assert!(declared > 0);
+}
+
+/// Keys the user gives an unbound command work like any other binding, and
+/// resetting the slot unbinds them again.
+#[gpui::test]
+fn a_user_key_on_an_unbound_command_dispatches_and_reset_unbinds(cx: &mut gpui::TestAppContext) {
+    let _keymap_state = keymap_state_test_guard();
+    cx.update(init_keymap);
+
+    let slot = BindingSlot::unbound(ContextId::Results, Command::ResultsCopyAsMarkdown);
+    let keys = KeyChord::new("f19", Modifiers::ctrl_shift());
+
+    assert!(
+        run_command_for(ContextId::Results, Command::ResultsCopyAsMarkdown).is_none(),
+        "no default binding"
+    );
+    assert_eq!(effective_keymap().resolve(ContextId::Results, &keys), None);
+
+    let mut overrides = KeymapOverrides::new();
+    overrides.set(slot.clone(), Some(KeySequence::from(keys.clone())));
+    cx.update(|cx| apply_keymap_overrides(overrides.clone(), cx));
+
+    assert_eq!(
+        effective_keymap().resolve(ContextId::Results, &keys),
+        Some(Command::ResultsCopyAsMarkdown)
+    );
+    let bound = run_command_for(ContextId::Results, Command::ResultsCopyAsMarkdown)
+        .expect("the user key binds the command");
+    assert!(runs_command(&bound, Command::ResultsCopyAsMarkdown));
+    assert!(bound.from_user_binding);
+
+    overrides.reset(&slot);
+    cx.update(|cx| apply_keymap_overrides(overrides, cx));
+
+    assert_eq!(effective_keymap().resolve(ContextId::Results, &keys), None);
+    assert!(run_command_for(ContextId::Results, Command::ResultsCopyAsMarkdown).is_none());
+}
+
+/// The native keymap the user's overrides produce.
+fn native_keymap_with(overrides: &KeymapOverrides) -> gpui::Keymap {
+    let mut keymap = gpui::Keymap::default();
+    keymap.add_bindings(native_bindings(
+        &overrides.effective_bindings(default_keymap()),
+        false,
+    ));
+    keymap
+}
+
+/// Whether `keys` runs `command` in the results grid and in a focused results
+/// text field, in that order.
+fn results_dispatch(keymap: &gpui::Keymap, keys: &str, command: Command) -> (bool, bool) {
+    let root = root_key_context(WORKSPACE_KEY_CONTEXT, ContextId::Results, &[]);
+    let grid = element_stack(root.clone(), &[]);
+    let field = element_stack(root, &["Input"]);
+
+    let runs_in = |stack: &[KeyContext]| {
+        top_action(keymap, keys, stack).is_some_and(|action| runs_command(action.as_ref(), command))
+    };
+
+    (runs_in(&grid), runs_in(&field))
+}
+
+fn unbound_markdown_slot() -> BindingSlot {
+    BindingSlot::unbound(ContextId::Results, Command::ResultsCopyAsMarkdown)
+}
+
+/// A printable key the user gives an unbound Results command is typed text in
+/// a focused field, as the default Results letters are.
+#[test]
+fn a_printable_user_key_on_an_unbound_command_is_typed_text_in_a_results_field() {
+    let mut overrides = KeymapOverrides::new();
+    overrides.set(
+        unbound_markdown_slot(),
+        Some(KeySequence::from(KeyChord::new("m", Modifiers::none()))),
+    );
+    let keymap = native_keymap_with(&overrides);
+
+    assert_eq!(
+        results_dispatch(&keymap, "m", Command::ResultsCopyAsMarkdown),
+        (true, false),
+        "fires in the grid, does not reach a focused field"
+    );
+    assert_eq!(
+        overrides.effective_predicate(&unbound_markdown_slot()),
+        "Results && !Modal && !Input"
+    );
+}
+
+/// A chord that does not print keeps the context default, so it still runs
+/// from a focused field like the shipped Results chords.
+#[test]
+fn a_non_printing_user_key_on_an_unbound_command_keeps_the_context_predicate() {
+    let mut overrides = KeymapOverrides::new();
+    overrides.set(
+        unbound_markdown_slot(),
+        Some(KeySequence::from(KeyChord::new(
+            "f19",
+            Modifiers::ctrl_shift(),
+        ))),
+    );
+    let keymap = native_keymap_with(&overrides);
+
+    assert_eq!(
+        results_dispatch(&keymap, "ctrl-shift-f19", Command::ResultsCopyAsMarkdown),
+        (true, true)
+    );
+    assert_eq!(
+        overrides.effective_predicate(&unbound_markdown_slot()),
+        "Results && !Modal"
+    );
+}
+
+/// A predicate the user set wins over the narrowing.
+#[test]
+fn a_custom_predicate_wins_over_the_printable_key_narrowing() {
+    let mut overrides = KeymapOverrides::new();
+    overrides.set(
+        unbound_markdown_slot(),
+        Some(KeySequence::from(KeyChord::new("m", Modifiers::none()))),
+    );
+    overrides.set_predicate(unbound_markdown_slot(), Some("Results".to_string()));
+    let keymap = native_keymap_with(&overrides);
+
+    assert_eq!(
+        results_dispatch(&keymap, "m", Command::ResultsCopyAsMarkdown),
+        (true, true),
+        "the user's own predicate is kept as typed"
+    );
+}
+
+/// A shipped Results binding moved to a bare letter takes the same path.
+/// Before the narrowing it kept its own default predicate, which for a
+/// non-printing default (`Results && !Modal`) held inside a text field and
+/// took the letter from it.
+#[test]
+fn a_default_moved_to_a_printable_key_is_typed_text_in_a_results_field() {
+    let slots = dbflux_app::keymap::default_slots(default_keymap());
+    let slot_of = |command: Command| {
+        slots
+            .iter()
+            .find(|slot| {
+                slot.context == ContextId::Results
+                    && slot.command == command
+                    && slot.default_keys.is_some()
+            })
+            .cloned()
+            .unwrap_or_else(|| panic!("{command:?} has a default Results binding"))
+    };
+    let letter = || Some(KeySequence::from(KeyChord::new("m", Modifiers::none())));
+
+    let copy_cell = slot_of(Command::ResultsCopyCell);
+    assert!(
+        copy_cell
+            .default_keys
+            .as_ref()
+            .is_some_and(|keys| keys.first().modifiers != Modifiers::none()),
+        "the default copy chord is a modified, non-printing one"
+    );
+    let mut overrides = KeymapOverrides::new();
+    overrides.set(copy_cell, letter());
+    assert_eq!(
+        results_dispatch(
+            &native_keymap_with(&overrides),
+            "m",
+            Command::ResultsCopyCell
+        ),
+        (true, false)
+    );
+
+    let copy_row = slot_of(Command::ResultsCopyRow);
+    let mut overrides = KeymapOverrides::new();
+    overrides.set(copy_row, letter());
+    assert_eq!(
+        results_dispatch(
+            &native_keymap_with(&overrides),
+            "m",
+            Command::ResultsCopyRow
+        ),
+        (true, false),
+        "a default that was already narrowed behaves as before"
+    );
+}
+
 #[test]
 fn sidebar_renames_with_f2() {
     let keymap = default_keymap();
@@ -3131,13 +3381,24 @@ fn persisted_identifiers_round_trip_through_their_storage_forms() {
     for slot in &slots {
         let context_id = slot.context.id();
         let command_id = slot.command.id();
-        let default_keys = slot.default_keys.to_storage_string();
+        let default_keys = slot
+            .default_keys
+            .as_ref()
+            .map(KeySequence::to_storage_string)
+            .unwrap_or_default();
 
         assert_eq!(
-            KeySequence::from_storage_string(&default_keys),
-            Ok(slot.default_keys.clone()),
-            "{context_id}/{command_id}: the stored keys parse back unchanged"
+            slot.default_keys.is_none(),
+            default_keys.is_empty(),
+            "{context_id}/{command_id}: only an unbound slot stores empty default keys"
         );
+        if let Some(keys) = &slot.default_keys {
+            assert_eq!(
+                KeySequence::from_storage_string(&default_keys).as_ref(),
+                Ok(keys),
+                "{context_id}/{command_id}: the stored keys parse back unchanged"
+            );
+        }
         assert!(
             ContextId::all_variants()
                 .iter()

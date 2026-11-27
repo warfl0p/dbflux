@@ -126,6 +126,7 @@ pub static METADATA: LazyLock<DriverMetadata> = LazyLock::new(|| DriverMetadata 
         supports_window_functions: true,
         supports_ctes: true,
         supports_explain: true,
+        supports_explain_analyze: false,
         max_query_parameters: 32766,
         max_order_by_columns: 0,
         max_group_by_columns: 0,
@@ -1396,6 +1397,19 @@ impl Connection for SqliteConnection {
 
         let sql = format!("EXPLAIN QUERY PLAN {}", query);
         self.execute(&QueryRequest::new(sql))
+    }
+
+    fn query_plan(
+        &self,
+        request: &dbflux_core::QueryPlanRequest,
+    ) -> Result<dbflux_core::QueryPlan, DbError> {
+        if request.mode == dbflux_core::QueryPlanMode::Analyze {
+            return Err(dbflux_core::analyze_unsupported());
+        }
+
+        let sql = crate::plan::explain_statement(&request.query)?;
+        let result = self.execute(&QueryRequest::new(sql))?;
+        dbflux_core::parse_sqlite_query_plan(&result)
     }
 
     fn describe_table(&self, request: &DescribeRequest) -> Result<QueryResult, DbError> {
@@ -3604,6 +3618,7 @@ mod tests {
                 type_name: Some("INTEGER".to_string()),
                 nullable: false,
                 is_primary_key: true,
+                kind: dbflux_core::ColumnKind::Unknown,
             }],
             if_not_exists: false,
         };

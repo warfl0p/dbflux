@@ -1259,6 +1259,169 @@ document:
         empty: No dimension combinations
         connection_not_found: Connection not found or not active
         catalog_unsupported: Connection does not support metric catalog
+  query_plan:
+    tab:
+      title: Plan
+      analyzed: "analyzed"
+    view:
+      switch: Plan view
+      diagram: Diagram
+      tree: Tree
+      raw: Raw
+    rows:
+      one: "%{count} row"
+      many: "%{count} rows"
+    run_mode:
+      switch: "Plan mode"
+      estimate: "Estimate"
+      analyze: "Analyze"
+    analyze:
+      refusal:
+        title: "Analyze is off for this statement."
+        changes_data: "It changes data, so only the estimate runs."
+        several: "Analyze runs one statement at a time."
+      gate:
+        title: "Analyze runs this query on %{connection}"
+        body: "The statement really runs to measure real time and rows. What it does outside the transaction, such as locks or remote calls, still happens."
+        production: "%{connection} is a production connection."
+        cancel: "Cancel"
+        run: "Run analyze"
+    scope:
+      selection: "Selection L%{start}–%{end}"
+      script: "Whole script · %{count} statements"
+    totals:
+      cost: total cost
+      rows: rows
+      planning: "planning"
+      execution: "execution"
+    controls:
+      zoom_out: Zoom out
+      zoom_in: Zoom in
+      zoom_reset: Reset zoom
+      fit: Fit
+    warnings:
+      one: 1 warning.
+      many: "%{count} warnings."
+      estimate_gap: "%{node} returned %{actual} against an estimate of %{estimated} (%{ratio})."
+    node:
+      costliest: COSTLIEST
+      table: table
+      index: index
+      cost: cost
+      rows: rows
+      self: self
+      slowest: "SLOWEST"
+      est: "est."
+      actual: "actual"
+    tree:
+      node: Node
+      index: Index
+      cost: Cost
+      self_cost: Self cost
+      rows: Rows
+      on_relation: on
+      est_rows: "Est. rows"
+      actual_rows: "Actual rows"
+      time: "Time"
+      loops: "Loops"
+      self_time: "Self time"
+    raw:
+      copy: Copy
+    footer:
+      nodes:
+        one: "%{count} node"
+        many: "%{count} nodes"
+      not_run: query not run
+      analyze_cancelled: "Analyze cancelled"
+      analyze_failed: "Analyze failed"
+      format:
+        json: JSON plan
+        xml: XML plan
+        text: Text plan
+      analyzed: "Analyzed · query was run"
+    inspector:
+      node: "node %{id}"
+      estimate: Estimate
+      reads: Reads
+      details: Details
+      startup_cost: Startup cost
+      total_cost: Total cost
+      self_cost: Self cost
+      rows: Rows
+      relation: Relation
+      index: Index
+      actual: "Actual"
+      rows_per_loop: "Rows per loop"
+      startup_time: "Startup time"
+      total_time: "Total time"
+      self_time: "Self time"
+      loops: "Loops"
+      versus: "Versus estimate"
+      versus_more: "%{ratio} more rows"
+      versus_fewer: "%{ratio} fewer rows"
+      versus_same: "As estimated"
+    loading:
+      running: Planning the query…
+      cancel: Cancel
+      analyzing: "Running the query to measure it…"
+    state:
+      retry: Retry
+      unsupported:
+        title: Query plans are not supported by this driver
+        body: "%{connection} has no plan to show for its commands."
+      multi_statement:
+        title: More than one statement
+      failed:
+        title: Plan failed
+      origin_gone: "The connection this result came from is no longer connected. Reconnect it and run the query again to explain it."
+      origin_database_changed: "The database this result ran on (%{origin}) is no longer the one this connection is using (%{current}). Switch back to %{origin} and explain the query again; a plan taken now would describe the wrong database."
+      editor_database_changed: "The database this editor is on (%{origin}) is no longer the one this connection is using (%{current}). Switch back to %{origin} and explain the query again; a plan taken now would describe the wrong database."
+      analyze_connection_changed: "The editor now points at a different connection than the one this plan was made on. Run Explain again on the new connection before analyzing."
+      analyze_database_changed: "The editor is on a different database than the one this plan was made on. Run Explain again before analyzing."
+      analyze_query_running: "A query is still running in this editor. Wait for it to finish or cancel it, then run analyze."
+      cancelled:
+        title: Plan cancelled
+    explain:
+      unavailable: "%{connection} does not provide query plans"
+    tooltip:
+      diagram_body: "The plan as a graph: one box per step, read from the left and ending in the final result."
+      tree_body: "The plan as an indented list, with the numbers in columns."
+      raw_body: The plan exactly as the engine returned it.
+      totals_title: Plan totals
+      totals_body: "Total cost of the whole plan, in planner units, and the rows it expects to return."
+      cost_title: Estimated cost
+      cost_body: "In the planner's own units, children included. Compare it only inside this plan."
+      startup_cost_title: Startup cost
+      startup_cost_body: Estimated cost before the first row can be returned.
+      self_cost_title: Self cost
+      self_cost_node_body: "Share of the plan total spent in this node alone, without its children."
+      self_cost_column_body: "Node cost minus its children, as a share of the plan total. The bar shows the same share."
+      rows_title: Estimated rows
+      rows_body: Rows this step passes to the next one. A thicker line means more rows.
+      costliest_title: Costliest
+      costliest_body: The node with the highest self cost in this plan.
+      index_title: Index
+      index_body: The index this step uses to find rows.
+      relation_title: Relation
+      relation_body: The table or view this step reads.
+      condition_body: "The condition that best explains this step, as the engine reports it."
+      estimate_body: "Plans the query without running it."
+      analyze_body: "Runs the query and measures real time and rows. Estimate only plans it."
+      totals_analyzed_body: "Planning is the time spent building the plan. Execution is the time spent running it. Both are measured on the server."
+      edge_actual_title: "Actual rows"
+      edge_actual_body: "Rows this step passed to the next one, over all its runs. A thicker line means more rows."
+      gap_title: "Rows off the estimate"
+      gap_body: "%{actual} came back against an estimate of %{estimated}, the largest gap in this plan."
+      slowest_title: "Slowest"
+      slowest_body: "The node with the highest self time in this plan."
+      actual_rows_title: "Actual rows"
+      actual_rows_body: "Rows this step returned for each run of it, to compare with the estimate beside it."
+      time_title: "Time"
+      time_body: "Time spent in this step and its children, added up over all its runs."
+      self_time_title: "Self time"
+      self_time_body: "Time spent in this node alone, without its children, as a share of the execution time. The bar shows the same share."
+      loops_title: "Loops"
+      loops_body: "How many times the engine ran this step. Time is the total across loops; rows are per loop, like the estimate."
   code:
     gutter:
       run_statement: Run this statement
@@ -1306,6 +1469,21 @@ document:
       alias: "alias"
       keyword: "keyword"
       cte: "cte"
+      snippet: "snippet"
+    snippets:
+      picker:
+        title: "Insert snippet"
+        search_placeholder: "Search %{language} snippets"
+        builtin: "Built-in"
+        no_match: "No snippets match “%{query}”"
+        empty: "No %{language} snippets yet"
+        empty_hint: "Snippets belong to one query language and only appear in editors of that language. Add yours in Settings › Snippets."
+        count_one: "1 snippet"
+        count_many: "%{count} snippets"
+        hint_insert: "Enter Insert"
+        hint_close: "Esc Close"
+        load_error: "Could not load the snippets"
+        invalid_body: "The snippet “%{prefix}” has an invalid body and was not inserted"
     layout:
       split_save_failed: "Could not save the editor and results split: %{error}"
     vim:
@@ -1626,6 +1804,7 @@ document:
       header: "%{column} · row %{row}"
       item:
         copy: Copy
+        copy_as_markdown: Copy as Markdown
         copy_column_name: Copy column name
         view_document: View document
         add_document: Add document
@@ -1650,6 +1829,7 @@ document:
         duplicate_row: Duplicate row
         delete_row: Delete row
         chart_this_query: Chart this query
+        explain_this_query: Explain this query
       submenu:
         copy_query:
           sql: Copy as SQL
@@ -4514,6 +4694,8 @@ palette:
       name: Toggle line comment
     format_query:
       name: Format query
+    insert_snippet:
+      name: "Insert snippet"
     go_to_query_error:
       name: Go to query error
     open_history:
@@ -4532,6 +4714,8 @@ palette:
       name: Move tab right
     export_results:
       name: Export results
+    results_copy_as_markdown:
+      name: Copy as Markdown
     open_connection_manager:
       name: Open connection manager
     disconnect:
@@ -4864,6 +5048,9 @@ settings:
         "8s": "8 seconds"
         "15s": "15 seconds"
         never: "Keep until dismissed"
+    mcp_approval_notifications:
+      label: "Notify when an MCP agent requests approval"
+      hint: "Shows a desktop notification, or a toast when DBFlux is focused."
     share_stable_db:
       label: Use the stable database
       error: Failed to update the shared-database setting
@@ -4991,6 +5178,7 @@ settings:
       open_folder: "Open folder…"
       toggle_comment: Toggle line comment
       format_query: Format query
+      insert_snippet: "Insert snippet"
       go_to_query_error: Go to query error
       export_results: Export results
       clear_filter: Clear filter
@@ -5008,6 +5196,7 @@ settings:
       results_duplicate_row: Duplicate row
       results_copy_row: Copy row
       results_copy_cell: Copy cell
+      results_copy_as_markdown: Copy as Markdown
       toggle_record_view: Toggle record view
       cycle_document_view: Cycle tree / table / JSON
       cycle_result_view: "Cycle result view"
@@ -5387,6 +5576,9 @@ settings:
       get_pending_execution:
         name: Get Pending
         description: Retrieve details of a specific pending execution
+      wait_for_approval:
+        name: Wait for Approval
+        description: Wait until a pending execution is approved, rejected or expires
       query_audit_logs:
         name: Query Audit Logs
         description: Search and filter the audit trail
@@ -5742,6 +5934,58 @@ settings:
       save_failed_copy: "Failed to save: %{error}"
     toast:
       saved: Audit settings saved.
+  snippets:
+    header:
+      title: "Snippets"
+      subtitle: "Templates you insert into the query editor by prefix or from the snippet picker. Each snippet belongs to one query language."
+    list:
+      new: "New snippet"
+      empty: "No snippets yet"
+      builtin: "Built-in"
+    empty:
+      title: "No snippets yet"
+      hint: "Create one to insert it from the completion menu or the snippet picker."
+    form:
+      group:
+        snippet: "Snippet"
+        body: "Body"
+      name: "Name"
+      name_placeholder: "Snippet name"
+      prefix: "Prefix"
+      prefix_placeholder: "prefix"
+      prefix_hint: "Type it in the editor to see the snippet in the completion menu"
+      language: "Language"
+      language_hint: "Snippets only appear in editors of this language"
+      body: "Body"
+      body_hint: "Use $1, $2… for fields, ${1:default} for a field with a default, and $0 for where the cursor ends. Repeating a number mirrors that field."
+    language:
+      sql: "SQL"
+    action:
+      save: "Save"
+      update: "Update"
+      delete: "Delete"
+      cancel: "Cancel"
+    delete:
+      title: "Delete snippet"
+      message: "Are you sure you want to delete snippet \"%{name}\"?"
+    validation:
+      name_required: "Name is required"
+      prefix_required: "Prefix is required"
+      body_required: "Body is required"
+      duplicate_prefix: "Another %{language} snippet already uses the prefix %{prefix}"
+      parse:
+        unclosed_placeholder: "Unclosed placeholder at line %{line}, column %{column}: %{excerpt}"
+        nested_placeholder: "Nested placeholder at line %{line}, column %{column}: %{excerpt}"
+        unsupported_choice: "Choices are not supported at line %{line}, column %{column}: %{excerpt}"
+        unsupported_variable: "Variables are not supported at line %{line}, column %{column}: %{excerpt}"
+        invalid_placeholder: "Invalid placeholder at line %{line}, column %{column}: %{excerpt}"
+    toast:
+      saved: "Snippet saved"
+      deleted: "Snippet deleted"
+    error:
+      save: "Could not save the snippet"
+      delete: "Could not delete the snippet"
+      load: "Could not load the snippets"
   nav:
     no_results: "No settings match"
     search_placeholder: "Search settings"
@@ -5749,6 +5993,7 @@ settings:
     general: General
     appearance: Appearance
     keybindings: Keybindings
+    snippets: "Snippets"
     updates: Updates & privacy
     audit: Audit
     about: About
@@ -6364,6 +6609,9 @@ notifications:
     title: You are up to date
     message: Approvals, updates and failed tasks show up here. Read items are kept until you clear them.
   approval:
+    alert_title: "Approval requested"
+    alert_body: "%{client} wants to run %{tool} (%{classification}) on %{connection}"
+    alert_body_many: "%{count} MCP requests are waiting for your approval"
     meta: "%{connection} · %{client} · %{waiting}"
     review: Review
   update:

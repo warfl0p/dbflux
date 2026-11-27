@@ -1259,6 +1259,169 @@ document:
         empty: "차원 조합이 없습니다"
         connection_not_found: "연결을 찾을 수 없거나 활성 상태가 아닙니다"
         catalog_unsupported: "이 연결은 메트릭 카탈로그를 지원하지 않습니다"
+  query_plan:
+    tab:
+      title: 실행 계획
+      analyzed: "분석됨"
+    view:
+      switch: 계획 보기
+      diagram: 다이어그램
+      tree: 트리
+      raw: 원본
+    rows:
+      one: "%{count}행"
+      many: "%{count}행"
+    run_mode:
+      switch: "플랜 모드"
+      estimate: "추정"
+      analyze: "분석"
+    analyze:
+      refusal:
+        title: "이 구문은 분석할 수 없습니다."
+        changes_data: "데이터를 변경하므로 추정만 실행됩니다."
+        several: "분석은 한 번에 구문 하나만 실행합니다."
+      gate:
+        title: "분석은 이 쿼리를 %{connection}에서 실행합니다"
+        body: "구문이 실제 시간과 행 수를 측정하기 위해 실제로 실행됩니다. 락이나 원격 호출처럼 트랜잭션 밖에서 하는 작업은 그대로 일어납니다."
+        production: "%{connection}은(는) 프로덕션 연결입니다."
+        cancel: "취소"
+        run: "분석 실행"
+    scope:
+      selection: "선택 영역 L%{start}–%{end}"
+      script: "전체 스크립트 · 문 %{count}개"
+    totals:
+      cost: 총 비용
+      rows: 행
+      planning: "플래닝"
+      execution: "실행"
+    controls:
+      zoom_out: 축소
+      zoom_in: 확대
+      zoom_reset: 확대/축소 재설정
+      fit: 맞춤
+    warnings:
+      one: 경고 1개.
+      many: "경고 %{count}개."
+      estimate_gap: "%{node}이(가) %{actual}을(를) 반환했습니다. 추정은 %{estimated}였습니다 (%{ratio})."
+    node:
+      costliest: 최고 비용
+      table: 테이블
+      index: 인덱스
+      cost: 비용
+      rows: 행
+      self: 자체
+      slowest: "가장 느림"
+      est: "추정"
+      actual: "실제"
+    tree:
+      node: 노드
+      index: 인덱스
+      cost: 비용
+      self_cost: 자체 비용
+      rows: 행
+      on_relation: "대상:"
+      est_rows: "추정 행"
+      actual_rows: "실제 행"
+      time: "시간"
+      loops: "반복"
+      self_time: "자체 시간"
+    raw:
+      copy: 복사
+    footer:
+      nodes:
+        one: "노드 %{count}개"
+        many: "노드 %{count}개"
+      not_run: 쿼리 실행 안 함
+      analyze_cancelled: "분석 취소됨"
+      analyze_failed: "분석 실패"
+      format:
+        json: JSON 계획
+        xml: XML 계획
+        text: 텍스트 계획
+      analyzed: "분석됨 · 쿼리가 실행되었습니다"
+    inspector:
+      node: "노드 %{id}"
+      estimate: 추정치
+      reads: 읽기 대상
+      details: 세부 정보
+      startup_cost: 시작 비용
+      total_cost: 총 비용
+      self_cost: 자체 비용
+      rows: 행
+      relation: 관계
+      index: 인덱스
+      actual: "실제"
+      rows_per_loop: "반복당 행"
+      startup_time: "시작 시간"
+      total_time: "총 시간"
+      self_time: "자체 시간"
+      loops: "반복"
+      versus: "추정 대비"
+      versus_more: "행 %{ratio} 더 많음"
+      versus_fewer: "행 %{ratio} 더 적음"
+      versus_same: "추정과 같음"
+    loading:
+      running: 쿼리 계획을 만드는 중…
+      cancel: 취소
+      analyzing: "측정을 위해 쿼리를 실행하는 중…"
+    state:
+      retry: 다시 시도
+      unsupported:
+        title: 이 드라이버는 쿼리 실행 계획을 지원하지 않습니다
+        body: "%{connection}에는 명령에 대해 표시할 계획이 없습니다."
+      multi_statement:
+        title: 문이 둘 이상입니다
+      failed:
+        title: 계획 생성 실패
+      origin_gone: "이 결과를 만든 연결이 더 이상 연결되어 있지 않습니다. 다시 연결한 뒤 쿼리를 다시 실행해 설명하세요."
+      origin_database_changed: "이 결과가 실행된 데이터베이스(%{origin})가 더 이상 이 연결이 사용 중인 데이터베이스(%{current})가 아닙니다. %{origin}(으)로 다시 전환한 뒤 쿼리를 다시 설명하세요. 지금 계획을 얻으면 다른 데이터베이스를 설명하게 됩니다."
+      editor_database_changed: "이 편집기의 데이터베이스(%{origin})가 더 이상 이 연결이 사용 중인 데이터베이스(%{current})가 아닙니다. %{origin}(으)로 다시 전환한 뒤 쿼리를 다시 설명하세요. 지금 계획을 얻으면 다른 데이터베이스를 설명하게 됩니다."
+      analyze_connection_changed: "편집기가 이 계획을 만든 연결과 다른 연결을 가리키고 있습니다. 분석하기 전에 새 연결에서 Explain을 다시 실행하세요."
+      analyze_database_changed: "편집기가 이 계획을 만든 데이터베이스와 다른 데이터베이스에 있습니다. 분석하기 전에 Explain을 다시 실행하세요."
+      analyze_query_running: "이 편집기에서 쿼리가 아직 실행 중입니다. 끝날 때까지 기다리거나 취소한 뒤 분석을 실행하세요."
+      cancelled:
+        title: 계획 생성이 취소되었습니다
+    explain:
+      unavailable: "%{connection}은(는) 쿼리 실행 계획을 제공하지 않습니다"
+    tooltip:
+      diagram_body: 계획을 그래프로 표시합니다. 단계마다 상자 하나이며 왼쪽부터 읽어 최종 결과로 끝납니다.
+      tree_body: 계획을 들여쓴 목록으로 표시하고 수치는 열로 보여 줍니다.
+      raw_body: 엔진이 반환한 계획 그대로입니다.
+      totals_title: 계획 합계
+      totals_body: 계획 전체의 총 비용(플래너 단위)과 반환할 것으로 예상하는 행 수입니다.
+      cost_title: 추정 비용
+      cost_body: 플래너 고유 단위이며 하위 노드를 포함합니다. 이 계획 안에서만 비교하세요.
+      startup_cost_title: 시작 비용
+      startup_cost_body: 첫 번째 행을 반환하기 전까지의 추정 비용입니다.
+      self_cost_title: 자체 비용
+      self_cost_node_body: 하위 노드를 제외하고 이 노드 하나가 쓰는 계획 전체 대비 비율입니다.
+      self_cost_column_body: 노드 비용에서 하위 노드 비용을 뺀 값이 계획 전체에서 차지하는 비율입니다. 막대도 같은 비율을 보여 줍니다.
+      rows_title: 추정 행 수
+      rows_body: 이 단계가 다음 단계로 넘기는 행 수입니다. 선이 굵을수록 행이 많습니다.
+      costliest_title: 최고 비용
+      costliest_body: 이 계획에서 자체 비용이 가장 높은 노드입니다.
+      index_title: 인덱스
+      index_body: 이 단계가 행을 찾는 데 사용하는 인덱스입니다.
+      relation_title: 관계
+      relation_body: 이 단계가 읽는 테이블 또는 뷰입니다.
+      condition_body: "엔진이 보고한, 이 단계를 가장 잘 설명하는 조건입니다."
+      estimate_body: "쿼리를 실행하지 않고 플랜만 계산합니다."
+      analyze_body: "쿼리를 실행해 실제 시간과 행 수를 측정합니다. 추정은 플랜만 계산합니다."
+      totals_analyzed_body: "플래닝은 플랜을 만드는 데 걸린 시간이고, 실행은 플랜을 실행하는 데 걸린 시간입니다. 둘 다 서버에서 측정됩니다."
+      edge_actual_title: "실제 행"
+      edge_actual_body: "이 단계가 모든 실행에 걸쳐 다음 단계로 넘긴 행 수입니다. 선이 굵을수록 행이 많습니다."
+      gap_title: "추정과 다른 행 수"
+      gap_body: "%{actual}이(가) 반환되었으며 추정은 %{estimated}였습니다. 이 플랜에서 가장 큰 차이입니다."
+      slowest_title: "가장 느림"
+      slowest_body: "이 플랜에서 자체 시간이 가장 긴 노드입니다."
+      actual_rows_title: "실제 행"
+      actual_rows_body: "이 단계가 실행될 때마다 반환한 행 수로, 옆의 추정과 비교합니다."
+      time_title: "시간"
+      time_body: "이 단계와 하위 단계가 모든 실행에 걸쳐 쓴 시간의 합계입니다."
+      self_time_title: "자체 시간"
+      self_time_body: "하위 단계를 뺀 이 노드만의 시간으로, 실행 시간에서 차지하는 비율입니다. 막대도 같은 비율을 보여 줍니다."
+      loops_title: "반복"
+      loops_body: "엔진이 이 단계를 실행한 횟수입니다. 시간은 모든 반복의 합계이고, 행 수는 추정처럼 반복당입니다."
   code:
     gutter:
       run_statement: 이 문 실행
@@ -1306,6 +1469,21 @@ document:
       alias: "별칭"
       keyword: "키워드"
       cte: "cte"
+      snippet: "스니펫"
+    snippets:
+      picker:
+        title: "스니펫 삽입"
+        search_placeholder: "%{language} 스니펫 검색"
+        builtin: "기본 제공"
+        no_match: "“%{query}”와(과) 일치하는 스니펫이 없습니다"
+        empty: "%{language} 스니펫이 아직 없습니다"
+        empty_hint: "스니펫은 하나의 쿼리 언어에 속하며 해당 언어의 편집기에만 표시됩니다. 설정 › 스니펫에서 추가하세요."
+        count_one: "스니펫 1개"
+        count_many: "스니펫 %{count}개"
+        hint_insert: "Enter 삽입"
+        hint_close: "Esc 닫기"
+        load_error: "스니펫을 불러오지 못했습니다"
+        invalid_body: "스니펫 “%{prefix}”의 본문이 올바르지 않아 삽입하지 않았습니다"
     layout:
       split_save_failed: "편집기와 결과 분할을 저장할 수 없습니다: %{error}"
     vim:
@@ -1626,6 +1804,7 @@ document:
       header: "%{column} · 행 %{row}"
       item:
         copy: 복사
+        copy_as_markdown: Markdown으로 복사
         copy_column_name: 열 이름 복사
         view_document: 문서 보기
         add_document: 문서 추가
@@ -1650,6 +1829,7 @@ document:
         duplicate_row: 행 복제
         delete_row: 행 삭제
         chart_this_query: 이 쿼리로 차트 만들기
+        explain_this_query: 이 쿼리 설명하기
       submenu:
         copy_query:
           sql: SQL로 복사
@@ -4514,6 +4694,8 @@ palette:
       name: 주석 전환
     format_query:
       name: 쿼리 서식 지정
+    insert_snippet:
+      name: "스니펫 삽입"
     go_to_query_error:
       name: 쿼리 오류로 이동
     open_history:
@@ -4532,6 +4714,8 @@ palette:
       name: 탭을 오른쪽으로 이동
     export_results:
       name: 결과 내보내기
+    results_copy_as_markdown:
+      name: Markdown으로 복사
     open_connection_manager:
       name: 연결 관리자 열기
     disconnect:
@@ -4864,6 +5048,9 @@ settings:
         "8s": "8초"
         "15s": "15초"
         never: "닫을 때까지 유지"
+    mcp_approval_notifications:
+      label: "MCP 에이전트가 승인을 요청하면 알림"
+      hint: "데스크톱 알림을 표시하며, DBFlux가 활성 상태일 때는 앱 내 알림으로 표시합니다."
     share_stable_db:
       label: 안정 데이터베이스 사용
       error: 공유 데이터베이스 설정을 업데이트하지 못했습니다
@@ -4991,6 +5178,7 @@ settings:
       open_folder: "폴더 열기…"
       toggle_comment: 주석 전환
       format_query: 쿼리 서식 지정
+      insert_snippet: "스니펫 삽입"
       go_to_query_error: 쿼리 오류로 이동
       export_results: 결과 내보내기
       clear_filter: 필터 지우기
@@ -5008,6 +5196,7 @@ settings:
       results_duplicate_row: 행 복제
       results_copy_row: 행 복사
       results_copy_cell: 셀 복사
+      results_copy_as_markdown: Markdown으로 복사
       toggle_record_view: 레코드 뷰 전환
       cycle_document_view: 트리 / 테이블 / JSON 전환
       cycle_result_view: "결과 보기 전환"
@@ -5386,6 +5575,9 @@ settings:
       get_pending_execution:
         name: 대기 항목 조회
         description: 특정 대기 중인 실행의 세부 정보를 조회합니다
+      wait_for_approval:
+        name: 승인 대기
+        description: 대기 중인 실행이 승인, 거부 또는 만료될 때까지 기다립니다
       query_audit_logs:
         name: 감사 로그 조회
         description: 감사 로그를 검색하고 필터링합니다
@@ -5741,6 +5933,58 @@ settings:
       save_failed_copy: "저장하지 못했습니다: %{error}"
     toast:
       saved: 감사 설정을 저장했습니다.
+  snippets:
+    header:
+      title: "스니펫"
+      subtitle: "접두사로 또는 스니펫 선택기에서 쿼리 편집기에 삽입하는 템플릿입니다. 각 스니펫은 하나의 쿼리 언어에 속합니다."
+    list:
+      new: "새 스니펫"
+      empty: "스니펫이 아직 없습니다"
+      builtin: "기본 제공"
+    empty:
+      title: "스니펫이 아직 없습니다"
+      hint: "스니펫을 만들면 자동 완성 메뉴나 스니펫 선택기에서 삽입할 수 있습니다."
+    form:
+      group:
+        snippet: "스니펫"
+        body: "본문"
+      name: "이름"
+      name_placeholder: "스니펫 이름"
+      prefix: "접두사"
+      prefix_placeholder: "접두사"
+      prefix_hint: "편집기에서 입력하면 자동 완성 메뉴에 스니펫이 표시됩니다"
+      language: "언어"
+      language_hint: "스니펫은 이 언어의 편집기에만 표시됩니다"
+      body: "본문"
+      body_hint: "필드에는 $1, $2…, 기본값이 있는 필드에는 ${1:기본값}, 커서가 끝날 위치에는 $0을 사용하세요. 같은 번호를 반복하면 해당 필드가 함께 바뀝니다."
+    language:
+      sql: "SQL"
+    action:
+      save: "저장"
+      update: "업데이트"
+      delete: "삭제"
+      cancel: "취소"
+    delete:
+      title: "스니펫 삭제"
+      message: "스니펫 \"%{name}\"을(를) 삭제하시겠습니까?"
+    validation:
+      name_required: "이름을 입력해야 합니다"
+      prefix_required: "접두사를 입력해야 합니다"
+      body_required: "본문을 입력해야 합니다"
+      duplicate_prefix: "다른 %{language} 스니펫이 이미 접두사 %{prefix}을(를) 사용하고 있습니다"
+      parse:
+        unclosed_placeholder: "%{line}행 %{column}열에 닫히지 않은 자리 표시자: %{excerpt}"
+        nested_placeholder: "%{line}행 %{column}열에 중첩된 자리 표시자: %{excerpt}"
+        unsupported_choice: "%{line}행 %{column}열의 선택 목록은 지원되지 않습니다: %{excerpt}"
+        unsupported_variable: "%{line}행 %{column}열의 변수는 지원되지 않습니다: %{excerpt}"
+        invalid_placeholder: "%{line}행 %{column}열에 잘못된 자리 표시자: %{excerpt}"
+    toast:
+      saved: "스니펫을 저장했습니다"
+      deleted: "스니펫을 삭제했습니다"
+    error:
+      save: "스니펫을 저장하지 못했습니다"
+      delete: "스니펫을 삭제하지 못했습니다"
+      load: "스니펫을 불러오지 못했습니다"
   nav:
     no_results: "일치하는 설정 없음"
     search_placeholder: "설정 검색"
@@ -5748,6 +5992,7 @@ settings:
     general: 일반
     appearance: 모양
     keybindings: 키 바인딩
+    snippets: "스니펫"
     updates: 업데이트 및 개인정보
     audit: 감사
     about: 정보
@@ -6363,6 +6608,9 @@ notifications:
     title: 모두 확인했습니다
     message: 승인, 업데이트, 실패한 작업이 여기에 표시됩니다. 읽은 항목은 지울 때까지 유지됩니다.
   approval:
+    alert_title: "승인 요청"
+    alert_body: "%{client}이(가) %{connection}에서 %{tool}(%{classification})을(를) 실행하려고 합니다"
+    alert_body_many: "MCP 요청 %{count}개가 승인을 기다리고 있습니다"
     meta: "%{connection} · %{client} · %{waiting}"
     review: 검토
   update:

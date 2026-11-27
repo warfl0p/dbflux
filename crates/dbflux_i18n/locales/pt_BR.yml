@@ -1256,6 +1256,169 @@ document:
         empty: Nenhuma combinação de dimensões
         connection_not_found: Conexão não encontrada ou inativa
         catalog_unsupported: A conexão não oferece suporte a catálogo de métricas
+  query_plan:
+    tab:
+      title: Plano
+      analyzed: "analisado"
+    view:
+      switch: Visualização do plano
+      diagram: Diagrama
+      tree: Árvore
+      raw: Bruto
+    rows:
+      one: "%{count} linha"
+      many: "%{count} linhas"
+    run_mode:
+      switch: "Modo do plano"
+      estimate: "Estimar"
+      analyze: "Analisar"
+    analyze:
+      refusal:
+        title: "Analisar não está disponível para esta instrução."
+        changes_data: "Ela altera dados, então apenas a estimativa é executada."
+        several: "Analisar executa uma instrução por vez."
+      gate:
+        title: "Analisar executa esta consulta em %{connection}"
+        body: "A instrução é executada de verdade para medir o tempo e as linhas reais. O que ela fizer fora da transação, como bloqueios ou chamadas remotas, continua acontecendo."
+        production: "%{connection} é uma conexão de produção."
+        cancel: "Cancelar"
+        run: "Executar análise"
+    scope:
+      selection: "Seleção L%{start}–%{end}"
+      script: "Script inteiro · %{count} instruções"
+    totals:
+      cost: custo total
+      rows: linhas
+      planning: "planejamento"
+      execution: "execução"
+    controls:
+      zoom_out: Diminuir zoom
+      zoom_in: Aumentar zoom
+      zoom_reset: Redefinir zoom
+      fit: Ajustar
+    warnings:
+      one: 1 aviso.
+      many: "%{count} avisos."
+      estimate_gap: "%{node} retornou %{actual} contra uma estimativa de %{estimated} (%{ratio})."
+    node:
+      costliest: MAIS CARO
+      table: tabela
+      index: índice
+      cost: custo
+      rows: linhas
+      self: próprio
+      slowest: "MAIS LENTO"
+      est: "est."
+      actual: "real"
+    tree:
+      node: Nó
+      index: Índice
+      cost: Custo
+      self_cost: Custo próprio
+      rows: Linhas
+      on_relation: em
+      est_rows: "Linhas est."
+      actual_rows: "Linhas reais"
+      time: "Tempo"
+      loops: "Laços"
+      self_time: "Tempo próprio"
+    raw:
+      copy: Copiar
+    footer:
+      nodes:
+        one: "%{count} nó"
+        many: "%{count} nós"
+      not_run: consulta não executada
+      analyze_cancelled: "Análise cancelada"
+      analyze_failed: "Análise falhou"
+      format:
+        json: Plano em JSON
+        xml: Plano em XML
+        text: Plano em texto
+      analyzed: "Analisado · a consulta foi executada"
+    inspector:
+      node: "nó %{id}"
+      estimate: Estimativa
+      reads: Lê
+      details: Detalhes
+      startup_cost: Custo de início
+      total_cost: Custo total
+      self_cost: Custo próprio
+      rows: Linhas
+      relation: Relação
+      index: Índice
+      actual: "Real"
+      rows_per_loop: "Linhas por laço"
+      startup_time: "Tempo de início"
+      total_time: "Tempo total"
+      self_time: "Tempo próprio"
+      loops: "Laços"
+      versus: "Em relação à estimativa"
+      versus_more: "%{ratio} mais linhas"
+      versus_fewer: "%{ratio} menos linhas"
+      versus_same: "Como estimado"
+    loading:
+      running: Calculando o plano da consulta…
+      cancel: Cancelar
+      analyzing: "Executando a consulta para medi-la…"
+    state:
+      retry: Tentar novamente
+      unsupported:
+        title: Este driver não oferece suporte a planos de consulta
+        body: "%{connection} não tem plano para mostrar para os seus comandos."
+      multi_statement:
+        title: Mais de uma instrução
+      failed:
+        title: Falha no plano
+      origin_gone: "A conexão da qual este resultado veio não está mais conectada. Reconecte-a e execute a consulta novamente para explicá-la."
+      origin_database_changed: "O banco de dados em que este resultado foi executado (%{origin}) não é mais o que esta conexão está usando (%{current}). Volte para %{origin} e explique a consulta novamente; um plano obtido agora descreveria outro banco de dados."
+      editor_database_changed: "O banco de dados deste editor (%{origin}) não é mais o que esta conexão está usando (%{current}). Volte para %{origin} e explique a consulta novamente; um plano obtido agora descreveria outro banco de dados."
+      analyze_connection_changed: "O editor agora aponta para uma conexão diferente daquela em que este plano foi feito. Execute Explain novamente na nova conexão antes de analisar."
+      analyze_database_changed: "O editor está em um banco de dados diferente daquele em que este plano foi feito. Execute Explain novamente antes de analisar."
+      analyze_query_running: "Ainda há uma consulta em execução neste editor. Aguarde o término ou cancele-a e execute a análise."
+      cancelled:
+        title: Plano cancelado
+    explain:
+      unavailable: "%{connection} não oferece planos de consulta"
+    tooltip:
+      diagram_body: "O plano como grafo: uma caixa por etapa, lida da esquerda e terminando no resultado final."
+      tree_body: "O plano como lista recuada, com os números em colunas."
+      raw_body: O plano exatamente como o motor o devolveu.
+      totals_title: Totais do plano
+      totals_body: "Custo total do plano inteiro, em unidades do planejador, e as linhas que ele espera devolver."
+      cost_title: Custo estimado
+      cost_body: "Nas unidades do próprio planejador, incluindo os filhos. Compare apenas dentro deste plano."
+      startup_cost_title: Custo de início
+      startup_cost_body: Custo estimado antes de a primeira linha poder ser devolvida.
+      self_cost_title: Custo próprio
+      self_cost_node_body: "Parcela do total do plano gasta apenas neste nó, sem os filhos."
+      self_cost_column_body: "Custo do nó menos o dos filhos, como parcela do total do plano. A barra mostra a mesma parcela."
+      rows_title: Linhas estimadas
+      rows_body: Linhas que esta etapa passa para a seguinte. Uma linha mais grossa significa mais linhas.
+      costliest_title: Mais caro
+      costliest_body: O nó com o maior custo próprio neste plano.
+      index_title: Índice
+      index_body: O índice que esta etapa usa para encontrar linhas.
+      relation_title: Relação
+      relation_body: A tabela ou visão que esta etapa lê.
+      condition_body: "A condição que melhor explica esta etapa, como o motor a informa."
+      estimate_body: "Calcula o plano da consulta sem executá-la."
+      analyze_body: "Executa a consulta e mede o tempo e as linhas reais. Estimar apenas calcula o plano."
+      totals_analyzed_body: "Planejamento é o tempo gasto construindo o plano. Execução é o tempo gasto executando-o. Ambos são medidos no servidor."
+      edge_actual_title: "Linhas reais"
+      edge_actual_body: "Linhas que esta etapa passou para a seguinte, somando todas as suas execuções. Uma linha mais grossa significa mais linhas."
+      gap_title: "Linhas fora da estimativa"
+      gap_body: "Voltaram %{actual} contra uma estimativa de %{estimated}, a maior diferença deste plano."
+      slowest_title: "Mais lento"
+      slowest_body: "O nó com o maior tempo próprio deste plano."
+      actual_rows_title: "Linhas reais"
+      actual_rows_body: "Linhas que esta etapa retornou em cada execução, para comparar com a estimativa ao lado."
+      time_title: "Tempo"
+      time_body: "Tempo gasto nesta etapa e em seus filhos, somado em todas as suas execuções."
+      self_time_title: "Tempo próprio"
+      self_time_body: "Tempo gasto apenas neste nó, sem seus filhos, como parte do tempo de execução. A barra mostra a mesma proporção."
+      loops_title: "Laços"
+      loops_body: "Quantas vezes o motor executou esta etapa. O tempo é o total de todos os laços; as linhas são por laço, como a estimativa."
   code:
     gutter:
       run_statement: Executar esta instrução
@@ -1303,6 +1466,21 @@ document:
       alias: "alias"
       keyword: "palavra-chave"
       cte: "cte"
+      snippet: "snippet"
+    snippets:
+      picker:
+        title: "Inserir snippet"
+        search_placeholder: "Buscar snippets de %{language}"
+        builtin: "Integrado"
+        no_match: "Nenhum snippet corresponde a “%{query}”"
+        empty: "Ainda não há snippets de %{language}"
+        empty_hint: "Os snippets pertencem a uma linguagem de consulta e só aparecem nos editores dessa linguagem. Adicione os seus em Configurações › Snippets."
+        count_one: "1 snippet"
+        count_many: "%{count} snippets"
+        hint_insert: "Enter Inserir"
+        hint_close: "Esc Fechar"
+        load_error: "Não foi possível carregar os snippets"
+        invalid_body: "O snippet “%{prefix}” tem um corpo inválido e não foi inserido"
     layout:
       split_save_failed: "Não foi possível salvar a divisão entre o editor e os resultados: %{error}"
     vim:
@@ -1623,6 +1801,7 @@ document:
       header: "%{column} · linha %{row}"
       item:
         copy: Copiar
+        copy_as_markdown: Copiar como Markdown
         copy_column_name: Copiar nome da coluna
         view_document: Ver documento
         add_document: Adicionar documento
@@ -1647,6 +1826,7 @@ document:
         duplicate_row: Duplicar linha
         delete_row: Excluir linha
         chart_this_query: Criar gráfico desta consulta
+        explain_this_query: Explicar esta consulta
       submenu:
         copy_query:
           sql: Copiar como SQL
@@ -4508,6 +4688,8 @@ palette:
       name: Alternar comentário de linha
     format_query:
       name: Formatar consulta
+    insert_snippet:
+      name: "Inserir snippet"
     go_to_query_error:
       name: Ir para o erro da consulta
     open_history:
@@ -4526,6 +4708,8 @@ palette:
       name: Mover aba para a direita
     export_results:
       name: Exportar resultados
+    results_copy_as_markdown:
+      name: Copiar como Markdown
     open_connection_manager:
       name: Abrir gerenciador de conexões
     disconnect:
@@ -4857,6 +5041,9 @@ settings:
         "8s": "8 segundos"
         "15s": "15 segundos"
         never: "Manter até dispensar"
+    mcp_approval_notifications:
+      label: "Notificar quando um agente MCP solicitar aprovação"
+      hint: "Mostra uma notificação da área de trabalho, ou um aviso no app quando o DBFlux está em foco."
     share_stable_db:
       label: Usar o banco de dados estável
       error: Falha ao atualizar a configuração de banco de dados compartilhado
@@ -4984,6 +5171,7 @@ settings:
       open_folder: "Abrir pasta…"
       toggle_comment: Alternar comentário de linha
       format_query: Formatar consulta
+      insert_snippet: "Inserir snippet"
       go_to_query_error: Ir para o erro da consulta
       export_results: Exportar resultados
       clear_filter: Limpar filtro
@@ -5001,6 +5189,7 @@ settings:
       results_duplicate_row: Duplicar linha
       results_copy_row: Copiar linha
       results_copy_cell: Copiar célula
+      results_copy_as_markdown: Copiar como Markdown
       toggle_record_view: Alternar visão de registro
       cycle_document_view: Alternar árvore / tabela / JSON
       cycle_result_view: "Alternar visão do resultado"
@@ -5380,6 +5569,9 @@ settings:
       get_pending_execution:
         name: Obter pendente
         description: Recupera os detalhes de uma execução pendente específica
+      wait_for_approval:
+        name: Aguardar aprovação
+        description: Aguarda até que uma execução pendente seja aprovada, rejeitada ou expire
       query_audit_logs:
         name: Consultar logs de auditoria
         description: Pesquisa e filtra a trilha de auditoria
@@ -5735,6 +5927,58 @@ settings:
       save_failed_copy: "Falha ao salvar: %{error}"
     toast:
       saved: Configurações de auditoria salvas.
+  snippets:
+    header:
+      title: "Snippets"
+      subtitle: "Modelos que você insere no editor de consultas por prefixo ou pelo seletor de snippets. Cada snippet pertence a uma linguagem de consulta."
+    list:
+      new: "Novo snippet"
+      empty: "Ainda não há snippets"
+      builtin: "Integrado"
+    empty:
+      title: "Ainda não há snippets"
+      hint: "Crie um para inseri-lo pelo menu de autocompletar ou pelo seletor de snippets."
+    form:
+      group:
+        snippet: "Snippet"
+        body: "Corpo"
+      name: "Nome"
+      name_placeholder: "Nome do snippet"
+      prefix: "Prefixo"
+      prefix_placeholder: "prefixo"
+      prefix_hint: "Digite-o no editor para ver o snippet no menu de autocompletar"
+      language: "Linguagem"
+      language_hint: "Os snippets só aparecem nos editores desta linguagem"
+      body: "Corpo"
+      body_hint: "Use $1, $2… para os campos, ${1:padrão} para um campo com valor padrão e $0 para onde o cursor termina. Repetir um número espelha esse campo."
+    language:
+      sql: "SQL"
+    action:
+      save: "Salvar"
+      update: "Atualizar"
+      delete: "Excluir"
+      cancel: "Cancelar"
+    delete:
+      title: "Excluir snippet"
+      message: "Tem certeza de que deseja excluir o snippet \"%{name}\"?"
+    validation:
+      name_required: "O nome é obrigatório"
+      prefix_required: "O prefixo é obrigatório"
+      body_required: "O corpo é obrigatório"
+      duplicate_prefix: "Outro snippet de %{language} já usa o prefixo %{prefix}"
+      parse:
+        unclosed_placeholder: "Marcador não fechado na linha %{line}, coluna %{column}: %{excerpt}"
+        nested_placeholder: "Marcador aninhado na linha %{line}, coluna %{column}: %{excerpt}"
+        unsupported_choice: "Opções não são suportadas na linha %{line}, coluna %{column}: %{excerpt}"
+        unsupported_variable: "Variáveis não são suportadas na linha %{line}, coluna %{column}: %{excerpt}"
+        invalid_placeholder: "Marcador inválido na linha %{line}, coluna %{column}: %{excerpt}"
+    toast:
+      saved: "Snippet salvo"
+      deleted: "Snippet excluído"
+    error:
+      save: "Não foi possível salvar o snippet"
+      delete: "Não foi possível excluir o snippet"
+      load: "Não foi possível carregar os snippets"
   nav:
     no_results: "Nenhuma configuração corresponde"
     search_placeholder: "Buscar configurações"
@@ -5742,6 +5986,7 @@ settings:
     general: Geral
     appearance: Aparência
     keybindings: Atalhos de teclado
+    snippets: "Snippets"
     updates: Atualizações
     audit: Auditoria
     about: Sobre
@@ -6312,6 +6557,9 @@ notifications:
     title: Tudo em dia
     message: Aprovações, atualizações e tarefas com falha aparecem aqui. Os itens lidos são mantidos até você limpá-los.
   approval:
+    alert_title: "Aprovação solicitada"
+    alert_body: "%{client} quer executar %{tool} (%{classification}) em %{connection}"
+    alert_body_many: "%{count} solicitações MCP aguardam sua aprovação"
     meta: "%{connection} · %{client} · %{waiting}"
     review: Revisar
   update:

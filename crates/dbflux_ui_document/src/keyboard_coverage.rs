@@ -80,6 +80,66 @@ pub(crate) const CODE_EDITOR_CHROME: SurfaceRegistry = SurfaceRegistry {
     ],
 };
 
+/// The Plan tab of the code editor: its view switch, its Estimate | Analyze
+/// switch and the Analyze gate, the diagram's zoom
+/// controls, the nodes and rows, and the buttons of its states. The view
+/// switch, the zoom controls, Copy and the error buttons are entries of the
+/// pane actions menu (`m` in the context bar, Shift+F10 in the editor) while
+/// the tab is shown; the nodes and rows are selected with the arrow keys.
+pub(crate) const QUERY_PLAN: SurfaceRegistry = SurfaceRegistry {
+    name: "query plan",
+    contexts: &[ContextId::Results, ContextId::Editor],
+    entries: &[
+        ("segmented-plan-view-*", KeyboardPath::Menu("plan-view-*")),
+        (
+            "segmented-plan-run-mode-*",
+            KeyboardPath::Menu("plan-run-mode-*"),
+        ),
+        (
+            "plan-analyze-cancel",
+            KeyboardPath::Command(Command::Cancel),
+        ),
+        ("plan-analyze-run", KeyboardPath::Menu("plan-analyze-run")),
+        ("plan-zoom-out", KeyboardPath::Menu("plan-zoom-out")),
+        ("plan-zoom-in", KeyboardPath::Menu("plan-zoom-in")),
+        ("plan-zoom-reset", KeyboardPath::Menu("plan-zoom-reset")),
+        ("plan-fit", KeyboardPath::Menu("plan-fit")),
+        ("plan-node-*", KeyboardPath::Command(Command::SelectNext)),
+        (
+            "plan-tree-row-*",
+            KeyboardPath::Command(Command::SelectNext),
+        ),
+        (
+            "plan-tree-toggle-*",
+            KeyboardPath::Command(Command::ColumnRight),
+        ),
+        ("plan-raw-copy", KeyboardPath::Menu("plan-copy-raw")),
+        ("plan-cancel", KeyboardPath::Command(Command::Cancel)),
+        ("plan-retry", KeyboardPath::Menu("plan-retry")),
+        ("plan-copy-error", KeyboardPath::Menu("plan-copy-error")),
+        (
+            "plan-view-in-audit",
+            KeyboardPath::Menu("plan-view-in-audit"),
+        ),
+        (
+            "plan-inspector-close",
+            KeyboardPath::Command(Command::Cancel),
+        ),
+    ],
+};
+
+/// The Insert snippet picker over the code editor. It answers the history
+/// modal's keys: Up and Down move through the rows and Enter inserts the
+/// highlighted one, as a click on a row does.
+pub(crate) const SNIPPET_PICKER: SurfaceRegistry = SurfaceRegistry {
+    name: "snippet picker",
+    contexts: &[ContextId::HistoryModal],
+    entries: &[(
+        "snippet-picker-row-*",
+        KeyboardPath::Command(Command::Execute),
+    )],
+};
+
 /// The data grid: the table, its toolbar and footer, its menus and its side
 /// islands. The table menu (`m`) ends with a Toolbar submenu that lists the
 /// toolbar buttons shown (`DataGridPanel::toolbar_actions`).
@@ -718,10 +778,6 @@ pub(crate) const SECRET_DOCUMENT: SurfaceRegistry = SurfaceRegistry {
             KeyboardPath::Command(Command::ResultsCopyCell),
         ),
         (
-            "secret-document-details-copy-arn",
-            KeyboardPath::Command(Command::ResultsCopyCell),
-        ),
-        (
             "secret-document-refresh",
             KeyboardPath::Command(Command::RefreshSchema),
         ),
@@ -811,6 +867,11 @@ pub(crate) const SECRET_STORE: SurfaceRegistry = SurfaceRegistry {
         (
             "secret-details-copy-name",
             KeyboardPath::Menu("secret-copy-name"),
+        ),
+        // The ARN row's copy button, in the pane and in the tab.
+        (
+            "secret-document-details-copy-arn",
+            KeyboardPath::Command(Command::ResultsCopyCell),
         ),
         (
             "secret-details-close",

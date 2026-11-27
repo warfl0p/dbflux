@@ -11,7 +11,10 @@ use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
 
 mod kinds;
+mod snippets;
 use kinds::KindWords;
+pub(crate) use snippets::SnippetOffers;
+use snippets::SnippetWarnings;
 
 /// Rank groups for context-aware SQL completion (`sort_text` prefix): the
 /// items the context asks for come first, keywords last.
@@ -48,6 +51,10 @@ pub(crate) struct QueryCompletionProvider {
     /// Shared with the editor's highlighter, which colors a bare schema name
     /// as a schema; filled by `refresh_catalog_names`.
     catalog_names: super::schema_highlight::SharedCatalogNames,
+    /// Where the snippets of the editor's language are offered and recorded;
+    /// `None` for editors that do not expand snippets.
+    snippets: Option<SnippetOffers>,
+    snippet_warnings: SnippetWarnings,
 }
 
 impl QueryCompletionProvider {
@@ -71,6 +78,8 @@ impl QueryCompletionProvider {
             sql_context: SqlContextEngine::new(),
             completion_query_generation,
             catalog_names,
+            snippets: None,
+            snippet_warnings: SnippetWarnings::default(),
         }
     }
 
@@ -1578,7 +1587,7 @@ impl CompletionProvider for QueryCompletionProvider {
             self.connection_category(_cx),
         );
 
-        let items = if use_sql {
+        let mut items: Vec<CompletionItem> = if use_sql {
             let source = if self
                 .app_state
                 .read(_cx)
@@ -1627,6 +1636,11 @@ impl CompletionProvider for QueryCompletionProvider {
                 }
             }
         };
+
+        // The menu lists items in the order given: a snippet whose prefix the
+        // user typed comes ahead of the keywords the same letters match.
+        let snippet_items = self.snippet_items(&source, cursor, _cx);
+        items.splice(0..0, snippet_items);
 
         Task::ready(Ok(CompletionResponse::Array(items)))
     }
